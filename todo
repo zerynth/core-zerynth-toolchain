@@ -1,0 +1,50 @@
+#### ztc
+
+
+
+Groups of commands:
+
+- user
+    * register
+    * authenticate
+    * profile
+- compile
+    * project for target
+    * clean
+    * debug
+- lint
+    * file
+    * project
+- uplink
+    * compiled project to target
+- device
+    * discover [continuously]
+    * console
+    * identify
+    * register
+    * virtualize with vm
+    * list identified
+- vm
+    * generate
+    * download
+- package
+    * search
+    * install
+    * uninstall
+    * disable
+    * enable
+- project
+    * clone
+    * info
+    * publish
+    * search in files
+    * git
+- doc
+    * search
+    * make
+    * view
+
+
+General commands:
+
+- scan

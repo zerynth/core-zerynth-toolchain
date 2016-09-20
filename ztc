@@ -1,0 +1,3 @@
+#!/bin/bash
+
+~/.zerynth/env/sys/python/bin/python ztc.py $@
