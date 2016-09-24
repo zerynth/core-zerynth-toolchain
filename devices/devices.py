@@ -8,7 +8,7 @@ class Device():
         self._dev = dev
 
     def hash(self):
-        return self._info.get("shortname","---")+":"+self._dev.get("uid","---")
+        return self._info.get("target","---")+":"+self._dev.get("uid","---")
 
     def to_dict(self):
         x = {}
@@ -20,12 +20,21 @@ class Device():
             del x["cls"]
         return x
 
+    def __getitem__(self,key):
+        return self.__getattr__(key)
+
     def __getattr__(self,attr):
         if attr!="class" and attr in self._info:
             return self._info[attr]
         if attr in self._dev:
             return self._dev[attr]
-        raise AttributeError
+        return None
+        #raise AttributeError ##TODO: check correctness
+
+    def get(self,attr,default=None):
+        x = self.__getattr__(attr)
+        if x is None: return default
+        return x
 
     def virtualize(self,bin):
         pass

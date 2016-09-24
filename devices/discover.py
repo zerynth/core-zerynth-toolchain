@@ -2,6 +2,7 @@ from base import *
 import sys
 import importlib
 import json
+import hashlib
 
 
 
@@ -30,10 +31,10 @@ class Discover():
         self.load_devices()
 
     def load_devices(self):
-        bdirs = fs.dirs("/home/giacomo/git/boardtest")#env.boards)
+        bdirs = fs.dirs(env.devices)
         for bdir in bdirs:
             try:
-                bj = fs.get_json(fs.path(bdir,"board.json"))
+                bj = fs.get_json(fs.path(bdir,"device.json"))
                 bj["path"] = bdir
                 for cls in bj["class"]:
                     try:
@@ -46,9 +47,9 @@ class Discover():
                         sys.path.pop()
                         self.device_cls[bdir+"::"+bcls]=bjc
                     except Exception as e:
-                        print("#",e)
+                        warning(e,err=True)
             except Exception as e:
-                print("#",e)
+                warning(e,err=True)
 
     def wait_for_uid(self,uid,loop=5,matchdb=True):
         for l in range(loop):
@@ -111,7 +112,7 @@ class Discover():
     def matching_uids(self,devs,a_uid):
         uids=[]
         for uid,dev in devs.items():
-            u = dev["uid"]
+            u = dev.uid
             if u.startswith(a_uid):
                 uids.append(u)
         return uids
@@ -147,7 +148,10 @@ class Discover():
         
 
     def make_uid(self,dev):
-        return dev["vid"]+":"+dev["pid"]+":"+dev["sid"]
+        h = hashlib.sha1()
+        k = dev["vid"]+":"+dev["pid"]+":"+dev["sid"]
+        h.update(bytes(k,"ascii"))
+        return h.hexdigest()
 
     def make_fingerprint(self,dev):
         return (dev["port"] or "")+":"+(dev["disk"] or "")

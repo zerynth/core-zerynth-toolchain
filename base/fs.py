@@ -31,6 +31,10 @@ class zfs():
         with open(dst,"w") as ff:
             json.dump(js,ff,indent=4,sort_keys=True)
 
+    def write_file(self,data,dst):
+        with open(dst,"w") as ff:
+            ff.write(data)
+
     def rmtree(self,dst):
         pass
 

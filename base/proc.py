@@ -1,4 +1,5 @@
 from .base import *
+from .fs import *
 from .cfg import *
 import subprocess
 import shlex
@@ -17,6 +18,32 @@ class prc():
             self.startupnfo = subprocess.STARTUPINFO()
             self.startupnfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
             self.startupnfo.wShowWindow = subprocess.SW_HIDE
+
+        for d in fs.dirs(env.sys):
+            try:
+                bj = fs.get_json(fs.path(bdir,"device.json"))
+                bj["path"] = bdir
+                for cls in bj["class"]:
+                    try:
+                        sys.path.append(bdir)
+                        module,bcls = cls.split(".")
+                        bc = importlib.import_module(module)
+                        dcls = getattr(bc,bcls)
+                        bjc = dict(bj)
+                        bjc["cls"]=dcls
+                        sys.path.pop()
+                        self.device_cls[bdir+"::"+bcls]=bjc
+                    except Exception as e:
+                        warning(e,err=True)
+            except Exception as e:
+                warning(e,err=True)
+
+
+    def runcmd(self,cmd,*args):
+        cmdval = env.get_command(cmd)
+        if cmdval is None:
+            return None #TODO: raise proper exception
+        return self.run(cmdval,*args)
 
     def run(self,cmd,*args):
         try:

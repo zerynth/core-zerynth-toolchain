@@ -10,7 +10,7 @@ import devices
 def uplink(uid,bytecode,loop):
     _dsc = devices.Discover()
     uids = []
-    # search for device
+    # search for device #TODO: search for alias
     info("Searching for device",uid)
     uids, devs = _dsc.wait_for_uid(uid)
     if not uids:
@@ -34,6 +34,7 @@ def uplink(uid,bytecode,loop):
     conn = ConnectionInfo()
     conn.set_serial(dev.port,*dev.connection)
     ch = Channel(conn)
+
 
 
 

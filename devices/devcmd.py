@@ -62,20 +62,20 @@ def alias_put(uid,alias,name,target):
         fatal("Malformed alias")
     devs = _dsc.run_one(True)
     print(devs)
-    uids=_dsc.matching_uids(uid)
+    uids=_dsc.matching_uids(devs, uid)
     print(uids)
     if len(uids)<=0:
         fatal("No devices with uid",uid)
     elif len(uids)==1:
         uid = uids[0]
         aliaskey = alias
-        aliases = env.get_dev(aliaskey)
+        aliases = env.get_dev(uid)
         aliasuid = aliases[alias].uid if alias in aliases else None
         deventry = {
             "alias":alias,
             "uid":uid,
-            "name": aliases[alias].name if not name or aliasuid!=None else "",
-            "target": aliases[alias].target if not target or aliasuid!=None else "",
+            "name": aliases[alias].name if not name and aliasuid!=None else "",
+            "target": aliases[alias].target if not target and aliasuid!=None else "",
         }
         if target and not _target_exists(target):
                 fatal("No such target",target)

@@ -20,6 +20,9 @@ class Var():
 
 class Environment():
     
+    def __init__(self):
+        self.commands={}
+
     def dirs(self):
         prefix = fs.homedir()
         for x in self.__dict__:
@@ -46,7 +49,7 @@ class Environment():
             self._dbs_cfgdir=cfgdir
             self._dbs_dbname=dbname
             self._dbs = sqlite3.connect(fs.path(cfgdir,dbname),check_same_thread=False)
-            self._dbs.execute("CREATE TABLE IF NOT EXISTS aliases (alias TEXT PRIMARY KEY, uid TEXT, shortname TEXT, name TEXT)")
+            self._dbs.execute("CREATE TABLE IF NOT EXISTS aliases (alias TEXT PRIMARY KEY, uid TEXT, target TEXT, name TEXT)")
             self._dbs.execute("CREATE UNIQUE INDEX IF NOT EXISTS aliases_idx ON aliases(alias)")
             self._dbs.execute("CREATE UNIQUE INDEX IF NOT EXISTS uid_idx ON aliases(uid)")
         except Exception as e:
@@ -61,10 +64,8 @@ class Environment():
     def get_dev(self,key):
         res = {}
         for row in self._dbs.execute("select * from aliases where alias=? or uid=?",(key,key)):
-            res[row[0]]=Var({"alias":row[0],"uid":row[1],"target":var[2],"name":var[3]})
+            res[row[0]]=Var({"alias":row[0],"uid":row[1],"target":row[2],"name":row[3]})
         return res
-    
-
 
     def put_dev(self,dev):
         if not isinstance(dev,Var):
@@ -75,6 +76,12 @@ class Environment():
     def del_dev(self,dev):
         self._dbs.execute("delete from aliases where alias=?",(dev.alias,))
         self._dbs.commit()
+
+    def add_command(self,cmdname,cmdvalue):
+        self.commands[cmdname]=cmdvalue
+
+    def get_command(self,cmdname):
+        return self.commands.get(cmdname)
 
 
 env=Environment()
@@ -127,7 +134,7 @@ def init_cfg():
 
     # load configuration
     env.load(env.cfg)
-    env.load_dbs(env.cfg,"db.json")
+    env.load_dbs(env.cfg,"devices.db")
     version = env.var.version
 
     # dist directories
@@ -139,7 +146,8 @@ def init_cfg():
     env.studio    = fs.path(env.home,"dist",version,"studio")
     env.docs      = fs.path(env.home,"dist",version,"docs")
     env.examples  = fs.path(env.home,"dist",version,"examples")
-    env.devices    = fs.path(env.home,"dist",version,"devices")
+    #env.devices    = fs.path(env.home,"dist",version,"devices")
+    env.devices    = fs.path(fs.homedir(),"git","ZerynthBoards") #TODO: remove
 
     # set global temp dir
     fs.set_temp(env.tmp)
