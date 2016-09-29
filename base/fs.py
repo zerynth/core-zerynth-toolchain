@@ -2,6 +2,8 @@ import os
 import os.path
 import tempfile
 import json
+import shutil
+from .cfg import *
 
 __all__ = ["fs"]
 
@@ -35,8 +37,9 @@ class zfs():
         with open(dst,"w") as ff:
             ff.write(data)
 
-    def rmtree(self,dst):
-        pass
+    def rmtree(self,dst, is_windows):
+        ####TODO implement for windows
+        shutil.rmtree(dst)
 
     def copytree(self,src,dst):
         pass
@@ -72,7 +75,9 @@ class zfs():
             for d in dirs:
                 os.makedirs(d,exist_ok=True)
 
-
-
+    def file_exists(self, path):
+        if isinstance(path, str):
+            return os.path.isfile(path)
+        return False
 
 fs=zfs()

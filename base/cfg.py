@@ -136,6 +136,7 @@ def init_cfg():
     env.load(env.cfg)
     env.load_dbs(env.cfg,"devices.db")
     version = env.var.version
+    env.token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1aWQiOiJmMUxDQWNoYVRyZXRZV0FnTmZBY2ZRIiwianRpIjoia1Z6ZmJLcHpRRTJkRElmNTRHdmthUSIsImlzcyI6InplcnludGgiLCJleHAiOjE0NzY5NTE2NzAsImlhdCI6MTQ3NDM1OTY3MH0.7-Mx_cQ3KV5oY0pTNzW8e8MdOmucriStbnvMoCogdFA"
 
     # dist directories
     env.ztc       = fs.path(env.home,"dist",version,"ztc")

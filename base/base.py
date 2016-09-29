@@ -2,6 +2,7 @@ import click
 import sys
 import traceback
 import time
+import json
 
 __all__ =['Critical','Error','Warning','Info','echo','cli','error','warning','info','log','critical','fatal','add_init','init_all','sleep']
 
@@ -12,13 +13,19 @@ _options = {
     "traceback": True
 }
 
+################### json special type encoder
+class ZjsonEncoder(json.JSONEncoder):
+    def default(self,obj):
+        if isinstance(obj, datetime.datetime):
+            return str(obj)
+        return json.JSONEncoder.default(self, obj)
 
 ## Styles
 _styles = {
     "Critical":{"fg":"magenta","bold":True},
     "Error":{"fg":"red","bold":True},
     "Warning":{"fg":"yellow"},
-    "Info":{"fg":"cyan"}
+    "Info":{"fg":"green"}
 }
 
 
@@ -82,7 +89,7 @@ def critical(*args,**kwargs):
     
 
 def fatal(*args,**kwargs):
-    echo(Error("[error]   >"),*args,**kwargs)
+    echo(Fatal("[error]   >"),*args,**kwargs)
     sys.exit(1)
 def error(*args,**kwargs):
     echo(Error("[error]   >"),*args,**kwargs)
@@ -91,7 +98,7 @@ def warning(*args,**kwargs):
     echo(Warning("[warning] >"),*args,**kwargs)
 
 def info(*args,**kwargs):
-    echo(Warning("[info]    >"),*args,**kwargs)
+    echo(Info("[info]    >"),*args,**kwargs)
 
 log = echo
 
