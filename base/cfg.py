@@ -131,12 +131,13 @@ def init_cfg():
     env.cache     = fs.path(env.tmp,"cache")
     env.sys       = fs.path(env.home,"sys")
     env.workspace = fs.path(env.home,"workspace")
+    env.vms       = fs.path(env.home, "vms")
 
     # load configuration
     env.load(env.cfg)
     env.load_dbs(env.cfg,"devices.db")
     version = env.var.version
-    env.token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1aWQiOiJmMUxDQWNoYVRyZXRZV0FnTmZBY2ZRIiwianRpIjoia1Z6ZmJLcHpRRTJkRElmNTRHdmthUSIsImlzcyI6InplcnludGgiLCJleHAiOjE0NzY5NTE2NzAsImlhdCI6MTQ3NDM1OTY3MH0.7-Mx_cQ3KV5oY0pTNzW8e8MdOmucriStbnvMoCogdFA"
+    env.token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJ6ZXJ5bnRoIiwidWlkIjoiMmo4dWVzNXJTTGFoSGRXX2VENnIwQSIsImV4cCI6MTQ3Njk2NzYwOCwiaWF0IjoxNDc0Mzc1NjA4LCJqdGkiOiJjVDZtRF9RMVF0Mld4MkJtYzVZNlR3In0.UanEyipdHxkoxpEvk9Eyg_PMS3C6lUsF7vGB4E9CkFg"
 
     # dist directories
     env.ztc       = fs.path(env.home,"dist",version,"ztc")

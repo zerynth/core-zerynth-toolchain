@@ -38,8 +38,19 @@ class zfs():
             ff.write(data)
 
     def rmtree(self,dst, is_windows):
-        ####TODO implement for windows
-        shutil.rmtree(dst)
+        if is_windows:
+            try:
+                shutil.rmtree(dst)
+            except Exception as e:
+                print(e)
+                for path, dirs, files in os.walk(dst):
+                    for file in files:
+                        try:
+                            os.remove(os.join(path, file))
+                        except Exception as e:
+                            print("Warning: can't remove file :", file, "error: ", e)
+        else:
+            shutil.rmtree(dst)
 
     def copytree(self,src,dst):
         pass

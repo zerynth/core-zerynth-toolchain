@@ -13,13 +13,6 @@ _options = {
     "traceback": True
 }
 
-################### json special type encoder
-class ZjsonEncoder(json.JSONEncoder):
-    def default(self,obj):
-        if isinstance(obj, datetime.datetime):
-            return str(obj)
-        return json.JSONEncoder.default(self, obj)
-
 ## Styles
 _styles = {
     "Critical":{"fg":"magenta","bold":True},
@@ -89,7 +82,7 @@ def critical(*args,**kwargs):
     
 
 def fatal(*args,**kwargs):
-    echo(Fatal("[error]   >"),*args,**kwargs)
+    echo(Critical("[error]   >"),*args,**kwargs)
     sys.exit(1)
 def error(*args,**kwargs):
     echo(Error("[error]   >"),*args,**kwargs)

@@ -3,6 +3,8 @@ from .discover import *
 import click
 import re
 
+dev_url = "http://localhost/zbackend/devices/"
+
 _dsc = None
 
 @cli.group()
@@ -39,8 +41,32 @@ def _target_exists(target):
 
 @device.command()
 @click.argument("uid")
-def register(uid):
-    pass
+@click.argument("name")
+def register(uid, name):
+    ### TODO mactchdb true and parse board infomations
+    dev_list = _dsc.run_one(matchdb=False)
+    if uid in dev_list:
+        #print(dev_list[uid])
+        ### TODO load basic firmware and parse device informations (on_chip_id, type, etc.)
+        dinfo = {
+            "name": name,
+            "on_chip_id": "123456789",
+            "type": "flipnclick_sam3x",
+            "category": "AT91SAM3X8E"
+        }
+        headers = {"Authorization": "Bearer "+env.token}
+        try:
+            res = zpost(url=dev_url, headers=headers, data=dinfo)
+            #print(res.json())
+            if res.json()["status"] == "success":
+                info("Device",name,"created with uid:", res.json()["data"]["uid"])
+                ### TODO save mongodb uid in sqlite db
+            else:
+                error("Error in device data:", res.json()["message"])
+        except Exception as e:
+            error("Can't create device entity")
+
+
 
 
 
