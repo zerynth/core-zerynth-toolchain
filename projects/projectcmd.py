@@ -120,24 +120,21 @@ def git_init(path):
             else:
                 error("Can't create git remote repository")
                 return
+            zgit = proj_contents["git_url"]
+            zgit = zgit.replace("local://",env.git_url)
             try:
                 repo_path = pygit2.discover_repository(path)
                 print(repo_path)
                 repo = pygit2.Repository(repo_path)
-                repo.create_remote("zerynth", "http://"+env.token+":x-oauth-basic@"+proj_contents["git_url"])
+                repo.create_remote("zerynth", "http://"+env.token+":x-oauth-basic@"+zgit)
             except KeyError:
                 pygit2.init_repository(path)
                 repo_path = pygit2.discover_repository(path)
                 print(repo_path)
                 repo = pygit2.Repository(path)
-                repo.create_remote("zerynth", "http://"+env.token+":x-oauth-basic@"+proj_contents["git_url"])
+                repo.create_remote("zerynth", "http://"+env.token+":x-oauth-basic@"+zgit)
         except Exception as e:
             warning("Can't create git repository", e)
-        
-
-@project.command()
-def publish():
-    pass
 
 
 @project.command("import") 

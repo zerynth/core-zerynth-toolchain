@@ -55,9 +55,25 @@ class Environment():
         except Exception as e:
             self._dbs = None
 
+    def load_pack_db(self,cfgdir,dbname):
+        try:
+            self._pack_db_cfgdir=cfgdir
+            self._pack_db_dbname=dbname
+            self._pack_db = sqlite3.connect(fs.path(cfgdir,dbname),check_same_thread=False)
+            self._pack_db.execute("create table IF NOT EXISTS packages(uid TEXT PRIMARY KEY, fullname TEXT, type TEXT, tag TEXT, authname TEXT, last_version TEXT, dependencies TEXT, whatsnew TEXT, rating REAL, num_of_votes INTEGER, num_of_downloads INTEGER, last_update TEXT)")
+            self._pack_db.execute("create unique index IF NOT EXISTS packagenames on packages(fullname)")
+        except Exception as e:
+            self._pack_db = None
+
     def save_dbs(self):
         try:
             self._dbs.commit()
+        except Exception as e:
+            critical("can't save configuration",exc=e)
+
+    def save_pack_db(self):
+        try:
+            self._pack_db.commit()
         except Exception as e:
             critical("can't save configuration",exc=e)
 
@@ -67,11 +83,36 @@ class Environment():
             res[row[0]]=Var({"alias":row[0],"uid":row[1],"target":row[2],"name":row[3]})
         return res
 
+    def get_pack(self,fullname):
+        res = {}
+        for row in self._pack_db.execute("select * from packages where fullname=?",(fullname)):
+            res[row[0]]=Var({
+                    "uid":row[0],
+                    "fullname":row[1],
+                    "type":row[2],
+                    "tag":row[3],
+                    "authname":row[4],
+                    "last_version":row[5],
+                    "dependencies":row[6], 
+                    "whatsnew":row[7],
+                    "rating":row[8],
+                    "num_of_votes":row[9],
+                    "num_of_downloads":row[10],
+                    "last_update":row[11]
+                    })
+        return res
+
     def put_dev(self,dev):
         if not isinstance(dev,Var):
             dev = Var(dev)
         self._dbs.execute("insert or replace into aliases values(?,?,?,?)",(dev.alias,dev.uid,dev.target,dev.name))
         self._dbs.commit()
+
+    def put_pack(self,pack):
+        if not isinstance(pack,Var):
+            pack = Var(pack)
+        self._pack_db.execute("insert or replace into packages values(?,?,?,?,?,?,?,?,?,?,?,?)",(pack.uid, pack.fullname, pack.type, pack.tag, pack.authname, pack.last_version, pack.dependencies, pack.whatsnew, pack.rating, pack.num_of_votes, pack.num_of_downloads, pack.last_update))
+        self._pack_db.commit()
 
     def del_dev(self,dev):
         self._dbs.execute("delete from aliases where alias=?",(dev.alias,))
@@ -131,13 +172,17 @@ def init_cfg():
     env.cache     = fs.path(env.tmp,"cache")
     env.sys       = fs.path(env.home,"sys")
     env.workspace = fs.path(env.home,"workspace")
-    env.vms       = fs.path(env.home, "vms")
+    env.vms       = fs.path(env.home,"vms")
+    env.edb       = fs.path(env.home,"cfg","edb")
+    env.zdb       = fs.path(env.home,"cfg","zdb")
 
     # load configuration
     env.load(env.cfg)
     env.load_dbs(env.cfg,"devices.db")
+    env.load_pack_db(env.zdb,"packages.db")
     version = env.var.version
     env.token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJ6ZXJ5bnRoIiwidWlkIjoiMmo4dWVzNXJTTGFoSGRXX2VENnIwQSIsImV4cCI6MTQ3Njk2NzYwOCwiaWF0IjoxNDc0Mzc1NjA4LCJqdGkiOiJjVDZtRF9RMVF0Mld4MkJtYzVZNlR3In0.UanEyipdHxkoxpEvk9Eyg_PMS3C6lUsF7vGB4E9CkFg"
+    env.git_url = "localhost/git/"
 
     # dist directories
     env.ztc       = fs.path(env.home,"dist",version,"ztc")

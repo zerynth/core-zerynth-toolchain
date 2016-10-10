@@ -3,6 +3,8 @@ import os.path
 import tempfile
 import json
 import shutil
+import tarfile
+from zlib import crc32
 from .cfg import *
 
 __all__ = ["fs"]
@@ -37,6 +39,10 @@ class zfs():
         with open(dst,"w") as ff:
             ff.write(data)
 
+    def write_bytes_file(self,data,dst):
+        with open(dst,"wb") as ff:
+            ff.write(data)
+
     def rmtree(self,dst, is_windows):
         if is_windows:
             try:
@@ -46,11 +52,17 @@ class zfs():
                 for path, dirs, files in os.walk(dst):
                     for file in files:
                         try:
-                            os.remove(os.join(path, file))
+                            os.remove(os.path.join(path, file))
                         except Exception as e:
                             print("Warning: can't remove file :", file, "error: ", e)
         else:
             shutil.rmtree(dst)
+
+    def rm_file(self, dst):
+        try:
+            os.remove(os.path.join(dst))
+        except Exception as e:
+            print("Warning: can't remove file :", dst, "error: ", e)
 
     def copytree(self,src,dst):
         pass
@@ -58,8 +70,30 @@ class zfs():
     def mergetree(self,src,dst):
         pass
 
-    def untarxz(self,src,dst):
-        pass
+    def untarxz(self,src,dst,crc_enable=False):
+        try:
+            tfile = tarfile.open(src)
+            tt = tfile.getmember(dst.split('/')[-1])
+            ff = tfile.extractfile(tt)
+            dd = ''.encode("utf-8")
+            if crc_enable:
+                crc = crc32(''.encode("utf-8"))
+            while True:
+                data = ff.read(1024)
+                if not data:
+                    break
+                dd += data
+                if crc_enable:
+                    crc = crc32(data, crc)
+            if crc_enable:
+                return crc
+            fs.write_bytes_file(dd, dst)
+        except FileNotFoundError:
+            if crc_enable:
+                return 0
+        except Exception as e:
+            print("Error in fs:", e)
+
 
     def tarxz(self,src,dst):
         pass
