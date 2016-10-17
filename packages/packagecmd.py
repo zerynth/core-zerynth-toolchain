@@ -5,9 +5,14 @@ import json
 import sys
 import pygit2
 import sqlite3
+from .local_zpm  import *
+from .packages import *
+from .zversions import *
 
 pack_url = "http://localhost/zbackend/packages/"
 db_url = "http://localhost/zbackend/database/"
+
+_zpm = None
 
 def check_db(repo):
     headers = {"Authorization": "Bearer "+env.token}
@@ -27,23 +32,29 @@ def update_zdb(repo):
         res = {
             "uid":row[0],
             "fullname":row[1],
-            "type":row[2],
-            "tag":row[3],
-            "authname":row[4],
-            "last_version":row[5],
-            "dependencies":row[6], 
-            "whatsnew":row[7],
-            "rating":row[8],
-            "num_of_votes":row[9],
-            "num_of_downloads":row[10],
-            "last_update":row[11]
+            "name":row[2],
+            "description":row[3],
+            "type":row[4],
+            "tag":row[5],
+            "authname":row[6],
+            "git_pointer": row[7],
+            "last_version":row[8],
+            "dependencies":row[9], 
+            "whatsnew":row[10],
+            "rating":row[11],
+            "num_of_votes":row[12],
+            "num_of_downloads":row[13],
+            "versions":row[14],
+            "keywords":row[15],
+            "last_update":row[16]
             }
         env.put_pack(res)
     fs.rm_file(fs.path(repo, "packages.db"))
 
 @cli.group()
 def package():
-    pass
+    global _zpm
+    _zpm = Zpm()
 
 @package.command()
 @click.argument("path",type=click.Path())
@@ -129,10 +140,48 @@ def publish(path, version, git):
     
 
 @package.command()
-@click.argument("fullname")
-@click.argument("version")
-@click.option("--db", flag_value=True, default=False)
-def install(fullname, version, db):
+@click.option("-p", multiple=True, type=str)
+@click.option("--db", flag_value=False, default=True)
+@click.option("--last", flag_value=True, default=False)
+@click.option("--force", flag_value=True, default=False)
+def install(p, db, last, force):
+    
+    #### update local dbs
+    if db:
+        for repo in fs.dirs(env.edb):
+            res = check_db(repo)
+            if res.status_code == 304:
+                info(repo, "database already at server version")
+            elif res.status_code == 200:
+                info(repo, "uploading new last server version...")
+                fs.write_bytes_file(res.content, fs.path(env.edb, repo, "repo.tar.xz"))
+            else:
+                error(repo, "--> Error from the server", res.status_code)
+                continue
+            #### integrate edb in zdb
+            res = update_zdb(repo)
+
+    #### check packages and its dependecies
+    packages = {}
+    for pack in p:
+        if ':' in pack:
+            fullname = pack.split(':')[0]
+            version = pack.split(':')[1]
+        else:
+            fullname = pack
+            version = False
+        packages.update({fullname: version})
+
+    if packages:
+        try:
+            ##### TODO evaluate the force flag for package installations
+            _zpm.install(packages, last, force)
+        except Exception as e:
+            fatal("Impossible to install this packages:", e)
+
+
+@package.command()
+def update_all():
     
     #### update local dbs
     for repo in fs.dirs(env.edb):
@@ -148,10 +197,20 @@ def install(fullname, version, db):
         #### integrate edb in zdb
         res = update_zdb(repo)
 
+    #### check packages and its dependecies
+    try:
+        _zpm.update_all()
+    except Exception as e:
+        fatal("Impossible to install this packages:", e)
 
+@package.command()
+@click.option("-p", multiple=True, type=str)
+def uninstall(p):
+    packages = []
+    for pack in p:
+        packages.append(pack)
 
-    
-    
-
-    #### check package and its dependecies
-    
+    #try:
+    _zpm.uninstall(packages)
+    #except Exception as e:
+    #    fatal("impossible to unistall packages:", e)

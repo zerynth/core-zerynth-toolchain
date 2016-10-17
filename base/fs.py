@@ -113,6 +113,10 @@ class zfs():
         root,dirnames,files = next(os.walk(path))
         return [self.path(path,x) for x in dirnames]
 
+    def files(self,path):
+        root,dirnames,files = next(os.walk(path))
+        return [self.path(path,x) for x in files]
+
     def makedirs(self,dirs):
         if isinstance(dirs,str):
             os.makedirs(dirs,exist_ok=True)
@@ -124,5 +128,24 @@ class zfs():
         if isinstance(path, str):
             return os.path.isfile(path)
         return False
+
+    def rm_readonly(self, func, path):
+        try:
+            if not os.path.exists(path):
+                return
+            os.chmod(path, stat.S_IWRITE)
+            func(path)
+        except Exception as e:
+            print("ERROR in rmtree %s"%str(e))
+
+    # def remove_readonly_no_output(self, func, path, excinfo):
+    #     #used to hide the whooosh bug when updating the index in, guess.., windows -_-
+    #     try:
+    #         if not os.path.exists(path):
+    #             return
+    #         os.chmod(path, stat.S_IWRITE)
+    #         func(path)
+    #     except Exception as e:
+    #         pass
 
 fs=zfs()
