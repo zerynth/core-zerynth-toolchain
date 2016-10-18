@@ -222,35 +222,10 @@ def uninstall(p):
 
 @package.command()
 @click.argument("query")
-@click.option("--all", flag_value=True, default=False)
-def search(query, all):
+def search(query):
     ####TODO validate 
     q = query
-    print(query)
     query_url = quote_plus(query)
-    print(query_url)
-    schema = Schema(uid=ID(stored=True,unique=True),fullname=TEXT(stored=True),title=TEXT(stored=True,field_boost=3.0),description=TEXT(stored=True),tags=KEYWORD(stored=True,lowercase=True,commas=True))
-    qp = MultifieldParser(["fullname","title","description","tags"],schema=schema)
-    qp.add_plugin(PrefixPlugin())
-    cp = OperatorsPlugin(And="&&", Or="\|\|", AndNot="&!", AndMaybe="&~", Not="!")
-    spec_chars = [" ", "&&", "||", "&!", "&~", "!", "(", ")"]
-    for c in spec_chars:
-        q = q.replace(c, " "+c+" ")
-    print(q)
-    tfld = q.split(" ")
-    print(tfld)
-    qp.add_plugin(cp)
-    q=""
-    for x in tfld:
-        print(x)
-        if x and x not in spec_chars:
-            q+=x+"*"+" "
-        elif x:
-            q+=x+" "
-    print(q)
-    qqq = qp.parse(q)
-    print(q, " --> ",qqq)
-    print(unquote(query_url))
     headers = {"Authorization": "Bearer "+env.token}
     try:
         res = zget(url=search_url+"?textquery="+query_url, headers=headers)
@@ -261,4 +236,11 @@ def search(query, all):
     except Exception as e:
         error("Can't search package", e)
 
+@package.command()
+@click.argument("fullname")
+def info(fullname):  
+    print(fullname)
+    res = env.get_pack(fullname)
+    pack = Package(res, res.uid)
+    base.info(str(pack))
 
