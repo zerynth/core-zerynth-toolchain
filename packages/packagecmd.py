@@ -5,12 +5,17 @@ import json
 import sys
 import pygit2
 import sqlite3
+import re
+from urllib.parse import quote_plus, unquote
+from whoosh.qparser import QueryParser,MultifieldParser,PrefixPlugin,OperatorsPlugin
+from whoosh.fields import *
 from .local_zpm  import *
 from .packages import *
 from .zversions import *
 
 pack_url = "http://localhost/zbackend/packages/"
 db_url = "http://localhost/zbackend/database/"
+search_url = "http://localhost:7070/packages/search"
 
 _zpm = None
 
@@ -210,7 +215,50 @@ def uninstall(p):
     for pack in p:
         packages.append(pack)
 
-    #try:
-    _zpm.uninstall(packages)
-    #except Exception as e:
-    #    fatal("impossible to unistall packages:", e)
+    try:
+        _zpm.uninstall(packages)
+    except Exception as e:
+        fatal("impossible to unistall packages:", e)
+
+@package.command()
+@click.argument("query")
+@click.option("--all", flag_value=True, default=False)
+def search(query, all):
+    ####TODO validate 
+    q = query
+    print(query)
+    query_url = quote_plus(query)
+    print(query_url)
+    schema = Schema(uid=ID(stored=True,unique=True),fullname=TEXT(stored=True),title=TEXT(stored=True,field_boost=3.0),description=TEXT(stored=True),tags=KEYWORD(stored=True,lowercase=True,commas=True))
+    qp = MultifieldParser(["fullname","title","description","tags"],schema=schema)
+    qp.add_plugin(PrefixPlugin())
+    cp = OperatorsPlugin(And="&&", Or="\|\|", AndNot="&!", AndMaybe="&~", Not="!")
+    spec_chars = [" ", "&&", "||", "&!", "&~", "!", "(", ")"]
+    for c in spec_chars:
+        q = q.replace(c, " "+c+" ")
+    print(q)
+    tfld = q.split(" ")
+    print(tfld)
+    qp.add_plugin(cp)
+    q=""
+    for x in tfld:
+        print(x)
+        if x and x not in spec_chars:
+            q+=x+"*"+" "
+        elif x:
+            q+=x+" "
+    print(q)
+    qqq = qp.parse(q)
+    print(q, " --> ",qqq)
+    print(unquote(query_url))
+    headers = {"Authorization": "Bearer "+env.token}
+    try:
+        res = zget(url=search_url+"?textquery="+query_url, headers=headers)
+        if res.json()["status"] == "success":
+            info(json.dumps(res.json()["data"],sort_keys=True,indent=4))
+        else:
+            error("Can't search package",res.json()["message"])
+    except Exception as e:
+        error("Can't search package", e)
+
+
