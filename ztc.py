@@ -3,7 +3,10 @@ from base import *
 import compiler
 import devices
 import uplinker
-import project
+import projects
+import packages
+import virtualmachines
+import namespaces
 
 import json
 

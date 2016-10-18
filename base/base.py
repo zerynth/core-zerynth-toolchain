@@ -18,7 +18,7 @@ _styles = {
     "Critical":{"fg":"magenta","bold":True},
     "Error":{"fg":"red","bold":True},
     "Warning":{"fg":"yellow"},
-    "Info":{"fg":"cyan"}
+    "Info":{"fg":"green"}
 }
 
 
@@ -94,7 +94,7 @@ def warning(*args,**kwargs):
     echo(Warning("[warning]>"),*args,**kwargs)
 
 def info(*args,**kwargs):
-    echo(Warning("[info]>"),*args,**kwargs)
+    echo(Info("[info]    >"),*args,**kwargs)
 
 log = echo
 
@@ -110,5 +110,3 @@ def cli(verbose,nocolors,notraceback):
     _options["colors"]=nocolors
     _options["traceback"]=notraceback
     _options["verbose"]=verbose
-
-

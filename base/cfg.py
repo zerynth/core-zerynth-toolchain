@@ -2,8 +2,9 @@ import sys
 import sqlite3
 from .base import *
 from .fs import *
+import json
 
-__all__=['env']
+__all__=['env','Var']
 
 class Var():
     def __init__(self, _dict={}):
@@ -59,9 +60,41 @@ class Environment():
         except Exception as e:
             self._dbs = None
 
+    def load_zpack_db(self,cfgdir,dbname):
+        try:
+            self._zpack_db_cfgdir=cfgdir
+            self._zpack_db_dbname=dbname
+            self._zpack_db = sqlite3.connect(fs.path(cfgdir,dbname),check_same_thread=False)
+            self._zpack_db.execute("create table IF NOT EXISTS packages(uid TEXT PRIMARY KEY, fullname TEXT, name TEXT, description TEXT, type TEXT, tag TEXT, authname TEXT, git_pointer TEXT, last_version TEXT, dependencies TEXT, whatsnew TEXT, rating REAL, num_of_votes INTEGER, num_of_downloads INTEGER, versions TEXT, keywords TEXT, last_update TEXT)")
+            self._zpack_db.execute("create unique index IF NOT EXISTS packagenames on packages(fullname)")
+        except Exception as e:
+            self._zpack_db = None
+
+    def load_ipack_db(self,cfgdir,dbname):
+        try:
+            self._ipack_db_cfgdir=cfgdir
+            self._ipack_db_dbname=dbname
+            self._ipack_db = sqlite3.connect(fs.path(cfgdir,dbname),check_same_thread=False)
+            self._ipack_db.execute("create table IF NOT EXISTS packages(uid TEXT PRIMARY KEY, fullname TEXT, name TEXT, description TEXT, type TEXT, tag TEXT, authname TEXT, git_pointer TEXT, last_version TEXT, dependencies TEXT, whatsnew TEXT, rating REAL, num_of_votes INTEGER, num_of_downloads INTEGER, versions TEXT, keywords TEXT, last_update TEXT)")
+            self._ipack_db.execute("create unique index IF NOT EXISTS packagenames on packages(fullname)")
+        except Exception as e:
+            self._ipack_db = None
+
     def save_dbs(self):
         try:
             self._dbs.commit()
+        except Exception as e:
+            critical("can't save configuration",exc=e)
+
+    def save_zpack_db(self):
+        try:
+            self._zpack_db.commit()
+        except Exception as e:
+            critical("can't save configuration",exc=e)
+
+    def save_ipack_db(self):
+        try:
+            self._ipack_db.commit()
         except Exception as e:
             critical("can't save configuration",exc=e)
 
@@ -71,11 +104,48 @@ class Environment():
             res[row[0]]=Var({"alias":row[0],"uid":row[1],"target":row[2],"name":row[3],"chipid":row[4]})
         return res
 
+    def get_pack(self, fullname, db=None):
+        res = None
+        if db is None:
+            db = self._zpack_db
+        for row in db.execute("select * from packages where fullname=?",(fullname,)):
+            res=Var({
+                    "uid":row[0],
+                    "fullname":row[1],
+                    "name":row[2],
+                    "description":row[3],
+                    "type":row[4],
+                    "tag":row[5],
+                    "authname":row[6],
+                    "git_pointer": row[7],
+                    "last_version":row[8],
+                    "dependencies":row[9], 
+                    "whatsnew":row[10],
+                    "rating":row[11],
+                    "num_of_votes":row[12],
+                    "num_of_downloads":row[13],
+                    "versions":row[14],
+                    "keywords":row[15],
+                    "last_update":row[16]
+                    })
+        return res
+
     def put_dev(self,dev):
         if not isinstance(dev,Var):
             dev = Var(dev)
         self._dbs.execute("insert or replace into aliases values(?,?,?,?,?)",(dev.alias,dev.uid,dev.target,dev.name,dev.chipid))
         self._dbs.commit()
+
+    def put_pack(self, pack, db=None):
+        if not isinstance(pack,Var):
+            if isinstance(pack,dict):
+                pack = Var(pack)
+            else:
+                pack = Var(pack.to_var())
+        if db is None:
+            db = self._zpack_db
+        db.execute("insert or replace into packages values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",(pack.uid, pack.fullname, pack.name, pack.description, pack.type, pack.tag, pack.authname, pack.git_pointer, str(pack.last_version), str(pack.dependencies), str(pack.whatsnew), pack.rating, pack.num_of_votes, pack.num_of_downloads, str(pack.versions), str(pack.keywords), pack.last_update))
+        db.commit()
 
     def del_dev(self,dev):
         self._dbs.execute("delete from aliases where alias=?",(dev.alias,))
@@ -125,15 +195,24 @@ def init_cfg():
     zdir = "Zerynth" if env.is_windows() else ".Zerynth"
     env.home      = fs.path(fs.homedir(),zdir)
     env.cfg       = fs.path(env.home,"cfg")
+    env.env       = fs.path(env.home,"env")
     env.devdb     = fs.path(env.home,"cfg","devdb")
     env.tmp       = fs.path(env.home,"tmp")
     env.sys       = fs.path(env.home,"sys")
     env.workspace = fs.path(env.home,"workspace")
+    env.vms       = fs.path(env.home,"vms")
+    env.edb       = fs.path(env.home,"cfg","edb")
+    env.zdb       = fs.path(env.home,"cfg","zdb")
+    env.idb       = fs.path(env.home,"cfg","idb")
 
     # load configuration
     env.load(env.cfg)
     env.load_dbs(env.cfg,"devices.db")
+    env.load_zpack_db(env.zdb,"packages.db")
+    env.load_ipack_db(env.idb,"packages.db")
     version = env.var.version
+    env.token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJ6ZXJ5bnRoIiwidWlkIjoiMmo4dWVzNXJTTGFoSGRXX2VENnIwQSIsImV4cCI6MTQ3Njk2NzYwOCwiaWF0IjoxNDc0Mzc1NjA4LCJqdGkiOiJjVDZtRF9RMVF0Mld4MkJtYzVZNlR3In0.UanEyipdHxkoxpEvk9Eyg_PMS3C6lUsF7vGB4E9CkFg"
+    env.git_url = "localhost/git/"
 
     # dist directories
     env.ztc       = fs.path(env.home,"dist",version,"ztc")
