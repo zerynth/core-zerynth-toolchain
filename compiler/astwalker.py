@@ -1,14 +1,14 @@
 import ast
-from compiler.utils.code import ByteCode, CodeObj
-from compiler.utils.opcode import OpCode
-from compiler.utils.env import Name, Env, Scope
+from compiler.code import ByteCode, CodeObj
+from compiler.opcode import OpCode
+from compiler.env import Name, Env, Scope
 from collections import OrderedDict
 import sys
 from ast import *
 import os
 import os.path
 
-from compiler.utils.exceptions import CError,CSyntaxError, CNameError,CNameConstantError, CUnsupportedFeatureError,CWrongSyntax
+from compiler.exceptions import *
 
 
 class AstWalker(ast.NodeVisitor):

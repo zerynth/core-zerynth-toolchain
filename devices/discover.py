@@ -28,7 +28,15 @@ class Discover():
         self.devices = {}
         self.matched_devices = {}
         self.device_cls = {}
+        self.targets = {}
         self.load_devices()
+
+    def get_targets(self):
+        return self.targets
+
+    def get_target(self,target):
+        tgt = self.targets[target]
+        return tgt["cls"](tgt,{}) 
 
     def load_devices(self):
         bdirs = fs.dirs(env.devices)
@@ -46,6 +54,8 @@ class Discover():
                         bjc["cls"]=dcls
                         sys.path.pop()
                         self.device_cls[bdir+"::"+bcls]=bjc
+                        if "target" in bj:
+                            self.targets[bj["target"]]=bjc
                     except Exception as e:
                         warning(e,err=True)
             except Exception as e:
@@ -53,12 +63,12 @@ class Discover():
 
     def wait_for_uid(self,uid,loop=5,matchdb=True):
         for l in range(loop):
-            info("attempt",l)
-            devs = self.run_one(matchdb) #todo: set to true
+            devs = self.run_one(matchdb)
             uids = self.matching_uids(devs,uid)
             if len(uids)>=1:
                 return uids,devs
             sleep(1)
+            info("attempt",l+1)
         return [],{}
 
 
@@ -101,10 +111,35 @@ class Discover():
 
     def match_devices(self):
         ndb = {}
+        pdevs = []
+        tuid= {}
+        # augment devices with devdb info (alias and target and name)
+        for uid,dev in self.devices.items():
+            devs = env.get_dev(uid)
+            if devs:
+                for alias,d in devs.items():
+                    x = dict(dev)
+                    x["alias"] = d.alias
+                    x["custom_name"] = d.name
+                    x["target"] = d.target
+                    pdevs.append(x)
+                    if d.uid not in tuid:
+                        tuid[d.uid]=[]
+                    tuid[d.uid].append(x)
+            else:
+                dev["alias"]=None
+                pdevs.append(dev)
+        
+        # perform device - known device matching
         for dkey,dinfo in self.device_cls.items():
             cls = dinfo["cls"]
-            for uid,dev in self.devices.items():
-                if cls.match(dev):
+            for dev in pdevs:
+                #print("Checking",dev["uid"],dev["uid"] in tuid,dev)
+                if dev["uid"] in tuid:  # uid with alias and target
+                    if dinfo.get("target")==dev.get("target","-"):
+                        obj = cls(dinfo,dev)
+                        ndb[obj.hash()]=obj
+                elif cls.match(dev):
                     obj = cls(dinfo,dev)
                     ndb[obj.hash()]=obj
         return ndb
@@ -116,6 +151,43 @@ class Discover():
             if u.startswith(a_uid):
                 uids.append(u)
         return uids
+
+
+    def matching_uids_or_alias(self,devs,a_uid):
+        uids=[]
+        for uid,dev in devs.items():
+            if dev.uid.startswith(a_uid):
+                uids.append(dev.uid)
+            elif dev.alias and dev.alias.startswith(a_uid):
+                uids.append(dev.alias)
+        return uids
+
+    def get_by_alias(self,devs,alias):
+        for h,dev in devs.items():
+            if dev.alias==alias:
+                return dev
+        return None
+
+    def find_again(self,dev):
+        uids,devs = self.wait_for_uid(dev.uid)
+        if len(uids)!=1:
+            return None
+        return devs[dev.hash()]
+
+
+
+    def search_for_device(self,alias):
+        devs = self.run_one(True)
+        res = []
+        for h,dev in devs.items():
+            if dev.alias==alias:
+                return dev
+            elif dev.alias.startswith(alias):
+                res.append(dev)
+        if len(res)==1:
+            return res[0]
+        return res
+
 
     def run_one(self,matchdb):
         nd = self.parse()

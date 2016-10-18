@@ -1,5 +1,8 @@
 from .base import *
 import serial
+import threading
+import sys
+import os
 
 __all__ = ["ConnectionInfo","Channel"]
 
@@ -35,13 +38,13 @@ class ConnectionInfo():
     def is_socket(self):
         return self.type=="socket"
 
-    def set_serial(self,port,baudrate=115200,bytesize=8,parity=0,stopbits=1,dsrdtr=False, rtscts=False):
+    def set_serial(self,port,baudrate=115200,bytesize=8,parity="n",stopbits=1,dsrdtr=False, rtscts=False):
         self.type = "serial"
         self.port=port
         self.baudrate = baudrate
-        self.bytesize = Connection.BITS[bytesize]
-        self.parity = Connection.PARITY[parity]
-        self.stopbits = Connection.STOPS[stopbits]
+        self.bytesize = ConnectionInfo.BITS[bytesize]
+        self.parity = ConnectionInfo.PARITY[parity]
+        self.stopbits = ConnectionInfo.STOPS[stopbits]
         self.dsrdtr = dsrdtr
         self.rtscts = rtscts
 
@@ -79,14 +82,47 @@ class Channel():
         except ValueError as ve:
             raise ChannelException(ve)
 
+    def _reader(self):
+        try:
+            while True:
+                toread = self.ch.inWaiting() or 1
+                data = self.ch.read(toread)
+                log(data.decode("ascii","replace"),sep="",end="")
+        except Exception as e:
+            print("READER",e)
+
+    def _writer(self):
+        try:
+            while True:
+                data = sys.stdin.read(1) #TODO: do not block here, try select
+                if not data:
+                    self.close()
+                    return
+                self.write(data)
+        except Exception as e:
+            print(e)
+
+
+    def run(self):
+        self.thguard = threading.Event()
+        self.thw = threading.Thread(None,target=self._writer)
+        self.thw.start()
+        self._reader()
+
+
     def set_timeout(self,timeout):
         pass
 
     def write(self,data):
+        if isinstance(data,str):
+            data = bytes(data,"utf-8")
         self.ch.write(data)
 
     def read(self,n=1):
         return self.ch.read(n)
+
+    def readline(self):
+        return self.ch.readline().decode("ascii","ignore")
 
     def incoming(self):
         pass
@@ -95,5 +131,5 @@ class Channel():
         pass
 
     def close(self):
-        pass
+        return self.ch.close()
 

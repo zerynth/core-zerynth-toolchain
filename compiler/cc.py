@@ -1,8 +1,5 @@
-import os
-import os.path
-import subprocess
+from base import *
 import re
-import sys
 
 
 # CPU = -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=$(FLOAT_ABI)
@@ -15,7 +12,7 @@ import sys
 # -mthumb
 
 
-class viper_cobj():
+class ZerynthCObj():
     def __init__(self):
         self.sections = {}
         self.binary = bytearray()
@@ -37,10 +34,10 @@ class viper_cobj():
         has_rodata = ".rodata" in table.sections
         has_text = ".text" in table.sections
         #print(has_bss,has_data,has_rodata,has_text)
-        print(table)
-        table.info()
+        #print(table)
+        #table.info()
         for k,v in table.table.items():
-            print("Checking",k,v)
+            #print("Checking",k,v)
             if v[3]==".text":
                 self.symbols[v[0]]=int(v[2],16)
             elif v[3]==".bss" and (v[0]=="__bss_end__" or v[0]=="_end"):
@@ -83,7 +80,6 @@ class viper_cobj():
             #print("extended .romdata",len(self.binary))
                 
     def info(self):
-        print("VIPER C OBJECT")
         if self.data[0]:
             print(".data   :",hex(self.data[0]),"=>",hex(self.data[1]),"::",hex(self.data[2]))
         if self.bss[0]:
@@ -106,8 +102,7 @@ class symtable():
         self.table = {}
         self.sections = {"*ABS*":["*ABS*",0,0,0],"*UND*":["*UND*",0,0,0]}
     def add(self, name, size, addr, sect):
-        print("<<adding",name,size,addr,sect)
-
+        #print("<<adding",name,size,addr,sect)
         if name.startswith("."):
             self.sections[name]=[name,int(size,16),addr,0]
         else:
@@ -136,7 +131,7 @@ class symtable():
 
 #TODO: abstract for generic platform
 class gcc():
-    def __init__(self,tools, opts={},logger=None):
+    def __init__(self,tools, opts={}):
         self.gcc = tools["gcc"]
         self.gccopts = ["-c"]
         self.defines=[]
@@ -150,41 +145,53 @@ class gcc():
         self.objdump = tools["objdump"]
         self.ld = tools["ld"]
         self.readelf = tools["readelf"]
-        self.logger=logger
-        #hack to avoid annoying windows consoles
-        self.startupnfo = None
-        if sys.platform.startswith("win"):
-            self.startupnfo = subprocess.STARTUPINFO()
-            self.startupnfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-            self.startupnfo.wShowWindow = subprocess.SW_HIDE
 
     def run_command(self,cmd, args):
         ret = 0
         torun = [cmd]
         torun.extend(args)
-        print(">>>>>>>>>>"," ".join(torun))
-        try:            
-            output = subprocess.check_output(torun,stderr=subprocess.STDOUT,universal_newlines=True)
-        except subprocess.CalledProcessError as e:
-            output = e.output
-            ret = e.returncode
-        if self.logger:
-            self.logger.info("GCC: RET %s RUNNING %s, GOT %s",str(ret)," ".join(torun),output)
-        return (ret,output)
-    def compile(self, fnames,odir=None):        
-        wrn = {}
-        err = {}
-        ret = 1            
+        ecode,cout,cerr = proc.run(torun)
+        return (ecode,cout)
+
+    def get_headers(self,fnames):
+        res = {}
         for fname in fnames:
-            inc = []#["-I"+os.path.join("compiler","cdefs"),"-I"+os.path.join("vm","lang")]
-            dirname,filename = os.path.split(fname)
+            inc = []
+            res[fname]=[]
+            dirname, filename = fs.split(fname)
             if dirname:
                 inc.append("-I"+dirname)
             inc.extend(self.incpaths)
             nm = [fname]
-            if odir:
+            ret, output = self.run_command(self.gcc,self.gccopts+["-M"]+inc+nm+self.defines)
+            if not ret:
+                lines = output.split("\n")
+                for line in lines:
+                    if line.endswith("\\"):
+                        line=line[0:-1]
+                    line=line.strip()
+                    if fs.exists(line):
+                        res[fname].append(line)
+            return res
+
+    def compile(self, fnames,o=None):
+        wrn = {}
+        err = {}
+        ret = 1
+        for fname in fnames:
+            inc = []
+            dirname, filename = fs.split(fname)
+            if dirname:
+                inc.append("-I"+dirname)
+            inc.extend(self.incpaths)
+            nm = [fname]
+            if o:
                 nm.append("-o")
-                nm.append(os.path.join(odir,os.path.split(fname)[1].replace(".c",".o")))
+                if not fs.isdir(o):
+                    nm.append(o)
+                else:
+                    nm.append(fs.path(o,fs.basename(fname).replace(".c",".o")))
+                    
             ret, output = self.run_command(self.gcc,self.gccopts+inc+nm+self.defines)
             lines = output.split("\n")
             catcher = re.compile("([^:]+):([0-9]+):([0-9]+):[^:]*(warning|error)(.*)")
@@ -200,7 +207,12 @@ class gcc():
                     fname = res.group(1)
                     if fname not in cnt:
                         cnt[fname] = []
-                    cnt[fname].append( (int(res.group(2)),int(res.group(3)),res.group(5)))
+                    cnt[fname].append({
+                        "type":res.group(4),
+                        "line":int(res.group(2)),
+                        "col":int(res.group(3)),
+                        "msg":res.group(5)
+                    })
             if ret!=0:
                 break
         return (ret,wrn,err,output)
@@ -238,9 +250,9 @@ class gcc():
         #print(ldopt)
         ret,output = self.run_command(self.ld,ldopt)
         return (ret,output)
-    def generate_viper_binary(self,table,fname):
+    def generate_zerynth_binary(self,table,fname):
         res,output = self.run_command(self.objdump,["-s",fname])
-        cobj = viper_cobj()
+        cobj = ZerynthCObj()
         if res==0:
             lines = output.replace("\t"," ").split("\n")
             bcatcher = re.compile(" ([0-9a-fA-F]+) ([0-9a-fA-F]*) ([0-9a-fA-F]*) ([0-9a-fA-F]*) ([0-9a-fA-F]*)(.*)")

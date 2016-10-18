@@ -1,8 +1,8 @@
+from base import *
 import ast
 import struct
 import os
 from collections import OrderedDict
-import viper.viperconf as vconf
 
 class Var():
 
@@ -28,6 +28,13 @@ class Label():
     def getLabel(self):
         return self.label + "_" + str(self.codeid)
 
+    def toDict(self):
+        return {
+            "name":self.label,
+            "size":self.size,
+            "codeid":self.codeid,
+            "label":self.getLabel()
+        }
 
 class Byte():
 
@@ -41,6 +48,8 @@ class Byte():
     def __str__(self):
         return "B(" + str(self.val) + ")" + str(hex(id(self)))
 
+    def toDict(self):
+        return {"byte":self.val}
 
 class Short():
 
@@ -50,6 +59,9 @@ class Short():
 
     def toBytes(self, bar):
         bar += (struct.pack("=H", self.val & 0xffff))
+
+    def toDict(self):
+        return {"short":self.val}
 
 
 class Word():
@@ -61,6 +73,9 @@ class Word():
     def toBytes(self, bar):
         bar += (struct.pack("=I", self.val & 0xffffffff))
 
+    def toDict(self):
+        return {"word":self.val}
+
 
 class Double():
 
@@ -71,21 +86,24 @@ class Double():
     def toBytes(self, bar):
         bar += (struct.pack("=d", self.val & 0xffffffffffffffff))
 
+    def toDict(self):
+        return {"double":self.val}
+
 
 bytecodemap = {}
 
 
-def genByteCodeMap(bmap):
-        fname = os.path.join(vconf.envdirs["vm"],"lang","opcodes.h")
-        f = open(fname)
-        lines = f.readlines()
-        for txt in lines:
-            tmp = txt.replace("\t", " ")
-            flds = tmp.split()
-            if len(flds) >= 3 and flds[0] == "#define" and not (flds[1].startswith("_") or flds[1].startswith("NAME_")):
-                bmap[flds[1]] = Byte(int(flds[2], 16))
-                #print("{} = {}/{}".format(flds[1],flds[2],str(bmap[flds[1]])))
-genByteCodeMap(bytecodemap)
+def genByteCodeMap():
+    global bytecodemap
+    fname = os.path.join(env.stdlib,"__lang","opcodes.h")
+    f = open(fname)
+    lines = f.readlines()
+    for txt in lines:
+        tmp = txt.replace("\t", " ")
+        flds = tmp.split()
+        if len(flds) >= 3 and flds[0] == "#define" and not (flds[1].startswith("_") or flds[1].startswith("NAME_")):
+            bytecodemap[flds[1]] = Byte(int(flds[2], 16))
+            #print("{} = {}/{}".format(flds[1],flds[2],str(bmap[flds[1]])))
 
 
 # TODO: all opcodes must be single param! remove param list from OpCode

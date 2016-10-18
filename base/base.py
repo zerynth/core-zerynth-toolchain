@@ -62,12 +62,14 @@ class Info(Style):
 def echo(*args,**kwargs):
     sep = kwargs.get("sep"," ")
     end = kwargs.get("end","\n")
+    kwargs.pop("sep",None)
+    kwargs.pop("end",None)
     if args:
-        click.echo(str(args[0]),nl=False)
+        click.echo(str(args[0]),nl=False,**kwargs)
         for i in range(1,len(args)):
-            click.echo(str(sep),nl=False)
-            click.echo(str(args[i]),nl=False)
-    click.echo(str(end),nl=False)
+            click.echo(str(sep),nl=False,**kwargs)
+            click.echo(str(args[i]),nl=False,**kwargs)
+    click.echo(str(end),nl=False,**kwargs)
 
 
 def critical(*args,**kwargs):
@@ -75,23 +77,24 @@ def critical(*args,**kwargs):
         exc = kwargs.pop("exc")
     else:
         exc = None
-    echo(Critical("[fatal]   >"),*args,**kwargs)
+    echo(Critical("[fatal]>"),*args,**kwargs)
     if exc and _options["traceback"]:
         traceback.print_exc()
     sys.exit(1)
     
 
 def fatal(*args,**kwargs):
-    echo(Error("[error]   >"),*args,**kwargs)
+    echo(Error("[error]>"),*args,**kwargs)
     sys.exit(1)
+
 def error(*args,**kwargs):
-    echo(Error("[error]   >"),*args,**kwargs)
+    echo(Error("[error]>"),*args,**kwargs)
 
 def warning(*args,**kwargs):
-    echo(Warning("[warning] >"),*args,**kwargs)
+    echo(Warning("[warning]>"),*args,**kwargs)
 
 def info(*args,**kwargs):
-    echo(Warning("[info]    >"),*args,**kwargs)
+    echo(Warning("[info]>"),*args,**kwargs)
 
 log = echo
 
@@ -107,3 +110,5 @@ def cli(verbose,nocolors,notraceback):
     _options["colors"]=nocolors
     _options["traceback"]=notraceback
     _options["verbose"]=verbose
+
+

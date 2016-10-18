@@ -17,11 +17,14 @@ class Var():
     def __getattr__(self,attr):
         return self._v[attr]
 
+    def get(self,key,default=None):
+        return self._v.get(ket,default)
+
 
 class Environment():
     
     def __init__(self):
-        self.commands={}
+        pass
 
     def dirs(self):
         prefix = fs.homedir()
@@ -49,9 +52,10 @@ class Environment():
             self._dbs_cfgdir=cfgdir
             self._dbs_dbname=dbname
             self._dbs = sqlite3.connect(fs.path(cfgdir,dbname),check_same_thread=False)
-            self._dbs.execute("CREATE TABLE IF NOT EXISTS aliases (alias TEXT PRIMARY KEY, uid TEXT, target TEXT, name TEXT)")
+            self._dbs.execute("CREATE TABLE IF NOT EXISTS aliases (alias TEXT PRIMARY KEY, uid TEXT, target TEXT, name TEXT, chipid TEXT)")
             self._dbs.execute("CREATE UNIQUE INDEX IF NOT EXISTS aliases_idx ON aliases(alias)")
             self._dbs.execute("CREATE UNIQUE INDEX IF NOT EXISTS uid_idx ON aliases(uid)")
+            self._dbs.execute("CREATE UNIQUE INDEX IF NOT EXISTS chip_idx ON aliases(chipid)")
         except Exception as e:
             self._dbs = None
 
@@ -64,24 +68,18 @@ class Environment():
     def get_dev(self,key):
         res = {}
         for row in self._dbs.execute("select * from aliases where alias=? or uid=?",(key,key)):
-            res[row[0]]=Var({"alias":row[0],"uid":row[1],"target":row[2],"name":row[3]})
+            res[row[0]]=Var({"alias":row[0],"uid":row[1],"target":row[2],"name":row[3],"chipid":row[4]})
         return res
 
     def put_dev(self,dev):
         if not isinstance(dev,Var):
             dev = Var(dev)
-        self._dbs.execute("insert or replace into aliases values(?,?,?,?)",(dev.alias,dev.uid,dev.target,dev.name))
+        self._dbs.execute("insert or replace into aliases values(?,?,?,?,?)",(dev.alias,dev.uid,dev.target,dev.name,dev.chipid))
         self._dbs.commit()
 
     def del_dev(self,dev):
         self._dbs.execute("delete from aliases where alias=?",(dev.alias,))
         self._dbs.commit()
-
-    def add_command(self,cmdname,cmdvalue):
-        self.commands[cmdname]=cmdvalue
-
-    def get_command(self,cmdname):
-        return self.commands.get(cmdname)
 
 
 env=Environment()
@@ -121,6 +119,7 @@ def init_cfg():
     env.is_windows = lambda : env.platform.startswith("win")
     env.is_unix = lambda : not env.platform.startswith("win")
     env.is_mac = lambda : env.platform.startswith("mac")
+    env.is_linux = lambda : env.is_unix() and not env.is_mac()
 
     # main directories
     zdir = "Zerynth" if env.is_windows() else ".Zerynth"
@@ -128,7 +127,6 @@ def init_cfg():
     env.cfg       = fs.path(env.home,"cfg")
     env.devdb     = fs.path(env.home,"cfg","devdb")
     env.tmp       = fs.path(env.home,"tmp")
-    env.cache     = fs.path(env.tmp,"cache")
     env.sys       = fs.path(env.home,"sys")
     env.workspace = fs.path(env.home,"workspace")
 
@@ -142,7 +140,8 @@ def init_cfg():
     env.libs      = fs.path(env.home,"dist",version,"libs")
     env.nest      = fs.path(env.home,"dist",version,"nest")
     env.stdlib    = fs.path(env.home,"dist",version,"stdlib")
-    env.vhal      = fs.path(env.home,"dist",version,"vhal")
+    #env.vhal      = fs.path(env.home,"dist",version,"vhal") 
+    env.vhal      = fs.path(fs.homedir(),".zerynth","env","core","official","vhal") #TODO: remove
     env.studio    = fs.path(env.home,"dist",version,"studio")
     env.docs      = fs.path(env.home,"dist",version,"docs")
     env.examples  = fs.path(env.home,"dist",version,"examples")

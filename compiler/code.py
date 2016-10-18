@@ -3,8 +3,8 @@ Created on Oct 19, 2013
 
 @author: giacomo
 '''
-from compiler.utils.opcode import OpCode
-from compiler.utils.env import MiniTable
+from compiler.opcode import OpCode
+from compiler.env import MiniTable
 import struct
 
 
@@ -693,6 +693,17 @@ class CodeReprElement():
         self.pline = 0
     def __str__(self):
         return "{:<12} {:<3} {:>6}".format(self.opcode,(str(self.prm.val) if self.prm!=None else ""),(str(self.val) if self.val!=None else ""))
+    def toDict(self):
+        return {
+            "bpos":self.bpos,
+            "line":self.line,
+            "label":list(self.label) if self.label else None,
+            "prgline":self.prgline,
+            "opcode":self.opcode,
+            "prm":self.prm.toDict() if self.prm else None,
+            "val":self.val,
+            "pline":self.pline
+        }
 
 class CodeRepr():
     def __init__(self):
@@ -733,3 +744,19 @@ class CodeRepr():
             "lines":self.prglines
         }
         return ret
+    def toDict(self):
+        return {
+            "src":self.filename,
+            "lines":{-1 if k is None else k:v for k,v in self.prglines.items()},
+            "consts": self.consts,
+            "stacksize":self.stacksize,
+            "bcodesize":self.bcodesize,
+            "args":self.args,
+            "kwargs":self.kwargs,
+            "locals":self.locals,
+            "freevars":self.freevars,
+            "name":self.name,
+            "items": [
+                v.toDict() for k,v in self.map.items()
+            ]
+        }

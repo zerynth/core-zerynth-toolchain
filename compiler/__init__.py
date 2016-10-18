@@ -1,1 +1,2 @@
-from .test import *
+from .compilercmd import *
+from .cc import gcc

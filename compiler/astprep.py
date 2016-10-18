@@ -1,21 +1,18 @@
+from base import *
 import ast
 import json
-import os
-from compiler.utils.exceptions import CSyntaxError, CNameError,CNameConstantError, CUnsupportedFeatureError,CWrongSyntax
+from compiler.exceptions import CSyntaxError, CNameError,CNameConstantError, CUnsupportedFeatureError,CWrongSyntax
 
 class AstPreprocessor(ast.NodeTransformer):
-    # with open(os.path.dirname(__file__)+"/utils/preproc.json") as js:
-    #     allnames = json.load(js)
     def __init__(self,names,pinmap,defines,cfiles,just_imports=False):
         self.allnames = {}
-        self.allnames.update(names)        
+        self.allnames.update(names)
         self.pinmap = pinmap
         self.defines = defines
         self.cfiles = cfiles
         self.curpath = ""
         self.modules = set()
         self.just_imports=just_imports
-
 
     def visit_Import(self,node):
         for alias in node.names:

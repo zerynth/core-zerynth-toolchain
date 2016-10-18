@@ -1,3 +1,6 @@
+
+__all__=["CError","CSyntaxError", "CNameError","CNameConstantError", "CUnsupportedFeatureError","CWrongSyntax","CUnknownNative","CNativeError"]
+
 class CError(Exception):
     def __init__(self,line,col,filename):
         self.line = line
