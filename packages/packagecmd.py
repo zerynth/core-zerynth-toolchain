@@ -239,7 +239,6 @@ def search(query):
 @package.command()
 @click.argument("fullname")
 def info(fullname):  
-    print(fullname)
     res = env.get_pack(fullname)
     pack = Package(res, res.uid)
     base.info(str(pack))
