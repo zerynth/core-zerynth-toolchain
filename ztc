@@ -1,3 +1,8 @@
 #!/bin/bash
 
-( cd ~/GIT/zerynth-toolchain; python3 ztc.py "$@")
+pushd `dirname $0` > /dev/null
+SCRIPTPATH=`pwd`
+popd > /dev/null
+
+
+~/.Zerynth/sys/python/bin/python $SCRIPTPATH/ztc.py "$@"
