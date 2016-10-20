@@ -94,7 +94,7 @@ def warning(*args,**kwargs):
     echo(Warning("[warning]>"),*args,**kwargs)
 
 def info(*args,**kwargs):
-    echo(Info("[info]    >"),*args,**kwargs)
+    echo(Info("[info]>"),*args,**kwargs)
 
 log = echo
 

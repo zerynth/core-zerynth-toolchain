@@ -11,8 +11,10 @@ import projects
 import packages
 import virtualmachines
 import namespaces
+import user
 
 import json
+
 
 
 @cli.command("info")
@@ -59,6 +61,7 @@ def __info(__tools,__devices,__packages,__vms,__json,pretty):
                 "desc":vm["desc"]
             }
         log(json.dumps(vmdb,indent=indent))
+
 
 
 

@@ -45,14 +45,6 @@ class zfs():
         with open(dst,"w") as ff:
             json.dump(js,ff,indent=4,sort_keys=True)
 
-    def write_file(self,data,dst):
-        if isinstance(data,str):
-            d="w"
-        else:
-            d="wb"
-        with open(dst,"wb") as ff:
-            ff.write(data)
-
     def rmtree(self,dst, is_windows):
         if is_windows:
             try:
@@ -100,7 +92,7 @@ class zfs():
                     crc = crc32(data, crc)
             if crc_enable:
                 return crc
-            fs.write_bytes_file(dd, dst)
+            fs.write_file(dd, dst)
         except FileNotFoundError:
             if crc_enable:
                 return 0
@@ -157,8 +149,12 @@ class zfs():
         root,dirnames,files = next(os.walk(path))
         return [self.path(path,x) for x in files]
 
-    def writefile(self,path,data):
-        with open(path,"w") as ff:
+    def write_file(self,data,dst):
+        if isinstance(data,str):
+            d="w"
+        else:
+            d="wb"
+        with open(dst,d) as ff:
             ff.write(data)
 
     def readfile(self,path,param=""):
@@ -168,6 +164,7 @@ class zfs():
     def readlines(self,path):
         with open(path) as ff:
             return ff.readlines()
+ 
     def makedirs(self,dirs):
         if isinstance(dirs,str):
             os.makedirs(dirs,exist_ok=True)

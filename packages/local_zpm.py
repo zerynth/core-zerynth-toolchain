@@ -23,9 +23,9 @@ class Zpm():
     def create_db(self):
         env.load_ipack_db(env.idb,"packages.db")
         self._zdbfile = fs.path(env.zdb,"packages.db")
-        self._zdb = sqlite3.connect(self._zdbfile,check_same_thread=False) if fs.file_exists(self._zdbfile) else None
+        self._zdb = sqlite3.connect(self._zdbfile,check_same_thread=False) if fs.exists(self._zdbfile) else None
         self._idbfile = fs.path(env.idb,"packages.db")
-        self._idb = sqlite3.connect(self._idbfile,check_same_thread=False) if fs.file_exists(self._idbfile) else None
+        self._idb = sqlite3.connect(self._idbfile,check_same_thread=False) if fs.exists(self._idbfile) else None
 
     def persist(self):
         self._idb.commit()
@@ -133,7 +133,7 @@ class Zpm():
         res = zget(url=p_url, headers=headers)
         print(res)
         if res.status_code == 200:
-            fs.write_bytes_file(res.content, fs.path(env.tmp, package.name+"-"+str(version)+".tar.xz"))
+            fs.write_file(res.content, fs.path(env.tmp, package.name+"-"+str(version)+".tar.xz"))
             return True
         return False
     

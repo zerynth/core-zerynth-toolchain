@@ -5,25 +5,23 @@ import json
 import sys
 import pygit2
 
-proj_url = "http://localhost/zbackend/projects/"
 
 def create_project_entity(path):
-    if fs.file_exists(fs.path(path,".zproject")):
+    if fs.exists(fs.path(path,".zproject")):
         proj_contents = fs.get_json(fs.path(path,".zproject"))
         if "uid" in proj_contents:
             return True
-        else:
-            headers = {"Authorization": "Bearer "+env.token}
-            try:
-                res = zpost(url=proj_url, headers=headers, data=proj_contents)
-                if res.json()["status"] == "success":
-                    proj_contents.update({"uid": res.json()["data"]["uid"]})
-                    fs.set_json(proj_contents,fs.path(path,".zproject"))
-                    return proj_contents
-                else:
-                    return False
-            except Exception as e:
+        try:
+            res = zpost(url=env.api.project, data=proj_contents)
+            rj = res.json()
+            if rj["status"] == "success":
+                proj_contents.update({"uid": rj["data"]["uid"]})
+                fs.set_json(proj_contents,fs.path(path,".zproject"))
+                return proj_contents
+            else:
                 return False
+        except Exception as e:
+            return False
     else:
         return None
 
@@ -40,25 +38,27 @@ def create(title,path,description):
         "title":title,
         "created_at":str(datetime.datetime.utcnow()),
         "description":description
-        }
+    }
     fs.makedirs(path)
-    if fs.file_exists(fs.path(path,".zproject")):
-        error("Can't create project in this folder")
+    if fs.exists(fs.path(path,".zproject")):
+        error("A project already exists in",path)
     else:
-        info("Creating",fs.path(path,"main.py"))
+        info("Writing",fs.path(path,"main.py"))
         fs.write_file("# "+title+"\n# Created at "+pinfo["created_at"]+"\n\n",fs.path(path,"main.py"))
-        info("Creating",fs.path(path,"readme.md"))
+        info("Writing",fs.path(path,"readme.md"))
         fs.write_file(title+"\n"+("="*len(title))+"\n\n"+description,fs.path(path,"readme.md"))
-        headers = {"Authorization": "Bearer "+env.token}
+        # REMOTE API CALL
         try:
-            res = zpost(url=proj_url, headers=headers, data=pinfo)
-            if res.json()["status"] == "success":
-                pinfo.update({"uid": res.json()["data"]["uid"]})
-                info("Project",title,"created with uid:", res.json()["data"]["uid"])
+            res = zpost(url=env.api.project, data=pinfo)
+            rj = res.json()
+            if rj["status"] == "success":
+                pinfo.update({"uid": rj["data"]["uid"]})
+                info("Project",title,"created with uid:", rj["data"]["uid"])
             else:
                 warning("Can't create remote project")
         except Exception as e:
             warning("Can't create remote project")
+            print(e)
         fs.set_json(pinfo,fs.path(path,".zproject"))
 
 @project.command()
@@ -77,15 +77,14 @@ def create_remote(path):
 @project.command()
 @click.argument("path",type=click.Path())
 def delete(path):
-    if fs.file_exists(fs.path(path,".zproject")):
+    if fs.exists(fs.path(path,".zproject")):
         proj_contents = fs.get_json(fs.path(path,".zproject"))
         try:
             fs.rmtree(path, env.is_windows())
             info("deleting project", proj_contents["title"])
             if "uid" in proj_contents:
                 try:
-                    headers = {"Authorization": "Bearer "+env.token}
-                    res = zdelete(url=proj_url+proj_contents["uid"], headers=headers)
+                    res = zdelete(url=env.api.project+proj_contents["uid"])
                     if res.json()["status"] == "success":
                         info("Project",proj_contents["title"],"deleted from zerynth server")
                     else:
@@ -109,8 +108,7 @@ def git_init(path):
         proj_contents = fs.get_json(fs.path(path,".zproject"))
         info("Project",proj_contents["title"]," with uid:", proj_contents["uid"])
         try:
-            headers = {"Authorization": "Bearer "+env.token}
-            res = zpost(url=proj_url+proj_contents["uid"]+"/git", headers=headers, data={})
+            res = zpost(url=env.api.project+proj_contents["uid"]+"/git", data={})
             if res.json()["status"] == "success":
                 proj_contents.update({"git_url": res.json()["data"]["git_url"]})
                 fs.set_json(proj_contents,fs.path(path,".zproject"))

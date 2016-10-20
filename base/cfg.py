@@ -18,8 +18,20 @@ class Var():
     def __getattr__(self,attr):
         return self._v[attr]
 
+    def to_dict(self):
+        d = {}
+        for k,v in self._v.items():
+            if isinstance(v,Var):
+                d[k]=v.to_dict()
+            else:
+                d[k]=v
+        return d
+
+    def set(self,key,value):
+        self._v[key] = Var(value) if isinstance(value,dict) else value
+
     def get(self,key,default=None):
-        return self._v.get(ket,default)
+        return self._v.get(key,default)
 
 
 class Environment():
@@ -38,7 +50,6 @@ class Environment():
         return getattr(self,key)
     
 
-
     def load(self,cfgdir):
         try:
             js = fs.get_json(fs.path(cfgdir,"config.json"))
@@ -46,6 +57,15 @@ class Environment():
             self._var = js
         except Exception as e:
             critical("can't load configuration",exc=e)
+
+    def save(self,cfgdir=None):
+        try:
+            if not cfgdir:
+                cfgdir=self.cfg
+            js = fs.set_json(self.var.to_dict(),fs.path(cfgdir,"config.json"))
+        except Exception as e:
+            critical("can't save configuration",exc=e)
+
 
     def load_dbs(self,cfgdir,dbname):
         try:
@@ -151,7 +171,6 @@ class Environment():
         self._dbs.execute("delete from aliases where alias=?",(dev.alias,))
         self._dbs.commit()
 
-
 env=Environment()
 
 
@@ -211,7 +230,7 @@ def init_cfg():
     env.load_zpack_db(env.zdb,"packages.db")
     env.load_ipack_db(env.idb,"packages.db")
     version = env.var.version
-    env.token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJ6ZXJ5bnRoIiwidWlkIjoiMmo4dWVzNXJTTGFoSGRXX2VENnIwQSIsImV4cCI6MTQ3Njk2NzYwOCwiaWF0IjoxNDc0Mzc1NjA4LCJqdGkiOiJjVDZtRF9RMVF0Mld4MkJtYzVZNlR3In0.UanEyipdHxkoxpEvk9Eyg_PMS3C6lUsF7vGB4E9CkFg"
+    #env.token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJ6ZXJ5bnRoIiwidWlkIjoiMmo4dWVzNXJTTGFoSGRXX2VENnIwQSIsImV4cCI6MTQ3Njk2NzYwOCwiaWF0IjoxNDc0Mzc1NjA4LCJqdGkiOiJjVDZtRF9RMVF0Mld4MkJtYzVZNlR3In0.UanEyipdHxkoxpEvk9Eyg_PMS3C6lUsF7vGB4E9CkFg"
     env.git_url = "localhost/git/"
 
     # dist directories
@@ -233,4 +252,39 @@ def init_cfg():
     # create dirs
     fs.makedirs(env.dirs())
 
+    # backend & api
+    env.backend="https://backend.zerynth.com/v1"
+    env.api = Var({
+        "project":env.backend+"/projects/",
+        "renew":env.backend+"/user/renew",
+        "sso":env.backend+"/sso"
+
+        })
+
+
 add_init(init_cfg,prio=0)
+
+
+    # ### TODO mactchdb true and parse board infomations
+    # dev_list = _dsc.run_one(matchdb=False)
+    # if uid in dev_list:
+    #     #print(dev_list[uid])
+    #     ### TODO load basic firmware and parse device informations (on_chip_id, type, etc.)
+    #     dinfo = {
+    #         "name": name,
+    #         "on_chip_id": "123456789",
+    #         "type": "flipnclick_sam3x",
+    #         "category": "AT91SAM3X8E"
+    #     }
+    #     headers = {"Authorization": "Bearer "+env.token}
+    #     try:
+    #         res = zpost(url=dev_url, headers=headers, data=dinfo)
+    #         #print(res.json())
+    #         if res.json()["status"] == "success":
+    #             info("Device",name,"created with uid:", res.json()["data"]["uid"])
+    #             ### TODO save mongodb uid in sqlite db
+    #         else:
+    #             error("Error in device data:", res.json()["message"])
+    #     except Exception as e:
+    #         error("Can't create device entity")
+    #         

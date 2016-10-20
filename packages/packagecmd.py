@@ -68,7 +68,7 @@ def package():
 def publish(path, version, git):
     ####TODO check here if version is in correct ZpmVersion format??
     ###ctrl package.json
-    if fs.file_exists(fs.path(path,"package.json")):
+    if fs.exists(fs.path(path,"package.json")):
         try:
             pack_contents = fs.get_json(fs.path(path,"package.json"))
         except TypeError:
@@ -82,7 +82,7 @@ def publish(path, version, git):
             info("Creating package from gitlab")
         else:
             fatal("missing git url in package.json")
-    elif fs.file_exists(fs.path(path,".zproject")):
+    elif fs.exists(fs.path(path,".zproject")):
         proj_contents = fs.get_json(fs.path(path,".zproject"))
         if "git_url" in proj_contents:
             git_pointer = proj_contents["git_url"]
@@ -159,7 +159,7 @@ def install(p, db, last, force):
                 info(repo, "database already at server version")
             elif res.status_code == 200:
                 info(repo, "uploading new last server version...")
-                fs.write_bytes_file(res.content, fs.path(env.edb, repo, "repo.tar.xz"))
+                fs.write_file(res.content, fs.path(env.edb, repo, "repo.tar.xz"))
             else:
                 error(repo, "--> Error from the server", res.status_code)
                 continue
@@ -195,7 +195,7 @@ def update_all():
             info(repo, "database already at server version")
         elif res.status_code == 200:
             info(repo, "uploading new last server version...")
-            fs.write_bytes_file(res.content, fs.path(env.edb, repo, "repo.tar.xz"))
+            fs.write_file(res.content, fs.path(env.edb, repo, "repo.tar.xz"))
         else:
             error(repo, "--> Error from the server", res.status_code)
             continue

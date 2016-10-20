@@ -1,5 +1,7 @@
 from base import *
 from .compiler import Compiler
+from .exceptions import *
+
 import click
 
 @cli.command()
@@ -18,6 +20,8 @@ def compile(project,target,output,include,define):
     compiler = Compiler(mainfile,target,include,define)
     try:
         binary, reprs = compiler.compile()
+    except CModuleNotFound as e:
+        fatal("* Can't find module","["+e.module+"]","imported by","["+e.filename+"]","at line",e.line)
     except Exception as e:
         raise e
     if not output:

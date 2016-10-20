@@ -1,5 +1,5 @@
 
-__all__=["CError","CSyntaxError", "CNameError","CNameConstantError", "CUnsupportedFeatureError","CWrongSyntax","CUnknownNative","CNativeError"]
+__all__=["CError","CSyntaxError", "CNameError","CNameConstantError", "CUnsupportedFeatureError","CWrongSyntax","CUnknownNative","CNativeError","CModuleNotFound"]
 
 class CError(Exception):
     def __init__(self,line,col,filename):

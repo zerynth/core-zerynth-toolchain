@@ -973,17 +973,22 @@ class AstWalker(ast.NodeVisitor):
         #normal call            
         code = ByteCode(node.lineno,self.prgLine(node.lineno))
         code.addCode(self.visit(node.func))
-        code.addCode(self.genCodeList(node.args))
+
+        # update for Python 3.5 -_-
+        starargs = [arg for arg in node.args if isinstance(arg,ast.Starred)]
+        pargs = [arg for arg in node.args if not isinstance(arg,ast.Starred)]
+        code.addCode(self.genCodeList(pargs))
         for kw in node.keywords:
+            #TODO: check for kw.arg!=None --> changed in Python 3.5
             code.addCode(
                 OpCode.LOOKUP_NAME(self.env.addNameCode(kw.arg), kw.arg))
             code.addCode(self.visit(kw.value))
-        if node.starargs != None:
-            starcode = self.visit(node.starargs)
+        if starargs:
+            starcode = self.visit(starargs)
             code.addCode(starcode)
-            code.addCode(OpCode.CALL_VAR(len(node.args), len(node.keywords)))
+            code.addCode(OpCode.CALL_VAR(len(pargs), len(node.keywords)))
         else:
-            code.addCode(OpCode.CALL(len(node.args), len(node.keywords)))
+            code.addCode(OpCode.CALL(len(pargs), len(node.keywords)))
         return code
 
     def visit_Try(self,node):
