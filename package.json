@@ -1,0 +1,11 @@
+{
+    "dependencies": {},
+    "description": "",
+    "fullname": "core.zerynth.toolchain",
+    "git_pointer": "zerynth://zerynth-core/zerynth-toolchain",
+    "keywords": [],
+    "repo": "official",
+    "title": "Zerynth Toolchain",
+    "version": "r1.0.0",
+    "whatsnew": "First release"
+}
