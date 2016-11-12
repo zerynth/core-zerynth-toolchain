@@ -1,4 +1,5 @@
 from base import *
+import json
 
 class ZpmException(Exception):
     
@@ -90,3 +91,9 @@ class ZpmVersion():
                 else:
                     return z
         return None
+
+class ZpmEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, ZpmVersion):
+            return str(obj)
+        return json.JSONEncoder.default(self, obj)

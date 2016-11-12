@@ -1,5 +1,8 @@
 {
-    "dependencies": {},
+    "dependencies": {
+        "core.zerynth.stdlib": "r1.0.0",
+        "sys.zerynth.runtime": "r1.0.0"
+    },
     "description": "",
     "fullname": "core.zerynth.toolchain",
     "git_pointer": "zerynth://zerynth-core/zerynth-toolchain",

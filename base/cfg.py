@@ -7,10 +7,10 @@ import json
 __all__=['env','Var']
 
 class Var():
-    def __init__(self, _dict={}):
+    def __init__(self, _dict={},recursive=True):
         self._v=dict(_dict)
         for k,v in _dict.items():
-            if isinstance(v,dict):
+            if isinstance(v,dict) and recursive:
                 self._v[k] = Var(v)
             else:
                 self._v[k] = v
@@ -32,6 +32,9 @@ class Var():
 
     def get(self,key,default=None):
         return self._v.get(key,default)
+
+    def __str__(self):
+        return str(self._v)
 
 
 class Environment():
@@ -73,32 +76,12 @@ class Environment():
             self._dbs_cfgdir=cfgdir
             self._dbs_dbname=dbname
             self._dbs = sqlite3.connect(fs.path(cfgdir,dbname),check_same_thread=False)
-            self._dbs.execute("CREATE TABLE IF NOT EXISTS aliases (alias TEXT PRIMARY KEY, uid TEXT, target TEXT, name TEXT, chipid TEXT)")
+            self._dbs.execute("CREATE TABLE IF NOT EXISTS aliases (alias TEXT PRIMARY KEY, uid TEXT, target TEXT, name TEXT, chipid TEXT, remote_id TEXT)")
             self._dbs.execute("CREATE UNIQUE INDEX IF NOT EXISTS aliases_idx ON aliases(alias)")
             self._dbs.execute("CREATE UNIQUE INDEX IF NOT EXISTS uid_idx ON aliases(uid)")
             self._dbs.execute("CREATE UNIQUE INDEX IF NOT EXISTS chip_idx ON aliases(chipid)")
         except Exception as e:
             self._dbs = None
-
-    def load_zpack_db(self,cfgdir,dbname):
-        try:
-            self._zpack_db_cfgdir=cfgdir
-            self._zpack_db_dbname=dbname
-            self._zpack_db = sqlite3.connect(fs.path(cfgdir,dbname),check_same_thread=False)
-            self._zpack_db.execute("create table IF NOT EXISTS packages(uid TEXT PRIMARY KEY, fullname TEXT, name TEXT, description TEXT, type TEXT, tag TEXT, authname TEXT, git_pointer TEXT, last_version TEXT, dependencies TEXT, whatsnew TEXT, rating REAL, num_of_votes INTEGER, num_of_downloads INTEGER, versions TEXT, keywords TEXT, last_update TEXT)")
-            self._zpack_db.execute("create unique index IF NOT EXISTS packagenames on packages(fullname)")
-        except Exception as e:
-            self._zpack_db = None
-
-    def load_ipack_db(self,cfgdir,dbname):
-        try:
-            self._ipack_db_cfgdir=cfgdir
-            self._ipack_db_dbname=dbname
-            self._ipack_db = sqlite3.connect(fs.path(cfgdir,dbname),check_same_thread=False)
-            self._ipack_db.execute("create table IF NOT EXISTS packages(uid TEXT PRIMARY KEY, fullname TEXT, name TEXT, description TEXT, type TEXT, tag TEXT, authname TEXT, git_pointer TEXT, last_version TEXT, dependencies TEXT, whatsnew TEXT, rating REAL, num_of_votes INTEGER, num_of_downloads INTEGER, versions TEXT, keywords TEXT, last_update TEXT)")
-            self._ipack_db.execute("create unique index IF NOT EXISTS packagenames on packages(fullname)")
-        except Exception as e:
-            self._ipack_db = None
 
     def save_dbs(self):
         try:
@@ -106,70 +89,46 @@ class Environment():
         except Exception as e:
             critical("can't save configuration",exc=e)
 
-    def save_zpack_db(self):
+    def load_repo_list(self):
         try:
-            self._zpack_db.commit()
-        except Exception as e:
-            critical("can't save configuration",exc=e)
-
-    def save_ipack_db(self):
-        try:
-            self._ipack_db.commit()
-        except Exception as e:
-            critical("can't save configuration",exc=e)
+            fs.get_json(fs.path(env.cfg,"repos.cfg"))
+        except:
+            pass
+        return []
 
     def get_dev(self,key):
         res = {}
         for row in self._dbs.execute("select * from aliases where alias=? or uid=?",(key,key)):
-            res[row[0]]=Var({"alias":row[0],"uid":row[1],"target":row[2],"name":row[3],"chipid":row[4]})
+            res[row[0]]=Var({"alias":row[0],"uid":row[1],"target":row[2],"name":row[3],"chipid":row[4],"remote_id":row[5]})
         return res
 
-    def get_pack(self, fullname, db=None):
-        res = None
-        if db is None:
-            db = self._zpack_db
-        for row in db.execute("select * from packages where fullname=?",(fullname,)):
-            res=Var({
-                    "uid":row[0],
-                    "fullname":row[1],
-                    "name":row[2],
-                    "description":row[3],
-                    "type":row[4],
-                    "tag":row[5],
-                    "authname":row[6],
-                    "git_pointer": row[7],
-                    "last_version":row[8],
-                    "dependencies":row[9], 
-                    "whatsnew":row[10],
-                    "rating":row[11],
-                    "num_of_votes":row[12],
-                    "num_of_downloads":row[13],
-                    "versions":row[14],
-                    "keywords":row[15],
-                    "last_update":row[16]
-                    })
+    def get_dev_by_alias(self,alias):
+        res = []
+        for row in self._dbs.execute("select * from aliases where alias like '"+alias+"%'"):
+            res.append(Var({"alias":row[0],"uid":row[1],"target":row[2],"name":row[3],"chipid":row[4],"remote_id":row[5]}))
         return res
 
     def put_dev(self,dev):
         if not isinstance(dev,Var):
             dev = Var(dev)
-        self._dbs.execute("insert or replace into aliases values(?,?,?,?,?)",(dev.alias,dev.uid,dev.target,dev.name,dev.chipid))
+        self._dbs.execute("insert or replace into aliases values(?,?,?,?,?,?)",(dev.alias,dev.uid,dev.target,dev.name,dev.chipid,dev.remote_id))
         self._dbs.commit()
-
-    def put_pack(self, pack, db=None):
-        if not isinstance(pack,Var):
-            if isinstance(pack,dict):
-                pack = Var(pack)
-            else:
-                pack = Var(pack.to_var())
-        if db is None:
-            db = self._zpack_db
-        db.execute("insert or replace into packages values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",(pack.uid, pack.fullname, pack.name, pack.description, pack.type, pack.tag, pack.authname, pack.git_pointer, str(pack.last_version), str(pack.dependencies), str(pack.whatsnew), pack.rating, pack.num_of_votes, pack.num_of_downloads, str(pack.versions), str(pack.keywords), pack.last_update))
-        db.commit()
 
     def del_dev(self,dev):
         self._dbs.execute("delete from aliases where alias=?",(dev.alias,))
         self._dbs.commit()
+
+    def get_all_dev(self):
+        for row in self._dbs.execute("select * from aliases"):
+            yield Var({"alias":row[0],"uid":row[1],"target":row[2],"name":row[3],"chipid":row[4],"remote_id":row[5]})
+
+    def make_dist_dirs(self,distpath):
+        fs.makedirs(self.ztc_dir(distpath))
+        fs.makedirs(self.lib_dir(distpath))
+        fs.makedirs(self.stdlib_dir(distpath))
+        fs.makedirs(self.studio_dir(distpath))
+        fs.makedirs(self.docs_dir(distpath))
+        fs.makedirs(self.examples_dir(distpath))
 
 env=Environment()
 
@@ -181,6 +140,7 @@ env=Environment()
 #         workspace/
 #         sys/
 #         tmp/
+#         nest/
 #         dist/
 #             version/
 #                 ztc/
@@ -211,7 +171,7 @@ def init_cfg():
     env.is_linux = lambda : env.is_unix() and not env.is_mac()
 
     # main directories
-    zdir = "Zerynth" if env.is_windows() else ".Zerynth"
+    zdir = "Zerynth" if env.is_windows() else ".Zerynth2"
     env.home      = fs.path(fs.homedir(),zdir)
     env.cfg       = fs.path(env.home,"cfg")
     env.env       = fs.path(env.home,"env")
@@ -224,27 +184,39 @@ def init_cfg():
     env.zdb       = fs.path(env.home,"cfg","zdb")
     env.idb       = fs.path(env.home,"cfg","idb")
 
+
     # load configuration
     env.load(env.cfg)
     env.load_dbs(env.cfg,"devices.db")
-    env.load_zpack_db(env.zdb,"packages.db")
-    env.load_ipack_db(env.idb,"packages.db")
+    #env.load_zpack_db(env.zdb,"packages.db")
+    #env.load_ipack_db(env.idb,"packages.db")
     version = env.var.version
-    #env.token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJ6ZXJ5bnRoIiwidWlkIjoiMmo4dWVzNXJTTGFoSGRXX2VENnIwQSIsImV4cCI6MTQ3Njk2NzYwOCwiaWF0IjoxNDc0Mzc1NjA4LCJqdGkiOiJjVDZtRF9RMVF0Mld4MkJtYzVZNlR3In0.UanEyipdHxkoxpEvk9Eyg_PMS3C6lUsF7vGB4E9CkFg"
     env.git_url = "localhost/git/"
 
     # dist directories
+    env.dist      = fs.path(env.home,"dist",version)
     env.ztc       = fs.path(env.home,"dist",version,"ztc")
     env.libs      = fs.path(env.home,"dist",version,"libs")
     env.nest      = fs.path(env.home,"dist",version,"nest")
     env.stdlib    = fs.path(env.home,"dist",version,"stdlib")
-    #env.vhal      = fs.path(env.home,"dist",version,"vhal") 
-    env.vhal      = fs.path(fs.homedir(),".zerynth","env","core","official","vhal") #TODO: remove
+    env.vhal      = fs.path(env.home,"dist",version,"vhal") 
+    #env.vhal      = fs.path(fs.homedir(),".zerynth","env","core","official","vhal") #TODO: remove
     env.studio    = fs.path(env.home,"dist",version,"studio")
     env.docs      = fs.path(env.home,"dist",version,"docs")
     env.examples  = fs.path(env.home,"dist",version,"examples")
-    #env.devices    = fs.path(env.home,"dist",version,"devices")
-    env.devices    = fs.path(fs.homedir(),"git","ZerynthBoards") #TODO: remove
+    env.devices    = fs.path(env.home,"dist",version,"devices")
+    #env.devices    = fs.path(fs.homedir(),"git","ZerynthBoards") #TODO: remove
+
+    env.dist_dir = lambda x: fs.path(env.home,"dist",x)
+    env.ztc_dir = lambda x: fs.path(x,"ztc")
+    env.lib_dir = lambda x: fs.path(x,"libs")
+    env.stdlib_dir = lambda x: fs.path(x,"stdlib")
+    env.studio_dir = lambda x: fs.path(x,"studio")
+    env.vhal_dir = lambda x: fs.path(x,"vhal")
+    env.devices_dir = lambda x: fs.path(x,"devices")
+    env.docs_dir = lambda x: fs.path(x,"docs")
+    env.examples_dir = lambda x: fs.path(x,"examples")
+
 
     # set global temp dir
     fs.set_temp(env.tmp)
@@ -253,13 +225,19 @@ def init_cfg():
     fs.makedirs(env.dirs())
 
     # backend & api
-    env.backend="https://backend.zerynth.com/v1"
+    #env.backend="https://backend.zerynth.com/v1"
+    env.backend="http://localhost/v1"
     env.api = Var({
-        "project":env.backend+"/projects/",
+        "project":env.backend+"/projects",
         "renew":env.backend+"/user/renew",
-        "sso":env.backend+"/sso"
-
-        })
+        "sso":env.backend+"/sso",
+        "devices":env.backend+"/devices",
+        "vm":env.backend+"/vms",
+        "packages":env.backend+"/packages",
+        "ns":env.backend+"/namespaces",
+        "db":env.backend+"/database",
+        "search": env.backend+"/packages/search",
+    })
 
 
 add_init(init_cfg,prio=0)

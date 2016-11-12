@@ -41,7 +41,7 @@ def probing(ch,devtarget):
     # PROBING
     starttime = time.perf_counter()
     probesent = False
-    hcatcher = re.compile("^([0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}) ([^ ]+) ([0-9a-fA-F]+) VIPER")
+    hcatcher = re.compile("^([0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}) ([^ ]+) ([0-9a-fA-F]+) VIPER") #TODO: change to Zerynth
     while time.perf_counter()-starttime<5:
         line=ch.readline()
         if not line and not probesent:

@@ -4,7 +4,8 @@ import tempfile
 import json
 import shutil
 import tarfile
-from zlib import crc32
+import hashlib
+
 from .cfg import *
 import glob
 
@@ -45,20 +46,19 @@ class zfs():
         with open(dst,"w") as ff:
             json.dump(js,ff,indent=4,sort_keys=True)
 
-    def rmtree(self,dst, is_windows):
-        if is_windows:
-            try:
-                shutil.rmtree(dst)
-            except Exception as e:
-                print(e)
-                for path, dirs, files in os.walk(dst):
-                    for file in files:
-                        try:
-                            os.remove(os.path.join(path, file))
-                        except Exception as e:
-                            print("Warning: can't remove file :", file, "error: ", e)
-        else:
+    def rmtree(self,dst):
+        try:
+            if not fs.exists(dst):
+                return
             shutil.rmtree(dst)
+        except Exception as e:
+            print(e)
+            for path, dirs, files in os.walk(dst):
+                for file in files:
+                    try:
+                        os.remove(os.path.join(path, file))
+                    except Exception as e:
+                        print("Warning: can't remove file :", file, "error: ", e)
 
     def rm_file(self, dst):
         try:
@@ -67,42 +67,28 @@ class zfs():
             print("Warning: can't remove file :", dst, "error: ", e)
 
     def copytree(self,src,dst):
-        pass
+        shutil.rmtree(dst,ignore_errors=True)
+        try:
+            shutil.copytree(src,dst,ignore_dangling_symlinks=True)
+        except:
+            pass
+            #TODO: copy by walking
 
     def copyfile(self,src,dst):
         shutil.copyfile(src,dst)
 
-    def rmtree(self,dst):
-        pass
-
-    def untarxz(self,src,dst,crc_enable=False):
-        try:
-            tfile = tarfile.open(src)
-            tt = tfile.getmember(dst.split('/')[-1])
-            ff = tfile.extractfile(tt)
-            dd = ''.encode("utf-8")
-            if crc_enable:
-                crc = crc32(''.encode("utf-8"))
-            while True:
-                data = ff.read(1024)
-                if not data:
-                    break
-                dd += data
-                if crc_enable:
-                    crc = crc32(data, crc)
-            if crc_enable:
-                return crc
-            fs.write_file(dd, dst)
-        except FileNotFoundError:
-            if crc_enable:
-                return 0
-        except Exception as e:
-            print("Error in fs:", e)
-
-    def mergetree(self,src,dst):
-        pass
+    def file_hash(self,dst):
+        hh = hashlib.md5()
+        with open(dst,"rb") as ff:
+            hh.update(ff.read())
+        return hh.hexdigest()
 
     def untarxz(self,src,dst):
+        zp = tarfile.open(src,"r:xz")
+        zp.extractall(dst)
+        zp.close()
+
+    def mergetree(self,src,dst):
         pass
 
     def tarxz(self,src,dst):
@@ -192,3 +178,4 @@ class zfs():
     #         pass
 
 fs=zfs()
+

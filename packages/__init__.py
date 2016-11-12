@@ -1,4 +1,4 @@
 from .packagecmd import *
-from .local_zpm import *
-from .packages import *
+from .nscmd import *
+from .zpm import *
 from .zversions import *

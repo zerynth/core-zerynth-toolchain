@@ -4,7 +4,6 @@ import click
 import re
 import base64
 
-dev_url = "http://localhost/zbackend/devices/"
 
 _dsc = None
 
@@ -55,6 +54,7 @@ def register(alias):
     info("Starting device registration")
     tgt.burn(bytearray(base64.standard_b64decode(reg["bin"])))
     if tgt.has_alter_ego:
+        # TODO
         # virtualizable device is not the same as uplinkable device -_-
         # algo: find differences between devs 
         pass
@@ -80,31 +80,29 @@ def register(alias):
         info("Found chipid:",lines[pos])
     else:
         fatal("Can't find chipid")
-    # read chipid
+    chipid=lines[pos]
     # call api to register device
-    # ### TODO mactchdb true and parse board infomations
-    # dev_list = _dsc.run_one(matchdb=False)
-    # if uid in dev_list:
-    #     #print(dev_list[uid])
-    #     ### TODO load basic firmware and parse device informations (on_chip_id, type, etc.)
-    #     dinfo = {
-    #         "name": name,
-    #         "on_chip_id": "123456789",
-    #         "type": "flipnclick_sam3x",
-    #         "category": "AT91SAM3X8E"
-    #     }
-    #     headers = {"Authorization": "Bearer "+env.token}
-    #     try:
-    #         res = zpost(url=dev_url, headers=headers, data=dinfo)
-    #         #print(res.json())
-    #         if res.json()["status"] == "success":
-    #             info("Device",name,"created with uid:", res.json()["data"]["uid"])
-    #             ### TODO save mongodb uid in sqlite db
-    #         else:
-    #             error("Error in device data:", res.json()["message"])
-    #     except Exception as e:
-    #         error("Can't create device entity")
-    #         
+    dinfo = {
+        "name": tgt.custom_name or tgt.name,
+        "on_chip_id": chipid,
+        "type": tgt.target,
+        "category": tgt.family_name
+    }
+    try:
+        res = zpost(url=env.api.devices, data=dinfo)
+        rj = res.json()
+        print(rj)
+        if rj["status"] == "success":
+            info("Device",tgt.custom_name  or tgt.name,"registered with uid:", rj["data"]["uid"])
+        else:
+            fatal("Remote device registration failed with:", rj["message"])
+    except Exception as e:
+        critical("Error during remote registration",exc=e)
+    tgt = tgt.to_dict()
+    print(tgt)
+    tgt["chipid"]=chipid
+    tgt["remote_id"]=rj["data"]["uid"]
+    env.put_dev(tgt)
 
 @device.command()
 @click.argument("alias")
@@ -117,7 +115,7 @@ def virtualize(alias,vmuid):
         fatal("Ambiguous alias",[x.alias for x in tgt])
     if tgt.virtualizable!=tgt.classname:
         fatal("Device not virtualizable")
-    vms=tools.get_vms()
+    vms=tools.get_vms(tgt.target)
     if vmuid not in vms:
         vuids = []
         for vuid in vms:
@@ -178,13 +176,14 @@ def alias():
 @click.argument("target")
 @click.option("--name",default=False)
 @click.option("--chipid",default="")
-def alias_put(uid,alias,name,target,chipid):
-    if not re.match("^[A-Za-z0-9_:-]{4,}$",alias):
-        fatal("Malformed alias")
+@click.option("--remote_id",default="")
+def alias_put(uid,alias,name,target,chipid,remote_id):
+    #if not re.match("^[A-Za-z0-9_:-]{4,}$",alias):
+    #    fatal("Malformed alias")
     devs = _dsc.run_one(True)
-    print(devs)
+    #print(devs)
     uids=_dsc.matching_uids(devs, uid)
-    print(uids)
+    #print(uids)
     if len(uids)<=0:
         fatal("No devices with uid",uid)
     else:
@@ -199,7 +198,8 @@ def alias_put(uid,alias,name,target,chipid):
             "uid":uid,
             "name": aliases[alias].name if not name and aliasuid!=None else "",
             "target": target,
-            "chipid":chipid
+            "chipid":chipid,
+            "remote_id":remote_id
         }
         env.put_dev(deventry) 
         #TODO open devdb, get/set uid+unique_alias+name+shortname(this disambiguate a device)

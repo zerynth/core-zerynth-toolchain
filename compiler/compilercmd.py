@@ -1,7 +1,6 @@
 from base import *
 from .compiler import Compiler
 from .exceptions import *
-
 import click
 
 @cli.command()
@@ -21,7 +20,7 @@ def compile(project,target,output,include,define):
     try:
         binary, reprs = compiler.compile()
     except CModuleNotFound as e:
-        fatal("* Can't find module","["+e.module+"]","imported by","["+e.filename+"]","at line",e.line)
+        fatal("Can't find module","["+e.module+"]","imported by","["+e.filename+"]","at line",e.line)
     except Exception as e:
         raise e
     if not output:
@@ -31,6 +30,7 @@ def compile(project,target,output,include,define):
     info("Saving to",output)
     binary["repr"]=[rep.toDict() for rep in reprs]
     fs.set_json(binary,output)
+    info("Compilation Ok")
 
 
 

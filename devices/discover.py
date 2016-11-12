@@ -122,6 +122,8 @@ class Discover():
                     x["alias"] = d.alias
                     x["custom_name"] = d.name
                     x["target"] = d.target
+                    x["chipid"] = d.chipid
+                    x["remote_id"] = d.remote_id
                     pdevs.append(x)
                     if d.uid not in tuid:
                         tuid[d.uid]=[]

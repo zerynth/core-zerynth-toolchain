@@ -4,6 +4,8 @@ __all__=["CError","CSyntaxError", "CNameError","CNameConstantError", "CUnsupport
 class CError(Exception):
     def __init__(self,line,col,filename):
         self.line = line
+        if filename.endswith(".py"):
+            self.line-=1 #py files start with an hidden import __builtins__
         self.col = col;
         self.filename = filename
         self.errmsg = ""

@@ -32,8 +32,9 @@ def project():
 @project.command()
 @click.argument("title")
 @click.argument("path",type=click.Path())
+@click.option("--from","_from",default=False)
 @click.option("--description",default="[Project description goes here]")
-def create(title,path,description):
+def create(title,path,_from,description):
     pinfo = {
         "title":title,
         "created_at":str(datetime.datetime.utcnow()),
@@ -43,10 +44,14 @@ def create(title,path,description):
     if fs.exists(fs.path(path,".zproject")):
         error("A project already exists in",path)
     else:
-        info("Writing",fs.path(path,"main.py"))
-        fs.write_file("# "+title+"\n# Created at "+pinfo["created_at"]+"\n\n",fs.path(path,"main.py"))
-        info("Writing",fs.path(path,"readme.md"))
-        fs.write_file(title+"\n"+("="*len(title))+"\n\n"+description,fs.path(path,"readme.md"))
+        if _from:
+            info("Cloning from",_from)
+            fs.copytree(_from,path)
+        else:
+            info("Writing",fs.path(path,"main.py"))
+            fs.write_file("# "+title+"\n# Created at "+pinfo["created_at"]+"\n\n",fs.path(path,"main.py"))
+            info("Writing",fs.path(path,"readme.md"))
+            fs.write_file(title+"\n"+("="*len(title))+"\n\n"+description,fs.path(path,"readme.md"))
         # REMOTE API CALL
         try:
             res = zpost(url=env.api.project, data=pinfo)

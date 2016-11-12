@@ -10,7 +10,6 @@ import uplinker
 import projects
 import packages
 import virtualmachines
-import namespaces
 import user
 
 import json
@@ -20,11 +19,11 @@ import json
 @cli.command("info")
 @click.option("--tools","__tools",flag_value=True, default=False,help="show installed tools")
 @click.option("--devices","__devices",flag_value=True, default=False,help="show installed devices")
-@click.option("--packages","__packages",flag_value=True, default=False,help="show installed packages")
-@click.option("--vms","__vms",flag_value=True, default=False,help="show installed virtual machines")
+@click.option("--vms","__vms",help="show installed virtual machines (target must be specified)")
+@click.option("--examples","__examples",flag_value=True, default=False,help="show installed examples")
 @click.option("--json","__json",flag_value=True, default=False,help="output info in json format")
 @click.option("--pretty","pretty",flag_value=True, default=False,help="output info in readable format")
-def __info(__tools,__devices,__packages,__vms,__json,pretty):
+def __info(__tools,__devices,__vms,__examples,__json,pretty):
     indent = 4 if pretty else None
     if __tools:
         if __json:
@@ -37,16 +36,15 @@ def __info(__tools,__devices,__packages,__vms,__json,pretty):
                     for kk,vv in v.items():
                         log(k+"."+kk,"=>",vv)
     if __devices:
-        info("DEVICES")
-    if __packages:
-        info("PACKAGES")
+        for dev in env.get_all_dev():
+            log(json.dumps(dev.to_dict(),indent=indent))
     if __vms:
-        vms = tools.get_vms()
+        vms = tools.get_vms(__vms)
         vmdb = {
         }
         for uid,vmf in vms.items():
             vm = fs.get_json(vmf)
-            target = vm["board"]
+            target = vm["dev_type"]
             if target not in vmdb:
                 vmdb[target]={}
             vmdb[target][vm["version"]]={
@@ -54,13 +52,15 @@ def __info(__tools,__devices,__packages,__vms,__json,pretty):
                 "target":target,
                 "uuid":uid,
                 "version":vm["version"],
-                "props":[], #TODO: add props
-                "props_hash":"---", #TODO: add hash
-                "chipid":"", #TODO: add chipid
+                "features": vm["features"],
+                "hash_features": vm["hash_features"],
+                "chipid":vm["on_chip_id"],
                 "name":vm["name"],
-                "desc":vm["desc"]
+                "desc":vm.get("desc","")
             }
         log(json.dumps(vmdb,indent=indent))
+    if __examples:
+        log(json.dumps(tools.get_examples(),indent=indent))
 
 
 

@@ -6,165 +6,275 @@ import sys
 import pygit2
 import sqlite3
 import re
+import hashlib
+import time
 from urllib.parse import quote_plus, unquote
 from whoosh.qparser import QueryParser,MultifieldParser,PrefixPlugin,OperatorsPlugin
 from whoosh.fields import *
-from .local_zpm  import *
-from .packages import *
+from .zpm  import *
 from .zversions import *
-
-pack_url = "http://localhost/zbackend/packages/"
-db_url = "http://localhost/zbackend/database/"
-search_url = "http://localhost:7070/packages/search"
 
 _zpm = None
 
 def check_db(repo):
-    headers = {"Authorization": "Bearer "+env.token}
-    crc = fs.untarxz(fs.path(repo,"repo.tar.xz"),fs.path(repo, "packages.db"), crc_enable=True)
-    headers.update({"If-None-Match": str(crc)})
     try:
-        repo = repo.split("/")[-1]
-        res = zget(url=db_url+repo, headers=headers)
+        crc = fs.file_hash(fs.path(env.edb,repo, "packages.db"))
+    except Exception as e:
+        warning(e)
+        crc = 0
+    info("hash for",repo,crc)
+    headers = {"If-None-Match": str(crc)}
+    try:
+        res = zget(url=env.api.db+"/"+repo, headers=headers,auth="conditional")
         return res
     except Exception as e:
-        fatal("Server is Down", e)
+        warning("Error while asking for db",repo,e)
 
-def update_zdb(repo):
-    fs.untarxz(fs.path(repo,"repo.tar.xz"),fs.path(repo, "packages.db"))
-    tmpdb = sqlite3.connect(fs.path(repo, "packages.db"))
-    for row in tmpdb.execute("select * from packages"):
-        res = {
-            "uid":row[0],
-            "fullname":row[1],
-            "name":row[2],
-            "description":row[3],
-            "type":row[4],
-            "tag":row[5],
-            "authname":row[6],
-            "git_pointer": row[7],
-            "last_version":row[8],
-            "dependencies":row[9], 
-            "whatsnew":row[10],
-            "rating":row[11],
-            "num_of_votes":row[12],
-            "num_of_downloads":row[13],
-            "versions":row[14],
-            "keywords":row[15],
-            "last_update":row[16]
-            }
-        env.put_pack(res)
-    fs.rm_file(fs.path(repo, "packages.db"))
+def update_zdb(repolist):
+    has_official = True
+    for repo in repolist:
+        info("Updating repository ["+repo+"]")
+        repopath = fs.path(env.edb, repo)
+        info("Checking repository",repo)
+        res = check_db(repo)
+        if res.status_code == 304:
+            info(repo, "repository is in sync")
+        elif res.status_code == 200:
+            info(repo, "repository downloaded")
+            fs.makedirs(repopath)
+            fs.write_file(res.content, fs.path(repopath, "repo.tar.xz"))
+        else:
+            if repo=="official": has_official=False
+            warning("Error while downloading repo",repo, res.status_code)
+            continue
+        #### integrate edb in zdb
+        fs.untarxz(fs.path(repopath,"repo.tar.xz"),repopath)
+
+    if has_official:
+        _zpm.clear_zpack_db()
+        for repo in repolist:
+            repopath = fs.path(env.edb, repo, "packages.db")
+            if not fs.exists(repopath):
+                continue
+            tmpdb = sqlite3.connect(repopath)
+            for row in tmpdb.execute("select * from packages"):
+                res = _zpm.pack_from_row(row)
+                _zpm.put_pack(res)
+            tmpdb.close()
+        _zpm.save_zpack_db()
+    else:
+        warning("Can't download official repository, sync aborted")
+
+def update_repos():
+    # official must be last one, since put_pack replaces existing db entries
+    repolist = env.load_repo_list()+["community","official"]
+    update_zdb(repolist)
+
+@cli.group()
+def packages():
+    global _zpm
+    _zpm = Zpm()
+
+
+@packages.command()
+def sync():
+    update_repos()
+    
+        
+        
+
+@packages.command()
+@click.option("--from","_from",default=0)
+@click.option("--pretty","pretty",flag_value=True, default=False,help="output info in readable format")
+def published(_from,pretty):
+    indent = 4 if pretty else None
+    try:
+        prms = {"from":_from}
+        res = zget(url=env.api.packages,params=prms)
+        rj = res.json()
+        if rj["status"]=="success":
+            log(json.dumps(rj["data"],indent=indent))
+        else:
+            error("Can't get published packages",rj["message"])
+    except Exception as e:
+        critical("Can't get published packages",exc=e)
+
+@packages.command()
+@click.option("--extended","extended",flag_value=True, default=False,help="output full package info")
+@click.option("--pretty","pretty",flag_value=True, default=False,help="output info in readable format")
+def installed(extended,pretty):
+    indent = 4 if pretty else None
+    if not extended:
+        installed_list = _zpm.get_installed_list()
+    else:
+        installed_list = [v.to_dict() for v in _zpm.get_all_installed_packages()]
+    log(json.dumps(installed_list,indent=indent,cls=ZpmEncoder))
+
+@packages.command()
+@click.option("--db", flag_value=False, default=True)
+@click.option("--pretty","pretty",flag_value=True, default=False,help="output info in readable format")
+def updated(db,pretty):
+    indent = 4 if pretty else None
+    if db: update_repos()
+    installed_list = _zpm.get_installed_list()
+    pkgs = {p.fullname:v for p,v in _zpm.get_all_packages() if p.fullname in installed_list and installed_list[p.fullname]!=v}
+    log(json.dumps(pkgs,indent=indent,cls=ZpmEncoder))
+
+
+
+@packages.command()
+@click.argument("query")
+@click.option("--types", default="lib",help="comma separated list of package types: lib, sys, board, vhal, core, meta")
+@click.option("--pretty", flag_value=True, default=False)
+def search(query,types,pretty):
+    indent = 4 if pretty else None
+    ####TODO validate 
+    q = query
+    query_url = quote_plus(query)
+    try:
+        prms = {"textquery":q,"types":types}
+        res = zget(url=env.api.search, params=prms)
+        if res.json()["status"] == "success":
+            log(json.dumps(res.json()["data"],sort_keys=True,indent=indent))
+        else:
+            error("Can't search package",res.json()["message"])
+    except Exception as e:
+        error("Can't search package", e)
+
+
+
 
 @cli.group()
 def package():
     global _zpm
     _zpm = Zpm()
 
+
 @package.command()
 @click.argument("path",type=click.Path())
 @click.argument("version")
 @click.option("--git", default=False)
-def publish(path, version, git):
+@click.option("--username", default=False)
+@click.option("--password", default=False)
+def publish(path, version, git,username,password):
     ####TODO check here if version is in correct ZpmVersion format??
-    ###ctrl package.json
     if fs.exists(fs.path(path,"package.json")):
         try:
             pack_contents = fs.get_json(fs.path(path,"package.json"))
-        except TypeError:
-            fatal("invalid json file")
+        except:
+            fatal("bad json in package.json")
     else:
-        fatal("missing package.json file in this folder")
-    ###check if is a project or not --> TODO ctrl user permissions in token
+        fatal("missing package.json")
+
+    needed_fields = set(["title","description","fullname","keywords","whatsnew","dependencies","repo"])
+    valid_fields = set(["exclude","dont-pack","sys","examples","platform","targetdir","tool"])
+    given_fields = set(pack_contents.keys())
+    if not (needed_fields <= given_fields):
+        print(needed_fields)
+        print(given_fields)
+        print(needed_fields<given_fields)
+        fatal("missing some needed fields in package.json:",needed_fields-given_fields)
+    pack_contents = {k:v for k,v in pack_contents.items() if k in (needed_fields | valid_fields)}
+
+    # check git url
     if git:
-        if "git_url" in pack_contents:
-            git_pointer = pack_contents["git_pointer"]
-            info("Creating package from gitlab")
-        else:
-            fatal("missing git url in package.json")
+        pack_contents["git_pointer"] = git
     elif fs.exists(fs.path(path,".zproject")):
         proj_contents = fs.get_json(fs.path(path,".zproject"))
         if "git_url" in proj_contents:
-            git_pointer = proj_contents["git_url"]
+            pack_contents["git_pointer"] = proj_contents["git_url"]
             info("Creating package from project", proj_contents["title"])
         else:
             fatal("project must be a git repository")
     else:
-        fatal("no project in ths folder")
-    ###start package pubblication
-    headers = {"Authorization": "Bearer "+env.token}
-    pack_contents.update({"version": version, "git_pointer": git_pointer})
+        fatal("no project in this folder")
+    
+    # start publishing
+    pack_contents["version"]=version
+    fs.set_json(pack_contents,fs.path(path,"package.json"))
+    
     try:
-        res = zpost(url=pack_url, headers=headers, data=pack_contents)
-        #print(res.json())
-        if res.json()["status"] == "success":
-            uid = res.json()["data"]["uid"]
-            last_version = res.json()["data"]["last_version"]
-            info("Package",pack_contents["name"],"updated in database with uid:", uid)
-            pack_contents.update({"uid": uid, "last_version": last_version})
+        res = zpost(url=env.api.packages, data=pack_contents)
+        rj = res.json()
+        if rj["status"] == "success":
+            uid = rj["data"]["uid"]
+            info("Package",pack_contents["fullname"],"created with uid:", uid)
+            pack_contents.update({"uid": uid})
         else:
-            fatal("Can't create package", res.json()["message"])
+            fatal("Can't create package", rj["message"])
     except Exception as e:
         fatal("Can't create package", e)
-    try:
-        #####TODO check signature configuration of pygit2
-        repo_path = pygit2.discover_repository(path)
-        repo = pygit2.Repository(repo_path)
-        index = repo.index
-        index.add_all()
-        tree = repo.index.write_tree()
-        commit = repo.create_commit("HEAD", repo.default_signature, repo.default_signature, "version: "+version, tree, [repo.head.target])
-        #print(commit)
-        cc = repo.revparse_single("HEAD")
-        repo.remotes["zerynth"].push(['refs/heads/master'])
-        try:
-            tag = repo.create_tag(version, cc.hex, pygit2.GIT_OBJ_COMMIT, cc.author, cc.message)
-            #print(tag)
-            repo.remotes["zerynth"].push(['refs/tags/'+version])
-            info("Updated repository with new version:",version,"for the package", pack_contents["name"])
-        except Exception as e:
-            fatal("Can't create package", e)
-    except KeyError:
-        fatal("no git repositories in this path")
-    ###prepare data for load the new version in server database
+
+
+    # manage git repository for project
+    ## TODO: UNCOMMENT and add support for meta packages
+    # try:
+    #     #####TODO check signature configuration of pygit2
+    #     repo_path = pygit2.discover_repository(path)
+    #     repo = pygit2.Repository(repo_path)
+    #     regex = re.compile('^refs/tags')
+    #     tags = filter(lambda r: regex.match(r), repo.listall_references())
+    #     tags = [x.replace("refs/tags/","") for x in tags]
+    #     if version in tags:
+    #         fatal("Version",version,"already present in repo tags",tags)
+    #     index = repo.index
+    #     index.add_all()
+    #     tree = repo.index.write_tree()
+    #     commit = repo.create_commit("HEAD", repo.default_signature, repo.default_signature, "version: "+version, tree, [repo.head.target])
+    #     #print(commit)
+    #     cc = repo.revparse_single("HEAD")
+    #     remote = "zerynth" if not git else "origin"
+    #     credentials = None if (not username and not password) else pygit2.RemoteCallbacks(pygit2.UserPass(username,password))
+    #     repo.remotes[remote].push(['refs/heads/master'],credentials)
+
+    #     try:
+    #         tag = repo.create_tag(version, cc.hex, pygit2.GIT_OBJ_COMMIT, cc.author, cc.message)
+    #         #print(tag)
+    #         repo.remotes[remote].push(['refs/tags/'+version],credentials)
+    #         info("Updated repository with new tag:",version,"for", pack_contents["fullname"])
+    #     except Exception as e:
+    #         critical("Can't create package", exc=e)
+    # except KeyError:
+    #     fatal("no git repositories in this path")
+
+    ###prepare data to load the new version
     details = {
-        "details":{
-            "version": version,
-            "dependencies": pack_contents["dependencies"],
-            "whatsnew": pack_contents["whatsnew"]
-        }
+        "dependencies": pack_contents["dependencies"],
+        "whatsnew": pack_contents["whatsnew"]
     }
     try:
-        res = zpost(url=pack_url+pack_contents["uid"]+"/"+version, headers=headers, data=details)
-        if res.json()["status"] == "success":
-            info("new version:",version,"loaded into server database, in waiting to be approved")
+        res = zpost(url=env.api.packages+"/"+pack_contents["fullname"]+"/"+version, data=details)
+        rj = res.json()
+        if rj["status"] == "success":
+            info("version",version,"of package",pack_contents["fullname"],"queued for review")
         else:
-            error("Can't create package",res.json()["message"])
+            error("Can't publish package",rj["message"])
     except Exception as e:
-        error("Can't create package", e)
-    
+        critical("Can't publish package", exc=e)
+
+#TODO: improve
+def download_callback(cursize,prevsize,totsize):
+    curperc = int(cursize/totsize*100)
+    prevperc = int(prevsize/totsize*100)
+    if curperc//10 > prevperc//10:
+        log("\b"*20,curperc,"%",sep="",end="")
+    if cursize==totsize:
+        log("\b"*20,"100%")
 
 @package.command()
 @click.option("-p", multiple=True, type=str)
 @click.option("--db", flag_value=False, default=True)
 @click.option("--last", flag_value=True, default=False)
 @click.option("--force", flag_value=True, default=False)
-def install(p, db, last, force):
-    
-    #### update local dbs
+@click.option("--simulate", flag_value=True, default=False)
+@click.option("--justnew", flag_value=True, default=False)
+@click.option("--pretty", flag_value=True, default=False)
+@click.option("--offline", default=False)
+def install(p, db, last, force, simulate,justnew,pretty,offline):
+    indent = None if not pretty else 4
+    #### update local db
     if db:
-        for repo in fs.dirs(env.edb):
-            res = check_db(repo)
-            if res.status_code == 304:
-                info(repo, "database already at server version")
-            elif res.status_code == 200:
-                info(repo, "uploading new last server version...")
-                fs.write_file(res.content, fs.path(env.edb, repo, "repo.tar.xz"))
-            else:
-                error(repo, "--> Error from the server", res.status_code)
-                continue
-            #### integrate edb in zdb
-            res = update_zdb(repo)
+        update_repos()
 
     #### check packages and its dependecies
     packages = {}
@@ -179,67 +289,71 @@ def install(p, db, last, force):
 
     if packages:
         try:
-            ##### TODO evaluate the force flag for package installations
-            _zpm.install(packages, last, force)
+            if offline:
+                opkg = fs.get_json(fs.path(offline,"package.json"))
+                to_download = {k:v for k,v in opkg["packages"].items()}
+                to_download[opkg["name"]]=opkg["version"]
+            else:
+                to_download = _zpm.generate_installation(packages,last,force,justnew)
+            
+            if simulate:
+                log(json.dumps(to_download,indent=indent))
+            else:
+                res =_zpm.install(to_download,offline=offline)#,download_callback)
+                if res:
+                    info("New Zerynth version is",res)
+                info("Done")
+        except ZpmException as ze:
+            fatal("Error during install",ze)
         except Exception as e:
-            fatal("Impossible to install this packages:", e)
+            import traceback
+            log(traceback.format_exc())
+            fatal("Impossible to install packages:", e)
 
 
-@package.command()
-def update_all():
-    
-    #### update local dbs
-    for repo in fs.dirs(env.edb):
-        res = check_db(repo)
-        if res.status_code == 304:
-            info(repo, "database already at server version")
-        elif res.status_code == 200:
-            info(repo, "uploading new last server version...")
-            fs.write_file(res.content, fs.path(env.edb, repo, "repo.tar.xz"))
-        else:
-            error(repo, "--> Error from the server", res.status_code)
-            continue
-        #### integrate edb in zdb
-        res = update_zdb(repo)
+# def update_all(self):
+#     installed_list = self.get_installed_list()
+#     self.install(packages=installed_list, last=True, force=None,justnew=True)
 
-    #### check packages and its dependecies
+
+@packages.command()
+@click.option("--db", flag_value=False, default=True)
+@click.option("--simulate", flag_value=True, default=False)
+@click.option("--pretty", flag_value=True, default=False)
+def update_all(db,simulate,pretty):
+    indent = None if not pretty else 4
+
+    if db:
+        update_repos()
     try:
-        _zpm.update_all()
+        installed_list = _zpm.get_installed_list()
+        to_download = _zpm.generate_installation(installed_list,last=True,force=False,justnew=True)
+        if simulate:
+            log(json.dumps(to_download,indent=indent))
+        else:
+            res =_zpm.install(to_download)#,download_callback)
+            if res:
+                info("New Zerynth version is",res)
     except Exception as e:
-        fatal("Impossible to install this packages:", e)
+        fatal("Impossible to install packages:", e)
 
+#TODO: check uninstall
 @package.command()
 @click.option("-p", multiple=True, type=str)
 def uninstall(p):
     packages = []
     for pack in p:
         packages.append(pack)
-
     try:
         _zpm.uninstall(packages)
     except Exception as e:
         fatal("impossible to unistall packages:", e)
 
-@package.command()
-@click.argument("query")
-def search(query):
-    ####TODO validate 
-    q = query
-    query_url = quote_plus(query)
-    headers = {"Authorization": "Bearer "+env.token}
-    try:
-        res = zget(url=search_url+"?textquery="+query_url, headers=headers)
-        if res.json()["status"] == "success":
-            info(json.dumps(res.json()["data"],sort_keys=True,indent=4))
-        else:
-            error("Can't search package",res.json()["message"])
-    except Exception as e:
-        error("Can't search package", e)
 
-@package.command()
+@package.command("info")
 @click.argument("fullname")
-def info(fullname):  
-    res = env.get_pack(fullname)
+def __info(fullname):  
+    res = _zpm.get_pack(fullname)
     pack = Package(res, res.uid)
     base.info(str(pack))
 
