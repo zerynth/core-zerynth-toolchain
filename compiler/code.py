@@ -144,13 +144,13 @@ class CodeObj():
         return ref
 
     def addCode(self, code):
-        p1=None
         if isinstance(code, ByteCode):
-            p1 = self.bytecode.size
             for op in code.opcodes:
                 if op.hasConst():
                     cnst = op.getConst()
                     idx = self.addConst(cnst)
+            for pline,val in code.plines.items():
+                self.prglines[pline]=self.bytecode.size+val
         elif isinstance(code, OpCode):
             if code.hasConst():
                 cnst = code.getConst()
@@ -159,9 +159,6 @@ class CodeObj():
             for ll in code:
                 self.addCode(ll)
         self.bytecode.addCode(code)
-        p2= self.bytecode.size
-        if p1!=None:
-            self.prglines[code.lineno] = [p1,p2-1]
         return self
 
     def addKwArgName(self,name):
@@ -447,6 +444,18 @@ class CodeObj():
 class ByteCode():
     codeIds = -1
 
+    _curcode = None
+
+    @staticmethod
+    def set_current_code(code):
+        ByteCode._curcode = code
+
+    @staticmethod
+    def get_line():
+        if OpCode._line_hook:
+            return OpCode._line_hook()
+        return -1
+
     def __init__(self, lineno=None, prgline=None):
         self.opcodes = []
         self.lab2pos = {}
@@ -459,6 +468,9 @@ class ByteCode():
         self.stacksize = []
         self.bstacksize = [0]
         self.trace = []
+        self.plines = {}
+        if lineno:
+            self.plines[lineno]=0
 
     def len(self):
         return len(self.opcodes)
@@ -651,6 +663,8 @@ class ByteCode():
                 if np not in self.pos2lab:
                     self.pos2lab[np]=set()
                 self.pos2lab[np].add(k)
+            for pline,val in code.plines.items():
+                self.plines[pline]=val+self.size
             self.size += code.size
         elif isinstance(code, OpCode):
             if len(self.opcodes)>0 and self.opcodes[-1].name=="NOP":
@@ -713,7 +727,7 @@ class CodeRepr():
         self.locals = []
         self.freevars = []
         self.name = ""  
-    def makeFromByteCode(self,code):
+    def makeFromByteCode(self,code,prglines={}):
         curpos = 0
         for op in code.opcodes:
             cre = CodeReprElement()
@@ -723,6 +737,13 @@ class CodeRepr():
             cre.opcode = op.name
             cre.prm = None if op.params==[] else op.params[0]
             cre.val = op.augVal()
+            cre.pline = -1
+            for pline in sorted(prglines):
+                if prglines[pline]<=curpos:
+                    cre.pline=pline
+                else:
+                    break
+
             self.lines.append(curpos)
             self.map[curpos]=cre
             curpos+=op.size()
@@ -737,7 +758,7 @@ class CodeRepr():
         self.name = code.fullname
         self.filename = code.srcfile
         self.prglines = code.prglines
-        self.makeFromByteCode(code.bytecode)
+        self.makeFromByteCode(code.bytecode,self.prglines)
     def toIndex(self):
         ret = {
             "src":self.filename,
@@ -757,6 +778,6 @@ class CodeRepr():
             "freevars":self.freevars,
             "name":self.name,
             "items": [
-                v.toDict() for k,v in self.map.items()
+                self.map[k].toDict() for k in sorted(self.map)
             ]
         }

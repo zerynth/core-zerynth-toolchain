@@ -95,7 +95,10 @@ class Context(object):
         self._as_parameter_ = libudev.udev_new()
 
     def __del__(self):
-        libudev.udev_unref(self)
+        try:
+            libudev.udev_unref(self)
+        except:
+            pass
 
     @property
     def sys_path(self):

@@ -17,6 +17,7 @@ class Device():
         x.update(self._info)
         x.update(self._dev)
         if "class" in x:
+            x["classes"]=x["class"]
             del x["class"]
         if "cls" in x:
             del x["cls"]
@@ -27,7 +28,7 @@ class Device():
 
 
     def __getattr__(self,attr):
-        if attr!="class" and attr in self._info:
+        if attr in self._info:
             return self._info[attr]
         if attr in self._dev:
             return self._dev[attr]
@@ -54,7 +55,7 @@ class Device():
             self.family = fs.get_json(dpath)
             return True
         except Exception as e:
-            warning("Can't load device family!",self.family_name,err=True)
+            warning("Can't load device family!",self.family_name)
         return False
 
 

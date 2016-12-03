@@ -255,7 +255,7 @@ class Compiler():
             try:
                 tree = ast.parse(modprg)
             except SyntaxError as e:
-                raise CSyntaxError(e.lineno,e.offset,mfile)
+                raise CSyntaxError(e.lineno,e.offset,mfile,str(e))
             
             self.astp.curpath = fs.dirname(mfile)
             tree = self.astp.visit(tree)

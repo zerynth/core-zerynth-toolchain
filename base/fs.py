@@ -14,6 +14,7 @@ __all__ = ["fs"]
 
 class zfs():
 
+
     def __init__(self,tmpdir="."):
         self.tmpdir = self.apath(tmpdir)
         self.tempfiles=set()
@@ -37,6 +38,14 @@ class zfs():
 
     def del_tempdir(self,tmp):
         fs.rmtree(tmp)
+
+    def get_hashdir(self,path):
+        hh = hashlib.md5()
+        hh.update(bytes(path,"utf-8"))
+        pth = self.path(self.tmpdir,hh.hexdigest())
+        self.rmtree(pth)
+        self.makedirs(pth)
+        return pth
 
     def get_json(self,src):
         with open(src,"r") as ff:
@@ -99,6 +108,9 @@ class zfs():
 
     def apath(self,path):
         return os.path.normpath(os.path.abspath(os.path.realpath(path)))
+
+    def rpath(self,path,parent):
+        return os.path.relpath(path,parent)
 
     def homedir(self):
         return self.apath(os.path.expanduser("~"))

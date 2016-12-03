@@ -1,0 +1,10 @@
+{
+	"version":"1.0.0",
+	"title":"Zerynth Toolchain",
+	"copyright":"Zerynth Team",
+	"files":[
+		["Zerynth Toolchain","ztc.py"],
+		["Projetcs","projects/projectcmd.py"],
+		["Virtual Machines","virtualmachines/vmcmd.py"]
+	]
+}

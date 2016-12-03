@@ -1,5 +1,5 @@
 
-__all__=["CError","CSyntaxError", "CNameError","CNameConstantError", "CUnsupportedFeatureError","CWrongSyntax","CUnknownNative","CNativeError","CModuleNotFound"]
+__all__=["CError","CSyntaxError", "CNativeError","CNameError","CNameConstantError", "CUnsupportedFeatureError","CWrongSyntax","CUnknownNative","CNativeNotFound","CModuleNotFound"]
 
 class CError(Exception):
     def __init__(self,line,col,filename):
@@ -29,14 +29,15 @@ class CNativeNotFound(CError):
 
 
 class CSyntaxError(CError):
-    def __init__(self,line,col,filename):
+    def __init__(self,line,col,filename,txt=""):
         super().__init__(line,col,filename)
-        self.errmsg = ""
+        self.errmsg = txt
         self.errtype = "SyntaxError"
 
 class CNameError(CSyntaxError):
     def __init__(self,line,col,filename,name):
         super().__init__(line,col,filename)
+        self.name = name
         self.errmsg="Unknown name -> "+str(name)
 
 class CNameConstantError(CSyntaxError):
@@ -57,6 +58,7 @@ class CWrongSyntax(CSyntaxError):
 class CUnknownNative(CError):
     def __init__(self,line,col,filename,msg):
         super().__init__(line,col,filename)
+        self.native_message = msg
         self.errmsg="Unknown C Native -> "+str(msg)
 
 class CNativeError(CError):

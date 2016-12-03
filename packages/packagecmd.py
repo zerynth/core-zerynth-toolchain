@@ -9,8 +9,6 @@ import re
 import hashlib
 import time
 from urllib.parse import quote_plus, unquote
-from whoosh.qparser import QueryParser,MultifieldParser,PrefixPlugin,OperatorsPlugin
-from whoosh.fields import *
 from .zpm  import *
 from .zversions import *
 
@@ -79,9 +77,6 @@ def packages():
 @packages.command()
 def sync():
     update_repos()
-    
-        
-        
 
 @packages.command()
 @click.option("--from","_from",default=0)
@@ -270,8 +265,11 @@ def download_callback(cursize,prevsize,totsize):
 @click.option("--justnew", flag_value=True, default=False)
 @click.option("--pretty", flag_value=True, default=False)
 @click.option("--offline", default=False)
-def install(p, db, last, force, simulate,justnew,pretty,offline):
+@click.option("--mute", flag_value=True, default=False)
+def install(p, db, last, force, simulate,justnew,pretty,offline,mute):
     indent = None if not pretty else 4
+    
+    if mute: set_output_filter(False)
     #### update local db
     if db:
         update_repos()
@@ -287,6 +285,7 @@ def install(p, db, last, force, simulate,justnew,pretty,offline):
             version = False
         packages.update({fullname: version})
 
+    
     if packages:
         try:
             if offline:
@@ -296,6 +295,7 @@ def install(p, db, last, force, simulate,justnew,pretty,offline):
             else:
                 to_download = _zpm.generate_installation(packages,last,force,justnew)
             
+            if mute: set_output_filter(True)
             if simulate:
                 log(json.dumps(to_download,indent=indent))
             else:
@@ -352,8 +352,14 @@ def uninstall(p):
 
 @package.command("info")
 @click.argument("fullname")
-def __info(fullname):  
-    res = _zpm.get_pack(fullname)
-    pack = Package(res, res.uid)
-    base.info(str(pack))
+@click.option("--json","__json",flag_value=True, default=False)
+def __info(fullname,__json):  
+    pack = _zpm.get_pack(fullname)
+    if not pack:
+        fatal("No such package:",fullname)
+    if not __json:
+        log(str(pack))
+    else:
+        log(json.dumps(pack.to_dict(),cls=ZpmEncoder))
+
 

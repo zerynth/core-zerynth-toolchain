@@ -23,13 +23,12 @@ class Tools():
             if fs.basename(tooldir) in ["browser","newbrowser","newpython"]:
                 # ignore some sys packages
                 continue
-            print("Checking",tooldir)
             try:
                 pkg = fs.get_json(fs.path(tooldir,"package.json"))
                 toolname = pkg.get("tool")
                 pkg = pkg["sys"]
             except Exception as e:
-                warning("Can't load tool",tooldir,err=True)
+                warning("Can't load tool",tooldir)
                 continue
             if toolname:
                 self.tools[toolname]={}
@@ -56,26 +55,36 @@ class Tools():
             return self.tools[attr]
         raise KeyError
 
-    def get_vms(self,target):
+    def get_vm(self,vmuid,version,chipid,target):
+        vmpath = fs.path(env.vms,target,chipid)
+        vmfs = fs.glob(vmpath,"*.vm")
+        vm = None
+        for vmf in vmfs:
+            vmm = fs.basename(vmf)
+            if vmm.startswith(vmuid+"_"+version+"_"):
+                vm=vmf
+        return vm
+
+    def get_vms(self,target,chipid=None):
         vms = {}
-        for d in fs.dirs(env.vms):
-            vmtarget = fs.basename(d)
-            for r in fs.dirs(fs.path(env.vms,d)):
-                vmfs = fs.glob(fs.path(env.vms,d,r),"*.vm")
-                for vmf in vmfs:
-                    vmbf = fs.basename(vmf)
-                    rpos = vmbf.rfind("_") #rtos
-                    hpos = vmbf.rfind("_",0,rpos-1) #hash
-                    vpos = vmbf.rfind("_",0,hpos-1) #version
-                    vmrtos = vmbf[rpos+1:-3]
-                    vmhash = vmbf[hpos+1:rpos]
-                    vmversion = vmbf[vpos+1:hpos]
-                    vmuid = vmbf[0:vpos] #TODO: add check
-                    
-                    if target and vmtarget==target:
-                        vms[vmuid]=vmf
-                    elif not target:
-                        vms[vmuid]=vmf
+        targetpath = fs.path(env.vms,target)
+        if not fs.exists(targetpath):
+            return vms
+        for chid in fs.dirs(targetpath):
+            chid=fs.basename(chid)
+            if chipid and chipid!=chid:
+                continue
+            vmfs = fs.glob(fs.path(targetpath,chid),"*.vm")
+            for vmf in vmfs:
+                vmbf = fs.basename(vmf)
+                rpos = vmbf.rfind("_") #rtos
+                hpos = vmbf.rfind("_",0,rpos-1) #hash
+                vpos = vmbf.rfind("_",0,hpos-1) #version
+                vmrtos = vmbf[rpos+1:-3]
+                vmhash = vmbf[hpos+1:rpos]
+                vmversion = vmbf[vpos+1:hpos]
+                vmuid = vmbf[0:vpos] #TODO: add check
+                vms[vmuid]=vmf
         return vms
 
     def _parse_order(self,path):
@@ -129,6 +138,45 @@ class Tools():
                 ee = self._get_examples(exlib)
                 exr.extend(ee)
         return exr
+
+    def get_devices(self):
+        bdirs = fs.dirs(env.devices)
+        for bdir in bdirs:
+            try:
+                bj = fs.get_json(fs.path(bdir,"device.json"))
+                bj["path"] = bdir
+                yield bj
+            except Exception as e:
+                warning(e)
+
+    def get_modules(self):
+        res = {}
+        # libraries
+        rdirs = fs.dirs(env.libs)
+        for r in rdirs:
+            repo = fs.basename(r)
+            nsdirs = fs.dirs(r)
+            for ns in nsdirs:
+                namespace = fs.basename(ns)
+                lbdirs = fs.dirs(ns)
+                for l in lbdirs:
+                    lib = fs.basename(l)
+                    if repo=="official":
+                        if namespace=="zerynth":
+                            module = lib
+                        else:
+                            module = namespace+"."+lib
+                    else:
+                        module = repo+"."+namespace+"."+lib
+                    imports = []
+                    for f in fs.files(l):
+                        fl = fs.basename(f)
+                        if fl.endswith(".py") and fl!="main.py":
+                            imports.append(fl[0:-3])
+                    res[module]=imports
+        return res
+
+
 
 
 

@@ -3,6 +3,8 @@ import sqlite3
 from .base import *
 from .fs import *
 import json
+import base64
+import os
 
 __all__=['env','Var']
 
@@ -76,10 +78,10 @@ class Environment():
             self._dbs_cfgdir=cfgdir
             self._dbs_dbname=dbname
             self._dbs = sqlite3.connect(fs.path(cfgdir,dbname),check_same_thread=False)
-            self._dbs.execute("CREATE TABLE IF NOT EXISTS aliases (alias TEXT PRIMARY KEY, uid TEXT, target TEXT, name TEXT, chipid TEXT, remote_id TEXT)")
+            self._dbs.execute("CREATE TABLE IF NOT EXISTS aliases (alias TEXT PRIMARY KEY, uid TEXT, target TEXT, name TEXT, chipid TEXT, remote_id TEXT, classname TEXT)")
             self._dbs.execute("CREATE UNIQUE INDEX IF NOT EXISTS aliases_idx ON aliases(alias)")
             self._dbs.execute("CREATE UNIQUE INDEX IF NOT EXISTS uid_idx ON aliases(uid)")
-            self._dbs.execute("CREATE UNIQUE INDEX IF NOT EXISTS chip_idx ON aliases(chipid)")
+            self._dbs.execute("CREATE INDEX IF NOT EXISTS chip_idx ON aliases(chipid)")
         except Exception as e:
             self._dbs = None
 
@@ -99,19 +101,19 @@ class Environment():
     def get_dev(self,key):
         res = {}
         for row in self._dbs.execute("select * from aliases where alias=? or uid=?",(key,key)):
-            res[row[0]]=Var({"alias":row[0],"uid":row[1],"target":row[2],"name":row[3],"chipid":row[4],"remote_id":row[5]})
+            res[row[0]]=Var({"alias":row[0],"uid":row[1],"target":row[2],"name":row[3],"chipid":row[4],"remote_id":row[5],"classname":row[6]})
         return res
 
     def get_dev_by_alias(self,alias):
         res = []
         for row in self._dbs.execute("select * from aliases where alias like '"+alias+"%'"):
-            res.append(Var({"alias":row[0],"uid":row[1],"target":row[2],"name":row[3],"chipid":row[4],"remote_id":row[5]}))
+            res.append(Var({"alias":row[0],"uid":row[1],"target":row[2],"name":row[3],"chipid":row[4],"remote_id":row[5],"classname":row[6]}))
         return res
 
     def put_dev(self,dev):
         if not isinstance(dev,Var):
             dev = Var(dev)
-        self._dbs.execute("insert or replace into aliases values(?,?,?,?,?,?)",(dev.alias,dev.uid,dev.target,dev.name,dev.chipid,dev.remote_id))
+        self._dbs.execute("insert or replace into aliases values(?,?,?,?,?,?,?)",(dev.alias,dev.uid,dev.target,dev.name,dev.chipid,dev.remote_id,dev.classname))
         self._dbs.commit()
 
     def del_dev(self,dev):
@@ -120,7 +122,7 @@ class Environment():
 
     def get_all_dev(self):
         for row in self._dbs.execute("select * from aliases"):
-            yield Var({"alias":row[0],"uid":row[1],"target":row[2],"name":row[3],"chipid":row[4],"remote_id":row[5]})
+            yield Var({"alias":row[0],"uid":row[1],"target":row[2],"name":row[3],"chipid":row[4],"remote_id":row[5],"classname":row[6]})
 
     def make_dist_dirs(self,distpath):
         fs.makedirs(self.ztc_dir(distpath))
@@ -129,6 +131,38 @@ class Environment():
         fs.makedirs(self.studio_dir(distpath))
         fs.makedirs(self.docs_dir(distpath))
         fs.makedirs(self.examples_dir(distpath))
+
+
+    def get_token(self):
+        # get token
+        try:
+            token = Var(fs.get_json(fs.path(env.cfg,"token.json")))
+        except:
+            token = Var({
+                "token": None,
+                "expires":0,
+                "type": None
+            })
+        return token
+
+    def set_token(self,rawtoken):
+        pl = rawtoken.split(".")[1]
+        js = json.loads(decode_base64(pl).decode("utf-8"))
+        token = {
+            "token":rawtoken,
+            "expires":js["exp"],
+            "type": None
+        }
+        fs.set_json(token,fs.path(env.cfg,"token.json"))
+
+
+def decode_base64(data):
+    missing_padding = len(data) % 4
+    if missing_padding != 0:
+        data += '='* (4 - missing_padding)
+    return base64.standard_b64decode(data)
+
+
 
 env=Environment()
 
@@ -170,8 +204,8 @@ def init_cfg():
     env.is_mac = lambda : env.platform.startswith("mac")
     env.is_linux = lambda : env.is_unix() and not env.is_mac()
 
-    # main directories
-    zdir = "Zerynth" if env.is_windows() else ".Zerynth2"
+    # main directories TODO: change zdir to official zdir
+    zdir = "zerynth2" if env.is_windows() else ".zerynth2"
     env.home      = fs.path(fs.homedir(),zdir)
     env.cfg       = fs.path(env.home,"cfg")
     env.env       = fs.path(env.home,"env")
@@ -191,7 +225,12 @@ def init_cfg():
     #env.load_zpack_db(env.zdb,"packages.db")
     #env.load_ipack_db(env.idb,"packages.db")
     version = env.var.version
-    env.git_url = "localhost/git/"
+    if os.environ.get("ZERYNTH_TEST",0)==1:
+        env.git_url = "http://localhost/git"
+        env.backend="http://localhost/v1"
+    else:
+        env.git_url ="https://backend.zerynth.com/git"
+        env.backend="https://backend.zerynth.com/v1"
 
     # dist directories
     env.dist      = fs.path(env.home,"dist",version)
@@ -226,18 +265,23 @@ def init_cfg():
 
     # backend & api
     #env.backend="https://backend.zerynth.com/v1"
-    env.backend="http://localhost/v1"
     env.api = Var({
         "project":env.backend+"/projects",
         "renew":env.backend+"/user/renew",
         "sso":env.backend+"/sso",
+        "pwd_reset":env.backend+"/user/reset",
         "devices":env.backend+"/devices",
         "vm":env.backend+"/vms",
+        "vmlist":env.backend+"/vmlist",
         "packages":env.backend+"/packages",
         "ns":env.backend+"/namespaces",
-        "db":env.backend+"/database",
+        "db":env.backend+"/repository",
         "search": env.backend+"/packages/search",
+        "profile": env.backend+"/user/profile",
+        "installation": env.backend+"/installations"
     })
+
+    env.user_agent = "ztc/"+version
 
 
 add_init(init_cfg,prio=0)

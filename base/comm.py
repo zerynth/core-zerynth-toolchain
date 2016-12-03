@@ -59,8 +59,9 @@ class ChannelException(Exception):
         self.e=e
 
 class Channel():
-    def __init__(self,conn):
+    def __init__(self,conn,echoing=False):
         self.conn = conn
+        self.echoing=echoing
 
     def open(self,timeout=None):
         try:
@@ -89,7 +90,7 @@ class Channel():
                 data = self.ch.read(toread)
                 log(data.decode("ascii","replace"),sep="",end="")
         except Exception as e:
-            print("READER",e)
+            critical("Lost connection!")
 
     def _writer(self):
         try:
@@ -99,6 +100,7 @@ class Channel():
                     self.close()
                     return
                 self.write(data)
+                if self.echoing: log(str(data))
         except Exception as e:
             print(e)
 

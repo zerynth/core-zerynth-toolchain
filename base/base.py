@@ -3,7 +3,7 @@ import sys
 import traceback
 import time
 
-__all__ =['Critical','Error','Warning','Info','echo','cli','error','warning','info','log','critical','fatal','add_init','init_all','sleep']
+__all__ =['Critical','Error','Warning','Info','echo','cli','error','warning','info','log','critical','fatal','add_init','init_all','sleep','set_output_filter']
 
 
 ## GLOBAL OPTIONS
@@ -77,26 +77,36 @@ def critical(*args,**kwargs):
         exc = kwargs.pop("exc")
     else:
         exc = None
-    echo(Critical("[fatal]>"),*args,**kwargs)
+    echo(Critical("[fatal]>"),*args,err=True,**kwargs)
     if exc and _options["traceback"]:
         traceback.print_exc()
-    sys.exit(1)
+    sys.exit(2)
     
 
 def fatal(*args,**kwargs):
-    echo(Error("[error]>"),*args,**kwargs)
+    echo(Error("[error]>"),*args,err=True,**kwargs)
     sys.exit(1)
 
 def error(*args,**kwargs):
-    echo(Error("[error]>"),*args,**kwargs)
+    echo(Error("[error]>"),*args,err=True,**kwargs)
 
 def warning(*args,**kwargs):
-    echo(Warning("[warning]>"),*args,**kwargs)
+    echo(Warning("[warning]>"),*args,err=True,**kwargs)
 
 def info(*args,**kwargs):
+    if not output_filter: return
     echo(Info("[info]>"),*args,**kwargs)
 
-log = echo
+def log(*args,**kwargs):
+    if not output_filter: return
+    echo(*args,**kwargs)
+
+
+def set_output_filter(enabled):
+    global output_filter 
+    output_filter = enabled
+
+output_filter = True
 
 def sleep(n):
     time.sleep(n)
@@ -106,7 +116,10 @@ def sleep(n):
 @click.option("-v","verbose",flag_value=True,default=False,help="verbose")
 @click.option("--colors/--no-colors","nocolors",default=True,help="enable/disable colors")
 @click.option("--traceback/--no-traceback","notraceback",default=True,help="enable/disable exception traceback printing on criticals")
-def cli(verbose,nocolors,notraceback):
+@click.option("--user_agent",default="ztc")
+def cli(verbose,nocolors,notraceback,user_agent):
     _options["colors"]=nocolors
     _options["traceback"]=notraceback
     _options["verbose"]=verbose
+    from .cfg import env
+    env.user_agent = user_agent+"/"+env.var.version

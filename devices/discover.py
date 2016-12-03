@@ -13,18 +13,15 @@ __all__=['Discover']
 class Discover():
     def __init__(self):
         self.round=0
-        if env.is_unix():
-            self.devstrings={
-                "ID_SERIAL":"serial",
-                "ID_SERIAL_SHORT":"sid",
-                "ID_VENDOR_ID":"vid",
-                "ID_MODEL_ID":"pid",
-                "SUBSYSTEM":"sys",
-                "DEVNAME":"dev"
-            }
-            import pyudev
-            self.devkeys = set(self.devstrings.keys())
-            self.udev = pyudev.Context()
+        if env.is_linux():
+            from . import linuxusb
+            self.devsrc = linuxusb.LinuxUsb()
+        elif env.is_mac():
+            from . import macusb 
+            self.devsrc = macusb.MacUsb()
+        else:
+            from . import winusb
+            self.devsrc = winusb.WinUsb()
         self.devices = {}
         self.matched_devices = {}
         self.device_cls = {}
@@ -40,26 +37,21 @@ class Discover():
 
     def load_devices(self):
         bdirs = fs.dirs(env.devices)
-        for bdir in bdirs:
-            try:
-                bj = fs.get_json(fs.path(bdir,"device.json"))
-                bj["path"] = bdir
-                for cls in bj["class"]:
-                    try:
-                        sys.path.append(bdir)
-                        module,bcls = cls.split(".")
-                        bc = importlib.import_module(module)
-                        dcls = getattr(bc,bcls)
-                        bjc = dict(bj)
-                        bjc["cls"]=dcls
-                        sys.path.pop()
-                        self.device_cls[bdir+"::"+bcls]=bjc
-                        if "target" in bj:
-                            self.targets[bj["target"]]=bjc
-                    except Exception as e:
-                        warning(e,err=True)
-            except Exception as e:
-                warning(e,err=True)
+        for bj in tools.get_devices():
+            for cls in bj["classes"]:
+                try:
+                    sys.path.append(bj["path"])
+                    module,bcls = cls.split(".")
+                    bc = importlib.import_module(module)
+                    dcls = getattr(bc,bcls)
+                    bjc = dict(bj)
+                    bjc["cls"]=dcls
+                    sys.path.pop()
+                    self.device_cls[bj["path"]+"::"+bcls]=bjc
+                    if "target" in bj:
+                        self.targets[bj["target"]]=bjc
+                except Exception as e:
+                    warning(e)
 
     def wait_for_uid(self,uid,loop=5,matchdb=True):
         for l in range(loop):
@@ -71,14 +63,37 @@ class Discover():
             info("attempt",l+1)
         return [],{}
 
+    def wait_for_classname(self,classname,loop=5,matchdb=True):
+        for l in range(loop):
+            devs = self.run_one(matchdb)
+            uids = [uid for uid,dev in devs.items() if dev.classname==classname]
+            if len(uids)>=1:
+                return uids,devs
+            sleep(1)
+            info("attempt",l+1)
+        return [],{}
+
 
     def parse(self):
-        if env.is_windows():
-            self.parse_windows()
-        elif env.is_mac():
-            self.parse_mac()
-        else:
-            return self.parse_linux()
+        devices = self.devsrc.parse()
+        newdevices = {}
+        for dev in devices:
+            dev["uid"]=self.make_uid(dev)
+            dev["fingerprint"]=self.make_fingerprint(dev)
+            if dev["uid"] not in newdevices:
+                newdevices[dev["uid"]]={}
+            newdevices[dev["uid"]][dev["fingerprint"]]=dev
+        # fuse devices by uid
+        ret={}
+        for k,v in newdevices.items():
+            fused = {}
+            for fg,vv in v.items():
+                for key,value in vv.items():
+                    if (key not in fused) or not fused[key]:
+                        fused[key]=value
+            fused["fingerprint"]=self.make_fingerprint(fused)
+            ret[k]=fused
+        return ret
 
     def output_devices(self,pretty=False):
         indent = 4 if pretty else None
@@ -124,6 +139,7 @@ class Discover():
                     x["target"] = d.target
                     x["chipid"] = d.chipid
                     x["remote_id"] = d.remote_id
+                    x["classname"] =d.classname
                     pdevs.append(x)
                     if d.uid not in tuid:
                         tuid[d.uid]=[]
@@ -138,7 +154,7 @@ class Discover():
             for dev in pdevs:
                 #print("Checking",dev["uid"],dev["uid"] in tuid,dev)
                 if dev["uid"] in tuid:  # uid with alias and target
-                    if dinfo.get("target")==dev.get("target","-"):
+                    if dinfo.get("target")==dev.get("target","-") and cls.__name__==dev.get("classname","-"): #same target can have different device classes
                         obj = cls(dinfo,dev)
                         ndb[obj.hash()]=obj
                 elif cls.match(dev):
@@ -177,14 +193,13 @@ class Discover():
         return devs[dev.hash()]
 
 
-
     def search_for_device(self,alias):
         devs = self.run_one(True)
         res = []
         for h,dev in devs.items():
             if dev.alias==alias:
                 return dev
-            elif dev.alias.startswith(alias):
+            elif dev.alias and dev.alias.startswith(alias):
                 res.append(dev)
         if len(res)==1:
             return res[0]
@@ -228,58 +243,7 @@ class Discover():
         return h.hexdigest()
 
     def make_fingerprint(self,dev):
-        return (dev["port"] or "")+":"+(dev["disk"] or "")
-
-
-############ LINUX
-
-    def find_mount_point(self,block):
-        if not block:
-            return
-        e,out,err = proc.run("mount -v")
-        if not e:
-            lines = out.split("\n")
-            for line in lines:
-                if line.startswith(block):
-                    flds = line.split(" ")
-                    if len(flds)>=4 and flds[0]==block and flds[1]=="on" and flds[3]=="type":
-                        return flds[2]
-
-    def parse_linux(self):
-        newdevices={}
-        for device in self.udev.list_devices():
-            try:
-                if "SUBSYSTEM" in device and device["SUBSYSTEM"] in ("block","tty","usb"):
-                    if self.devkeys.issubset(device):
-                        dev={
-                            "vid":device["ID_VENDOR_ID"].upper(),
-                            "pid":device["ID_MODEL_ID"].upper(),
-                            "sid":device["ID_SERIAL_SHORT"].upper(),
-                            "port": device["DEVNAME"] if device["SUBSYSTEM"] == "tty" else None,
-                            "block": device["DEVNAME"] if device["SUBSYSTEM"] == "block" else None,
-                            "disk": self.find_mount_point(device["DEVNAME"]) if device["SUBSYSTEM"] == "block" else None,
-                            "desc": device["ID_SERIAL"]
-                        }
-                        dev["uid"]=self.make_uid(dev)
-                        dev["fingerprint"]=self.make_fingerprint(dev)
-                        if dev["uid"] not in newdevices:
-                            newdevices[dev["uid"]]={}
-                        newdevices[dev["uid"]][dev["fingerprint"]]=dev
-            except Exception as e:
-                print("#",e)
-        #fuse devices by uid
-        ret={}
-        for k,v in newdevices.items():
-            fused = {}
-            for fg,vv in v.items():
-                for key,value in vv.items():
-                    if (key not in fused) or not fused[key]:
-                        fused[key]=value
-            fused["fingerprint"]=self.make_fingerprint(fused)
-            ret[k]=fused
-        return ret
-        
-
+        return (dev.get("port") or "")+":"+(dev.get("disk") or "")
 
 
 # class ViperListener(ViperThread):

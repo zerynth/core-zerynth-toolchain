@@ -28,7 +28,7 @@ def get_device(uid):
     # got dev object!
     if dev.uplink_reset:
         info("Please reset the device!")
-        sleep(dev.reset_time)
+        sleep(dev.reset_time/1000)
         info("Searching for device",uid,"again")
         # wait for dev to come back, port/address may change -_-
         uids,devs = _dsc.wait_for_uid(uid)
@@ -41,7 +41,7 @@ def probing(ch,devtarget):
     # PROBING
     starttime = time.perf_counter()
     probesent = False
-    hcatcher = re.compile("^([0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}) ([^ ]+) ([0-9a-fA-F]+) VIPER") #TODO: change to Zerynth
+    hcatcher = re.compile("^(r[0-9]+\.[0-9]+\.[0-9]+) ([0-9A-Za-z_\-]+) ([^ ]+) ([0-9a-fA-F]+) ZERYNTH")
     while time.perf_counter()-starttime<5:
         line=ch.readline()
         if not line and not probesent:
@@ -49,12 +49,15 @@ def probing(ch,devtarget):
             ch.write("V")
             info("Probe sent")
         line = line.replace("\n","").strip()
-        if line.endswith("VIPER"): #TODO: change to Zerynth
+        if line:
+            info("Got header:",line)
+        if line.endswith("ZERYNTH"):
             mth = hcatcher.match(line)
             if mth:
-                vmuid = mth.group(1)
-                chuid = mth.group(3)
-                target = mth.group(2)
+                version = mth.group(1)
+                vmuid = mth.group(2)
+                chuid = mth.group(4)
+                target = mth.group(3)
                 break
     else:
         fatal("No answer to probe")
@@ -64,7 +67,7 @@ def probing(ch,devtarget):
     else:
         info("Found VM",vmuid,"for",target)
 
-    return vmuid,chuid,target
+    return version,vmuid,chuid,target
 
 
 
@@ -131,11 +134,13 @@ def uplink(uid,bytecode,loop):
     except:
         fatal("Can't open serial:",dev.port)
 
-    vmuid,chuid,target = probing(ch,dev.target)
+    version,vmuid,chuid,target = probing(ch,dev.target)
 
-    #TODO: get VM by uid
-    vms = tools.get_vms()
-    vm = fs.get_json(vms[vmuid])
+    vms = tools.get_vm(vmuid,version,chuid,target)
+    if not vms:
+        ch.close()
+        fatal("No such vm for",dev.target,"with id",vmuid)
+    vm = fs.get_json(vms)
 
     symbols,_memstart,_romstart,_flashspace = handshake(ch)
 
@@ -185,7 +190,7 @@ def uplink(uid,bytecode,loop):
         tosend = min(ll,vm_chunk)
         buf = thebin[wrt:wrt+tosend]
         adler = adler32(buf)
-        #logger.info("sending block %i of %i bytes with crc: %x",nblock,tosend,adler)
+        #info("sending block %i of %i bytes with crc: %x",nblock,tosend,adler)
         ch.write(buf)
         ch.write(struct.pack("<I",adler))
         #ser.flush()
@@ -211,8 +216,11 @@ def uplink(uid,bytecode,loop):
             #logger.error("Failed")
             raise UplinkException("Failed while sending bytecode")
     if nattempt!=0:
-        error("Too many attempts")
-    ch.close()
+        ch.close()
+        fatal("Too many attempts")
+    else:
+        ch.close()
+        info("Uplink done")
 
 def adler32(buf):
     a = 1

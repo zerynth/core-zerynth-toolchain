@@ -18,7 +18,10 @@ def device():
 @click.option("--matchdb","matchdb",flag_value=True, default=False,help="find matches in device db")
 @click.option("--pretty","pretty",flag_value=True, default=False,help="pretty json")
 def discover(loop,looptime,matchdb,pretty):
-    _dsc.run(loop,looptime,matchdb,pretty)
+    try:
+        _dsc.run(loop,looptime,matchdb,pretty)
+    except:
+        pass
 
 
 @device.command()
@@ -48,16 +51,32 @@ def register(alias):
         fatal("Can't find device",alias)
     elif isinstance(tgt,list):
         fatal("Ambiguous alias",[x.alias for x in tgt])
+    if not tgt.virtualizable:
+        fatal("Device is not virtualizable! Try to put it in a virtualizable mode...")
+    
+    if tgt.virtualizable != tgt.classname:
+        fatal("Device must be put in virtualizable mode!")
+
     # open register.vm
     reg = fs.get_json(fs.path(tgt.path,"register.vm"))
+
     # burn register.vm
     info("Starting device registration")
-    tgt.burn(bytearray(base64.standard_b64decode(reg["bin"])))
+    res,out = tgt.burn(bytearray(base64.standard_b64decode(reg["bin"])),info)
+    
+    if not res:
+        fatal("Can't burn bootloader!")
+
+    alter_ego = None
     if tgt.has_alter_ego:
-        # TODO
-        # virtualizable device is not the same as uplinkable device -_-
-        # algo: find differences between devs 
-        pass
+        alter_ego = tgt
+        clsname = tgt.has_alter_ego
+        uids,devs = _dsc.wait_for_classname(clsname)
+        if not uids:
+            fatal("Can't find this device alter ego!")
+        elif len(uids)>1:
+            fatal("Too many devices matching this device alter ego! Please unplug them all and retry...")
+        tgt = devs[uids[0]]
     else:
         # virtualizable device is the same as uplinkable device :)
         # search for dev again and open serial
@@ -76,7 +95,7 @@ def register(alias):
     ch.close()
     cnt = [lines.count(x) for x in lines]
     pos = cnt.index(max(cnt))
-    if pos>=0 and cnt[pos]>3:
+    if pos>=0 and cnt[pos]>3 and len(lines[pos])>=8:
         info("Found chipid:",lines[pos])
     else:
         fatal("Can't find chipid")
@@ -91,7 +110,6 @@ def register(alias):
     try:
         res = zpost(url=env.api.devices, data=dinfo)
         rj = res.json()
-        print(rj)
         if rj["status"] == "success":
             info("Device",tgt.custom_name  or tgt.name,"registered with uid:", rj["data"]["uid"])
         else:
@@ -99,10 +117,15 @@ def register(alias):
     except Exception as e:
         critical("Error during remote registration",exc=e)
     tgt = tgt.to_dict()
-    print(tgt)
     tgt["chipid"]=chipid
     tgt["remote_id"]=rj["data"]["uid"]
     env.put_dev(tgt)
+    if alter_ego:
+        alter_ego = alter_ego.to_dict()
+        alter_ego["chipid"]=chipid
+        alter_ego["remote_id"]=rj["data"]["uid"]
+        env.put_dev(alter_ego)
+
 
 @device.command()
 @click.argument("alias")
@@ -140,7 +163,8 @@ def virtualize(alias,vmuid):
 
 @device.command()
 @click.argument("alias")
-def open(alias):
+@click.option("--echo","__echo",flag_value=True, default=False,help="print typed characters to stdin")
+def open(alias,__echo):
     tgt = _dsc.search_for_device(alias)
     if not tgt:
         fatal("Can't find device",alias)
@@ -149,8 +173,7 @@ def open(alias):
 
     conn = ConnectionInfo()
     conn.set_serial(tgt.port,**tgt.connection)
-    ch = Channel(conn)
-
+    ch = Channel(conn,__echo)
     ch.open()
     ch.run()
     # import serial
@@ -177,7 +200,8 @@ def alias():
 @click.option("--name",default=False)
 @click.option("--chipid",default="")
 @click.option("--remote_id",default="")
-def alias_put(uid,alias,name,target,chipid,remote_id):
+@click.option("--classname",default="")
+def alias_put(uid,alias,name,target,chipid,remote_id,classname):
     #if not re.match("^[A-Za-z0-9_:-]{4,}$",alias):
     #    fatal("Malformed alias")
     devs = _dsc.run_one(True)
@@ -188,6 +212,13 @@ def alias_put(uid,alias,name,target,chipid,remote_id):
         fatal("No devices with uid",uid)
     else:
         uid = uids[0]
+        dd = [dev for uu,dev in devs.items() if dev.uid==uid]
+        dd = dd[0]
+        if not classname and len(dd["classes"])>1:
+            fatal("Multiclass device! Must specify --classname option")
+        if not classname:
+            classname = dd["classes"][0].split(".")[1]
+        print(classname,dd["classes"])
         aliaskey = alias
         aliases = env.get_dev(uid)
         aliasuid = aliases[alias].uid if alias in aliases else None
@@ -199,16 +230,15 @@ def alias_put(uid,alias,name,target,chipid,remote_id):
             "name": aliases[alias].name if not name and aliasuid!=None else "",
             "target": target,
             "chipid":chipid,
-            "remote_id":remote_id
+            "remote_id":remote_id,
+            "classname":classname
         }
         env.put_dev(deventry) 
         #TODO open devdb, get/set uid+unique_alias+name+shortname(this disambiguate a device)
 
 
 @alias.command("del")
-@click.argument("uid")
 @click.argument("alias")
-@click.option("--name",default=False)
-@click.option("--shortname",default=False)
-def alias_del(uid,alias,name,shortname):
-    pass
+def alias_del(alias):
+    env.del_dev(Var({"alias":alias}))
+    

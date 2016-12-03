@@ -169,7 +169,6 @@ class Zpm():
 
 
     def _download_package(self,package,version,callback=None,offline=None):
-        info("DOWNLOAD",str(offline))
         if not offline:
             res = zget(url=env.api.packages+"/"+package.fullname+"/"+str(version),stream=True,auth="conditional")
             if res.status_code == 200:
@@ -204,23 +203,23 @@ class Zpm():
         if vers == curvers:
             return curvers
         elif vers < minvers or vers > maxvers:
-            info("    Incompatible version",fullname,vers,"for allowed range",minvers,":",maxvers)
+            warning("    Incompatible version",fullname,vers,"for allowed range",minvers,":",maxvers)
             return False
         elif vers >= minvers and vers <= maxvers:
             if not fixed and not curfixed:
-                info("    Selected version",vers)
+                warning("    Selected version",vers)
                 if vers > curvers:
                     return curvers
                 else:
                     return vers
             elif fixed and vers > curvers:
-                info("    Selected version",vers)
+                warning("    Selected version",vers)
                 return curvers
             elif curfixed and curvers > vers:
-                info("    Selected version",vers)
+                warning("    Selected version",vers)
                 return vers
             else:
-                info("Incompatible version",fullname,vers,"vs",curvers)
+                warning("Incompatible version",fullname,vers,"vs",curvers)
                 return False
 
     def check_fullname(self, fullname):
