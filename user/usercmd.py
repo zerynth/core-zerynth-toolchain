@@ -40,8 +40,7 @@ def __login(token):
         webbrowser.open(env.api.sso)
         token = input("Paste the token here and press enter -->")
     if token:
-        env.var.set("token",token)
-        env.save()
+        env.set_token(token)
         check_installation()
     else:
         error("Bad token!")

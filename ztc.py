@@ -24,23 +24,30 @@ import json
 @click.option("--devices","__devices",flag_value=True, default=False,help="show installed devices")
 @click.option("--vms","__vms",help="show installed virtual machines (target must be specified)")
 @click.option("--examples","__examples",flag_value=True, default=False,help="show installed examples")
-@click.option("--json","__json",flag_value=True, default=False,help="output info in json format")
-@click.option("--pretty","pretty",flag_value=True, default=False,help="output info in readable format")
-def __info(__tools,__devices,__vms,__examples,__json,__version,__modules,pretty):
-    indent = 4 if pretty else None
+def __info(__tools,__devices,__vms,__examples,__version,__modules):
     if __tools:
-        if __json:
-            log(json.dumps(tools.tools,indent=indent))
-        else:
+        if env.human:
+            table = []
             for k,v in tools.tools.items():
                 if isinstance(v,str):
+                    table.append([k,v])
                     log(k,"=>",v)
                 else:
                     for kk,vv in v.items():
-                        log(k+"."+kk,"=>",vv)
+                        table.append([k+"."+kk,vv])
+            log_table(table)
+        else:
+            log_json(tools.tools)
+        return
+
     if __devices:
         for dev in tools.get_devices():
-            log(json.dumps(dev,indent=indent))
+            if env.human:
+                #TODO: print in human readable format
+                log_json(dev)
+            else:
+                log_json(dev)
+        return
     if __vms:
         if ":" in __vms:
             __vms,chipid = __vms.split(":")
@@ -69,15 +76,25 @@ def __info(__tools,__devices,__vms,__examples,__json,__version,__modules,pretty)
                 "desc":vm.get("desc",""),
                 "rtos":vm["rtos"]
             })
-        log(json.dumps(vmdb,indent=indent))
+        if env.human:
+            table = []
+            for target,chv in vmdb.items():
+                for chipid,nfo in chv.items():
+                    for nn in nfo:
+                        table.append([target,chipid,nn["uuid"],nn["rtos"],nn["features"],nn["file"]])
+            log_table(table,headers=["target","chipid","uid","rtos","features","path"])
+        else:
+            log_json(vmdb)
+        return
+
     if __examples:
-        log(json.dumps(tools.get_examples(),indent=indent))
+        log_json(tools.get_examples())
 
     if __version:
         log(env.var.version)
 
     if __modules:
-        log(json.dumps(tools.get_modules(),indent=indent))
+        log_json(tools.get_modules())
 
 if __name__=="__main__":
     init_all()

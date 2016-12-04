@@ -2,8 +2,10 @@ import click
 import sys
 import traceback
 import time
+import json
+from . import tabulate
 
-__all__ =['Critical','Error','Warning','Info','echo','cli','error','warning','info','log','critical','fatal','add_init','init_all','sleep','set_output_filter']
+__all__ =['Critical','Error','Warning','Info','echo','cli','error','warning','info','log','log_json','log_table','critical','fatal','add_init','init_all','sleep','set_output_filter']
 
 
 ## GLOBAL OPTIONS
@@ -101,12 +103,23 @@ def log(*args,**kwargs):
     if not output_filter: return
     echo(*args,**kwargs)
 
+def log_json(js,*args,**kwargs):
+    if not output_filter: return
+    cls = kwargs.pop("cls",None)
+    sort_keys = kwargs.pop("sort_keys",False)
+    echo(json.dumps(js,indent=indent,cls=cls,sort_keys=sort_keys),*args,**kwargs)
+
+def log_table(table,*args,**kwargs):
+    if not output_filter: return
+    headers = kwargs.pop("headers",[])
+    echo(tabulate.tabulate(table,headers),*args,**kwargs)
 
 def set_output_filter(enabled):
     global output_filter 
     output_filter = enabled
 
 output_filter = True
+indent = None
 
 def sleep(n):
     time.sleep(n)
@@ -117,9 +130,14 @@ def sleep(n):
 @click.option("--colors/--no-colors","nocolors",default=True,help="enable/disable colors")
 @click.option("--traceback/--no-traceback","notraceback",default=True,help="enable/disable exception traceback printing on criticals")
 @click.option("--user_agent",default="ztc")
-def cli(verbose,nocolors,notraceback,user_agent):
+@click.option("--pretty","pretty",flag_value=True, default=False,help="pretty json output")
+@click.option("-J","__j",flag_value=True,default=False)
+def cli(verbose,nocolors,notraceback,user_agent,__j,pretty):
     _options["colors"]=nocolors
     _options["traceback"]=notraceback
     _options["verbose"]=verbose
     from .cfg import env
     env.user_agent = user_agent+"/"+env.var.version
+    env.human = not __j
+    global indent 
+    indent = 4 if pretty else None

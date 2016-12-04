@@ -80,15 +80,13 @@ def sync():
 
 @packages.command()
 @click.option("--from","_from",default=0)
-@click.option("--pretty","pretty",flag_value=True, default=False,help="output info in readable format")
-def published(_from,pretty):
-    indent = 4 if pretty else None
+def published(_from):
     try:
         prms = {"from":_from}
         res = zget(url=env.api.packages,params=prms)
         rj = res.json()
         if rj["status"]=="success":
-            log(json.dumps(rj["data"],indent=indent))
+            log_json(rj["data"])
         else:
             error("Can't get published packages",rj["message"])
     except Exception as e:
@@ -96,46 +94,61 @@ def published(_from,pretty):
 
 @packages.command()
 @click.option("--extended","extended",flag_value=True, default=False,help="output full package info")
-@click.option("--pretty","pretty",flag_value=True, default=False,help="output info in readable format")
-def installed(extended,pretty):
-    indent = 4 if pretty else None
+def installed(extended):
+    table = []
+    headers = []
     if not extended:
         installed_list = _zpm.get_installed_list()
+        for k in sorted(installed_list):
+            table.append([k,installed_list[k]])
+        headers = ["fullname","version"]
     else:
         installed_list = [v.to_dict() for v in _zpm.get_all_installed_packages()]
-    log(json.dumps(installed_list,indent=indent,cls=ZpmEncoder))
+        for v in installed_list:
+            table.append([v["fullname"],v["last_version"],v["repo"],v["title"],v["rating"]])
+        headers = ["fullname","last version","repository","title","rating"]
+    if env.human:
+        log_table(table,headers=headers)
+    else:
+        log_json(installed_list,cls=ZpmEncoder)
 
 @packages.command()
 @click.option("--db", flag_value=False, default=True)
-@click.option("--pretty","pretty",flag_value=True, default=False,help="output info in readable format")
-def updated(db,pretty):
-    indent = 4 if pretty else None
+def updated(db):
     if db: update_repos()
     installed_list = _zpm.get_installed_list()
     pkgs = {p.fullname:v for p,v in _zpm.get_all_packages() if p.fullname in installed_list and installed_list[p.fullname]!=v}
-    log(json.dumps(pkgs,indent=indent,cls=ZpmEncoder))
+    if env.human:
+        table = [[k,pkgs[k]] for k in sorted(pkgs)]
+        log_table(table,headers=["fullaname","version"])
+    else:
+        log_json(pkgs,cls=ZpmEncoder)
 
 
 
 @packages.command()
 @click.argument("query")
 @click.option("--types", default="lib",help="comma separated list of package types: lib, sys, board, vhal, core, meta")
-@click.option("--pretty", flag_value=True, default=False)
-def search(query,types,pretty):
-    indent = 4 if pretty else None
+def search(query,types):
     ####TODO validate 
     q = query
     query_url = quote_plus(query)
     try:
         prms = {"textquery":q,"types":types}
         res = zget(url=env.api.search, params=prms)
-        if res.json()["status"] == "success":
-            log(json.dumps(res.json()["data"],sort_keys=True,indent=indent))
+        rj = res.json()
+        if rj["status"] == "success":
+            if env.human:
+                table = []
+                for v in rj["data"]:
+                    table.append([v["fullname"],v["versions"],v["repo"],v["title"],v["description"],v["num_of_downloads"],v["rating"]])
+                log_table(table,headers=["fullname","versions","repository","title","description","downloads","rating"])
+            else:
+                log_json(rj["data"],sort_keys=True)
         else:
             error("Can't search package",res.json()["message"])
     except Exception as e:
-        error("Can't search package", e)
-
+        critical("Can't search package", exc=e)
 
 
 
@@ -263,11 +276,9 @@ def download_callback(cursize,prevsize,totsize):
 @click.option("--force", flag_value=True, default=False)
 @click.option("--simulate", flag_value=True, default=False)
 @click.option("--justnew", flag_value=True, default=False)
-@click.option("--pretty", flag_value=True, default=False)
 @click.option("--offline", default=False)
 @click.option("--mute", flag_value=True, default=False)
-def install(p, db, last, force, simulate,justnew,pretty,offline,mute):
-    indent = None if not pretty else 4
+def install(p, db, last, force, simulate,justnew,offline,mute):
     
     if mute: set_output_filter(False)
     #### update local db
@@ -297,7 +308,11 @@ def install(p, db, last, force, simulate,justnew,pretty,offline,mute):
             
             if mute: set_output_filter(True)
             if simulate:
-                log(json.dumps(to_download,indent=indent))
+                if env.human:
+                    table = [[k,to_download[k]] for k in sorted(to_download)]
+                    log_table(table,headers=["fullname","version"])
+                else:
+                    log_json(to_download)
             else:
                 res =_zpm.install(to_download,offline=offline)#,download_callback)
                 if res:
@@ -306,9 +321,7 @@ def install(p, db, last, force, simulate,justnew,pretty,offline,mute):
         except ZpmException as ze:
             fatal("Error during install",ze)
         except Exception as e:
-            import traceback
-            log(traceback.format_exc())
-            fatal("Impossible to install packages:", e)
+            critical("Impossible to install packages:", exc=e)
 
 
 # def update_all(self):
@@ -319,17 +332,18 @@ def install(p, db, last, force, simulate,justnew,pretty,offline,mute):
 @packages.command()
 @click.option("--db", flag_value=False, default=True)
 @click.option("--simulate", flag_value=True, default=False)
-@click.option("--pretty", flag_value=True, default=False)
-def update_all(db,simulate,pretty):
-    indent = None if not pretty else 4
-
+def update_all(db,simulate):
     if db:
         update_repos()
     try:
         installed_list = _zpm.get_installed_list()
         to_download = _zpm.generate_installation(installed_list,last=True,force=False,justnew=True)
         if simulate:
-            log(json.dumps(to_download,indent=indent))
+            if env.human:
+                table = [[k,to_download[k]] for k in sorted(to_download)]
+                log_table(table,headers=["fullname","version"])
+            else:
+                log_json(to_download)
         else:
             res =_zpm.install(to_download)#,download_callback)
             if res:
@@ -337,29 +351,35 @@ def update_all(db,simulate,pretty):
     except Exception as e:
         fatal("Impossible to install packages:", e)
 
-#TODO: check uninstall
-@package.command()
-@click.option("-p", multiple=True, type=str)
-def uninstall(p):
-    packages = []
-    for pack in p:
-        packages.append(pack)
-    try:
-        _zpm.uninstall(packages)
-    except Exception as e:
-        fatal("impossible to unistall packages:", e)
+# #TODO: check uninstall
+# @package.command()
+# @click.option("-p", multiple=True, type=str)
+# def uninstall(p):
+#     packages = []
+#     for pack in p:
+#         packages.append(pack)
+#     try:
+#         _zpm.uninstall(packages)
+#     except Exception as e:
+#         fatal("impossible to unistall packages:", e)
 
 
 @package.command("info")
 @click.argument("fullname")
-@click.option("--json","__json",flag_value=True, default=False)
-def __info(fullname,__json):  
+def __info(fullname):
     pack = _zpm.get_pack(fullname)
     if not pack:
         fatal("No such package:",fullname)
-    if not __json:
-        log(str(pack))
+    if env.human:
+        table = [
+            ["fullname",pack.fullname],
+            ["last version",pack.last_version],
+            ["versions",pack.versions],
+            ["title",pack.title],
+            ["description",pack.description],
+        ]
+        log_table(table)
     else:
-        log(json.dumps(pack.to_dict(),cls=ZpmEncoder))
+        log_json(pack.to_dict(),cls=ZpmEncoder)
 
 

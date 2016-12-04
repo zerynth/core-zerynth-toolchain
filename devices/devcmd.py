@@ -16,10 +16,9 @@ def device():
 @click.option("--loop","loop",flag_value=True, default=False,help="loop discover")
 @click.option("--looptime",default=2,help="loop discover")
 @click.option("--matchdb","matchdb",flag_value=True, default=False,help="find matches in device db")
-@click.option("--pretty","pretty",flag_value=True, default=False,help="pretty json")
-def discover(loop,looptime,matchdb,pretty):
+def discover(loop,looptime,matchdb):
     try:
-        _dsc.run(loop,looptime,matchdb,pretty)
+        _dsc.run(loop,looptime,matchdb)
     except:
         pass
 
@@ -27,12 +26,18 @@ def discover(loop,looptime,matchdb,pretty):
 @device.command()
 @click.option("--type",default="board",type=click.Choice(["board","jtag","usbtoserial"]),help="type of device [board,jtag,usbtoserial]")
 def supported(type):
+    table = []
     for k,v in _dsc.device_cls.items():
         if v["type"]==type:
-            echo(json.dumps({
-                "target":v["target"],
-                "path":v["path"]
-            }))
+            if env.human:
+                table.append([v["target"],v["path"]])
+            else:
+                log_json({
+                    "target":v["target"],
+                    "path":v["path"]
+                })
+    if env.human:
+        log_table(table,headers=["Target","Path"])
 
 
 #TODO: remove
@@ -218,7 +223,6 @@ def alias_put(uid,alias,name,target,chipid,remote_id,classname):
             fatal("Multiclass device! Must specify --classname option")
         if not classname:
             classname = dd["classes"][0].split(".")[1]
-        print(classname,dd["classes"])
         aliaskey = alias
         aliases = env.get_dev(uid)
         aliasuid = aliases[alias].uid if alias in aliases else None

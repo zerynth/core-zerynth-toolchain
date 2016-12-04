@@ -63,11 +63,14 @@ class Environment():
         except Exception as e:
             critical("can't load configuration",exc=e)
 
-    def save(self,cfgdir=None):
+    def save(self,cfgdir=None,version=None):
         try:
             if not cfgdir:
                 cfgdir=self.cfg
-            js = fs.set_json(self.var.to_dict(),fs.path(cfgdir,"config.json"))
+            dd = self.var.to_dict()
+            if version:
+                dd["version"]=version
+            js = fs.set_json(dd,fs.path(cfgdir,"config.json"))
         except Exception as e:
             critical("can't save configuration",exc=e)
 
@@ -170,7 +173,6 @@ env=Environment()
 # ####
 #     .Zerynth/
 #         cfg/
-#             devdb/
 #         workspace/
 #         sys/
 #         tmp/
@@ -209,7 +211,6 @@ def init_cfg():
     env.home      = fs.path(fs.homedir(),zdir)
     env.cfg       = fs.path(env.home,"cfg")
     env.env       = fs.path(env.home,"env")
-    env.devdb     = fs.path(env.home,"cfg","devdb")
     env.tmp       = fs.path(env.home,"tmp")
     env.sys       = fs.path(env.home,"sys")
     env.workspace = fs.path(env.home,"workspace")
@@ -225,7 +226,7 @@ def init_cfg():
     #env.load_zpack_db(env.zdb,"packages.db")
     #env.load_ipack_db(env.idb,"packages.db")
     version = env.var.version
-    if os.environ.get("ZERYNTH_TEST",0)==1:
+    if int(os.environ.get("ZERYNTH_TESTMODE",0))==1:
         env.git_url = "http://localhost/git"
         env.backend="http://localhost/v1"
     else:

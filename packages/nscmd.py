@@ -7,14 +7,12 @@ def namespace():
     pass
 
 @namespace.command("list")
-@click.option("--pretty","pretty",flag_value=True, default=False,help="output info in readable format")
-def __list(pretty):
-    indent = 4 if pretty else None
+def __list():
     try:
         res = zget(url=env.api.ns)
         rj = res.json()
         if rj["status"]=="success":
-            log(json.dumps(rj["data"],indent=indent))
+            log_json(rj["data"])
         else:
             error("Can't get namespace list",rj["message"])
     except Exception as e:

@@ -363,8 +363,8 @@ class Zpm():
 
         self._clear_tmp_folder()
         if core:
-            env.var.version=core
-            env.save()
+            
+            env.save(version=core)
         return core
 
 
@@ -443,7 +443,7 @@ class Zpm():
 
     def _install_core(self,package,version,distpath):
         if package.fullname=="core.zerynth.toolchain":
-            dst = env.ztc_dir(distpath) #TODO: also modify ztc startup script, and try to put it in global path
+            dst = env.ztc_dir(distpath)
         elif package.fullname=="core.zerynth.studio":
             dst = env.studio_dir(distpath)
         elif package.fullname=="core.zerynth.stdlib":
@@ -473,6 +473,7 @@ class Zpm():
                           "name": "Zerynth Studio",
                           "main": "index.html",
                           "window": {
+                            "icon":"img/Logo512.png",
                             "frame": True,
                             "min_width": 1024,
                             "min_height": 768
