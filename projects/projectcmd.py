@@ -1,9 +1,14 @@
 """
 .. module:: Projects
 
-****************
-Project Commands
-****************
+********
+Projects
+********
+
+A Zerynth Project is a folder with all the source files and other supported extra file needed to the project itself.
+Every Project can be created anywhere on users pc (according to the runner users permissions) and will include a :file:`.zproject` json file with all the main related informations.
+
+..
 """
 
 from base import *
@@ -36,11 +41,22 @@ def create_project_entity(path):
 @cli.group()
 def project():
     """
-This module contains all Zerynth Toolchain Commands for managing Zerynth Project Entities.
-With this commands the Zerynth User can handle all his projects using the command-line interface terminal.
 
-Every Project can be created anywhere on user pc and will include a :file:`.zproject` json
-file with all the main related informations.
+Project Commands
+================
+
+This module contains all Zerynth Toolchain Commands for managing Zerynth Project Entities.
+With this commands the Zerynth Users can handle all his projects using the command-line interface terminal.
+
+In all commands is present a ``--help`` option to show to the users a brief description of the related selected command and its syntax including argument and option informations.
+
+All commands return several log messages grouped in 4 main levels (info, warning, error, fatal) to inform the users about the results of the operation. 
+The actions that can be executed on Zerynth Projects are:
+    * :ref:`create<Create a Project>`: to create a Zerynth Project
+    * :ref:`create_remote<Create a Remote Project>`: to create a Remote Project Entity in Zerynth Backend
+    * :ref:`delete<Delete a Project>`: to delete a Zerynth Project
+    * :ref:`git_init<Initialize a Git Repository>`: to initialize the project folder as a git repository stored in Zerynth Backend
+    * :ref:`make_doc<Compile a Documentation>`: to generate a documentation related to the project
     """
     pass
 
@@ -51,7 +67,6 @@ file with all the main related informations.
 @click.option("--description",default="[Project description goes here]",help="description of the project")
 def create(title,path,_from,description):
     """ 
-================
 Create a Project
 ================
 
@@ -60,22 +75,18 @@ This command is used to create a new Zerynth Project from the command line with 
     Syntax:   ./ztc project create title path --from --description
     Example:  ./ztc project create myProj ~/my/Proj/Folder --description "My First Zerynth Project"
 
-This command invokes the :func:`create` function
+This command take as input the following arguments:
+    * **title** (str) --> the title that the users want to give to their project (**required**)
+    * **path** (str) --> the valid path where the users want to create the project (**required**)
+    * **from** (str) --> the source of another project to clone it (**optional**; default=False)
+    * **description** (str) --> the description that the users want to give to their project (**optional**; default=“[Project description goes here]")
 
-.. function:: create(title, path, from=False, descritption="[Project description goes here]")
+**Errors**:
+    * Missing input data
+    * Passing path with an other existing zerynth project
 
-**Args**:
-    * **title:** argument containing the title that the user wants to give to his project (type **string** --> **required**)
-    * **path:** argument containing where the user wants to create the project (type **string-path** --> **required**)
-    * **from:** argument containing the source of another zerynth project to clone it (type **string** --> **optional**)
-    * **description:** argument containing the description that the user wants to give to his project (type **string** --> **optional**)
-
-This function returns several log messages to inform the user about the results of the operation. 
-
-This operation cannot succeed for missing input data or project creation in a folder where there is an other existing zerynth project.
-
-.. note:: By default the command also create a remote project entity in the Zerynth Server to prepare the project for future git operations
-.. warning:: If the Remote Project creation failed, the user can work on his project only locally but he cannot initialize it as a git repository stored in the Zerynth Server
+.. note:: By default the command also creates a remote project entity in the Zerynth Backend to prepare the project for future git operations
+.. warning:: If the "Remote Project" creation fails, the users can work on their project only locally but they cannot initialize it as a git repository stored in the Zerynth Backend
 
     """
     pinfo = {
@@ -113,30 +124,25 @@ This operation cannot succeed for missing input data or project creation in a fo
 @click.argument("path",type=click.Path())
 def create_remote(path):
     """ 
-=======================
 Create a Remote Project
 =======================
 
-This command is used to create a new Zerynth Remote Project from the command line with this syntax: ::
+This command is used to create a new Zerynth Remote Project from the command line running: ::
 
     Syntax:   ./ztc project create_remote path
     Example:  ./ztc project create_remote ~/my/Proj/Folder
 
-A Remote Project is a Database Entity linked to the related User Local Project stored in the Zerynth Server.
-The creation of this entity permits to the user to prepare the project for future initialization of this folder as a git repository stored in the Zerynth Server.
+A Remote Project is a Database Entity linked to the related User Local Project stored in the Zerynth Backend.
+The creation of this entity permits to the users to prepare the project for future initialization of this folder as a git repository stored in the Zerynth Backend.
 
-.. function:: create_remote(path)
-
-**Args**:
-    * **path:** argument containing where the user has the project that wants to associate to a remote entity (type **string-path** --> **required**)
-
-This function returns several log messages to inform the user about the results of the operation. 
+This command take as input the following argument:
+    * **path** (str) --> the valid path where the users have the project that want to associate to a remote entity (**required**) 
 
 **Errors:**
     * Missing input data
     * Passing path without a zproject inside
-    * Passing path with a zproject already existing in the Zerynth Server
-    * Receiving Zerynth Server response errors
+    * Passing path with a zproject already existing in the Zerynth Backend
+    * Receiving Zerynth Backend response errors
     """
     res = create_project_entity(path)
     if res is True:
@@ -152,24 +158,17 @@ This function returns several log messages to inform the user about the results 
 @click.argument("path",type=click.Path())
 def delete(path):
     """ 
-================
 Delete a Project
 ================
 
-This command is used to delete an existing Zerynth Project from local and from the Zerynth Server.
+This command is used to delete an existing Zerynth Project from local and from the Zerynth Backend.
 The command line for this operation has the following syntax: ::
 
     Syntax:   ./ztc project delete path
     Example:  ./ztc project delete ~/my/Proj/Folder
 
-This command invokes the :func:`delete` function
-
-.. function:: delete(path)
-
-**Args**:
-    * **path:** argument containing where the user has the zproject that wants to remove (type **string-path** --> **required**)
-
-This function returns several log messages to inform the user about the results of the operation. 
+This command take as input the following argument:
+    * **path** (str) --> the valid path where the users have the zproject that want to remove (**required**) 
 
 **Errors:**
     * Missing input data
@@ -198,33 +197,26 @@ This function returns several log messages to inform the user about the results 
 @click.argument("path",type=click.Path())
 def git_init(path):
     """ 
-===========================
 Initialize a Git Repository
 ===========================
 
-This command is used to initialize a zerynth project folder as a git repository hosted in the Zerynth Server.
-The command line for this operation has the following syntax: ::
+This command is used to initialize a zerynth project folder as a git repository hosted in the Zerynth Backend.
+This command can be executed by running: ::
 
     Syntax:   ./ztc project git_init path
     Example:  ./ztc project git_init ~/my/Proj/Folder
 
-This command invokes the :func:`git_init` function
-
-.. function:: git_init(path)
-
-**Args**:
-    * **path:** argument containing where the user has the zproject that wants to git initialize (type **string-path** --> **required**)
-
-This function returns several log messages to inform the user about the results of the operation. 
+This command take as input the following argument:
+    * **path** (str) --> the valid path where the users have the zproject that want to initialize as git repository (**required**) 
 
 **Errors:**
     * Missing input data
     * Passing path without a zproject inside
-    * Passing a path with a zproject already initialized as a git repository in the Zerynth Server
-    * Receiving Errors from the Zerynth Server
+    * Passing a path with a zproject already initialized as a git repository in the Zerynth Backend
+    * Receiving Errors from the Zerynth Backend
     
 .. note:: After completing this operation, the project folder became a git repository and every git operations can be executed on it in standard way.
-          If the user wants to push/pull to/from the Zerynth Server he must execute the git operation with the Zerynth Remote Master. ::
+          If the users want to push/pull to/from the Zerynth Backend they must execute the git operation with the Zerynth Remote Master. ::
               Example:  git push/pull zerynth master
     """
     res = create_project_entity(path)
@@ -276,7 +268,6 @@ This function returns several log messages to inform the user about the results 
 @click.argument("path",type=click.Path())
 def make_doc(path):
     """ 
-=======================
 Compile a Documentation
 =======================
 
@@ -286,18 +277,40 @@ The command line for this operation has the following syntax: ::
     Syntax:   ./ztc project make_doc path
     Example:  ./ztc project make_doc ~/my/Proj/Folder
 
-This command invokes the :func:`make_doc` function
-
-.. function:: make_doc(path)
-
-**Args**:
-    * **path:** argument containing where the user has the zproject that wants to document (type **string-path** --> **required**)
-
-This function returns several log messages to inform the user about the results of the operation. 
+This command take as input the following argument:
+    * **path** (str) --> the path where the users have the zproject that want to document (**required**) 
 
 **Errors:**
     * Missing input data
     * Passing path without a zproject inside
+
+.. note:: Before running this command, it's recommended to create a “docs" folder inside the related project folder containing a :file:`docs.json` file and a :file:`index.rst` file.\n
+          In the :file:`docs.json`, the users must include a json dictionary like below: ::
+            
+            {
+                "title":"Title of your documentation",
+                "copyright":"Author of your documentation",
+                "version":"Version of your documentation",
+                "files":[
+                    ["title for file1","source .py or .json for document1"],
+                    ["title for file2","source .py or .json for document2"],
+                    ["...", "..."]
+                ]
+            }
+
+          In the :file:`index.rst` file, the users must include the title of the index, the contents (optional) of the index, and the :file:`__toc.rst` file
+          automatically generated during docs compilation for producing the complete document index. ::
+
+            ***********
+            Index_Title
+            ***********
+
+            .. index contents (optional)
+
+            .. include:: __toc.rst
+
+.. warning:: If the "docs" folder, :file:`docs.json` file, and :file:`index.rst` don't exist, the system
+             will generate them with default settings that can be edited manually     
     """
     docpath = fs.path(path,"docs")
     docjson = fs.path(docpath,"docs.json")

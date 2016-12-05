@@ -2,8 +2,16 @@
 .. module:: VMs
 
 ****************
-Virtual Machine Commands
+Virtual Machines 
 ****************
+
+The Zerynth Virtual Machine is the Multi-Thread Real Time Operative System that, once installed on the related device enabled by Zerynth,
+permits to the users to execute their Zerynth Projects uplinked on their device.
+
+Every Virtual Machine can be created after a device registration and can be compiled for the specific related device
+with the real time operative system and features choosen by the users.
+
+..
 """
 from base import *
 import click
@@ -27,11 +35,20 @@ def download_vm(uid,version):
 @cli.group()
 def vm():
     """
-This module contains all Zerynth Toolchain Commands for managing Zerynth Virtual Machine Entities.
-With this commands the Zerynth User can handle all his virtual machine using the command-line interface terminal.
+Virtual Machine Commands
+========================
 
-Every Virtual Machine can be created after a device registration; the vm will be compiled for the specific related device
-and with the real time operative system and features choosen by the user.
+This module contains all Zerynth Toolchain Commands for managing Zerynth Virtual Machine Entities.
+With this commands the Zerynth Users can handle all their virtual machine using the command-line interface terminal.
+
+In all commands is present a ``--help`` option to show to the users a brief description of the related selected command and its syntax including argument and option informations.
+
+All commands return several log messages grouped in 4 main levels (info, warning, error, fatal) to inform the users about the results of the operation. 
+The actions that can be executed on Zerynth Virtual Machines are:
+    * :ref:`create<Create a Virtual Machine>`: to create a Zerynth Virtual Machine
+    * :ref:`download<Download a Virtual Machine>`: to download an already compiled owned Zerynth Virtual Machine
+    * :ref:`list<List Virtual Machines>`: to list all owned Zerynth Virtual Machines
+    * :ref:`available<Retrieve a Virtual Machine>`: to retrieve a specific owned Zerynt Virtual Machine
     """
     pass
 
@@ -39,11 +56,10 @@ and with the real time operative system and features choosen by the user.
 @click.argument("device")
 @click.argument("version")
 @click.argument("rtos")
-@click.option("-feat", multiple=True, type=str)
-@click.option("--name", default="")
+@click.option("-feat", multiple=True, type=str,help="add an axtra feature to the requested virtual machine (multivalue field)")
+@click.option("--name", default="",help="name of the virtual machine")
 def create(device,version,rtos,feat,name):
     """ 
-========================
 Create a Virtual Machine
 ========================
 
@@ -52,18 +68,12 @@ This command is used to create and download a new Zerynth Virtual Machine from t
     Syntax:   ./ztc vm create device version rtos -feat --name
     Example:  ./ztc vm create myDev 1.0.0 chibi2 --name "myZVM"
 
-This command invokes the :func:`create` function
-
-.. function:: create(device, version, rtos, feat=[], name="")
-
-**Args**:
-    * **device:** argument containing the alias of the device that the user wants to virtualize (type **string** --> **required**)
-    * **version:** argument containing the version of the virtual machine (type **string** --> **required**)
-    * **rtos:** argument containing rtos choosen by the user for the virtual machine (type **string** --> **required**)
-    * **feat:** argument containing the extra features choosen by the user (only pro) for the virtual machine (type **array/multivalue** --> **optional**)
-    * **name:** argument containing the name of the virtual machine (type **string** --> **optional**)
-
-This function returns several log messages to inform the user about the results of the operation. 
+This command take as input the following arguments:
+    * **device** (str) --> the alias name of the device that the users want to virtualize (**required**)
+    * **version** (str) --> the version of the virtual machine (**required**)
+    * **rtos** (str) --> the rtos choosen by the users for the virtual machine (**required**)
+    * **feat** (str, multivalue) --> the extra features choosen by the users (only pro) for the virtual machine (**optional**, default=“")
+    * **name** (str) --> the name of the virtual machine (**optional**, default=“") 
 
 **Errors**:
     * Missing required data
@@ -113,7 +123,6 @@ This function returns several log messages to inform the user about the results 
 @click.argument("version")
 def download(uid,version):
     """ 
-==========================
 Download a Virtual Machine
 ==========================
 
@@ -124,15 +133,10 @@ This command is used to download an existing Zerynth Virtual Machine from the co
 
 The uid of an already compiled and available virtual machine can be found under .Zerynth/vms folder or
 executing the :func:`list` function described in the next section.
-This command invokes the :func:`download` function
 
-.. function:: downlaod(uid, version)
-
-**Args**:
-    * **uid:** argument containing the uid of the virtual machine (type **string** --> **required**)
-    * **version:** argument containing the version of the virtual machine (type **string** --> **required**)
-
-This function returns several log messages to inform the user about the results of the operation. 
+This command take as input the following arguments:
+    * **uid** (str) --> the uid of the virtual machine (**required**)
+    * **version** (str) --> the version of the virtual machine (**required**)
 
 **Errors**:
     * Missing required data
@@ -154,25 +158,18 @@ This function returns several log messages to inform the user about the results 
 @click.option("--core_dep",default=None)
 def __list(_from,pretty,core_dep):
     """ 
-=====================
 List Virtual Machines
 =====================
 
-This command is used to list all proper virtual machine already compiled from the command line with this syntax: ::
+This command is used to list all proper Zerynth Virtual Machine already compiled from the command line running: ::
 
     Syntax:   ./ztc vm list --from --pretty --core_dep
     Example:  ./ztc vm list --from 0 --pretty 
 
-This command invokes the :func:`list` function
-
-.. function:: list(from=0, pretty=False, core_dep=None)
-
-**Args**:
-    * **from:** argument containing number from which display the virtual machine list (type **int** --> **optional**)
-    * **pretty:** boolean flag to display output info in readble format (type **boolean** --> **optional**)
-    * **core_dep:** ?
-
-This function returns several log messages to inform the user about the results of the operation. 
+This command take as input the following arguments:
+    * **from** (int) --> the number from which display the virtual machine list (**optional**, default=0)
+    * **pretty** (bool) --> flag to display the json output in readble format (**optional**, default=False)
+    * **core_dep** (str) --> select the virtual machine from availables according to the related core dependency (**optional**, default=None)
 
 **Errors**:
     * Wrong data for the virtual machine list
@@ -195,6 +192,23 @@ This function returns several log messages to inform the user about the results 
 @click.argument("target")
 @click.option("--pretty","pretty",flag_value=True, default=False,help="output info in readable format")
 def available(target,pretty):
+    """ 
+Retrieve a Virtual Machine
+==========================
+
+This command is used to retrieve a specific owned Zerynth Virtual Machine informations from the command line with this syntax: ::
+
+    Syntax:   ./ztc vm available targef --pretty
+    Example:  ./ztc vm available 3Ss_HOgpQGW7oKtYmNESPQ --pretty 
+
+This command take as input the following arguments:
+    * **target** (str) --> (**requireq**)
+    * **pretty** (bool) --> flag to display json output in readble format (**optional**, default=False)
+
+**Errors**:
+    * Wrong data for retriving virtual machine
+
+    """
     indent = 4 if pretty else None
     try:
         res = zget(url=env.api.vmlist+"/"+target)
