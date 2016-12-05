@@ -324,9 +324,9 @@ class Zpm():
             if pack.type=="meta":
                 continue # meta packages have no files
             if offline:
-                info("Downloading", pack.fullname, vers,"from",offline)
+                info("Downloading", pack.fullname, vers)
             else:
-                info("Downloading", pack.fullname, vers,"from",env.api.packages+"/"+pack.fullname+"/"+str(vers))
+                info("Downloading", pack.fullname, vers)
             res = self._download_package(pack, vers,callback,offline)
             if res is not True:
                 fatal("Can't download package",pack.fullname,vers,"with error",res)
@@ -392,9 +392,9 @@ class Zpm():
         fs.rmtree(ex_dst)
         #fs.rmtree(doc_dst)
         
-        if fs.exists(ex_src):
-            fs.copytree(ex_src,ex_dst)
-            fs.rmtree(ex_src)
+        #if fs.exists(ex_src):
+        #    fs.copytree(ex_src,ex_dst)
+        #    fs.rmtree(ex_src)
         #if fs.exists(doc_src):
         #    fs.copytree(doc_src,doc_dst)
         #    fs.rmtree(doc_src)
