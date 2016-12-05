@@ -3,10 +3,12 @@ import datetime
 import json
 from .base import *
 from .cfg import *
+from .fs import *
+from encodings import idna
 import time
 
 TimeoutException = requests.exceptions.Timeout
-_ssl_verify = True
+_ssl_verify = fs.path(fs.dirname(__file__),"certs.pem")
 _default_timeout=5
 
 ################### json special type encoder
