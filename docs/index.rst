@@ -1,5 +1,5 @@
 *****************
-Zerynth Toolchain
+Zerynth-Toolchain
 *****************
 
 

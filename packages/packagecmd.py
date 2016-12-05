@@ -1,3 +1,10 @@
+"""
+.. module:: Packages
+
+********
+Packages
+********
+"""
 from base import *
 import click
 import datetime
@@ -69,16 +76,16 @@ def update_repos():
     update_zdb(repolist)
 
 @cli.group()
-def packages():
+def package():
     global _zpm
     _zpm = Zpm()
 
 
-@packages.command()
+@package.command()
 def sync():
     update_repos()
 
-@packages.command()
+@package.command()
 @click.option("--from","_from",default=0)
 def published(_from):
     try:
@@ -92,7 +99,7 @@ def published(_from):
     except Exception as e:
         critical("Can't get published packages",exc=e)
 
-@packages.command()
+@package.command()
 @click.option("--extended","extended",flag_value=True, default=False,help="output full package info")
 def installed(extended):
     table = []
@@ -112,7 +119,7 @@ def installed(extended):
     else:
         log_json(installed_list,cls=ZpmEncoder)
 
-@packages.command()
+@package.command()
 @click.option("--db", flag_value=False, default=True)
 def updated(db):
     if db: update_repos()
@@ -126,7 +133,7 @@ def updated(db):
 
 
 
-@packages.command()
+@package.command()
 @click.argument("query")
 @click.option("--types", default="lib",help="comma separated list of package types: lib, sys, board, vhal, core, meta")
 def search(query,types):
@@ -149,13 +156,6 @@ def search(query,types):
             error("Can't search package",res.json()["message"])
     except Exception as e:
         critical("Can't search package", exc=e)
-
-
-
-@cli.group()
-def package():
-    global _zpm
-    _zpm = Zpm()
 
 
 @package.command()
@@ -329,7 +329,7 @@ def install(p, db, last, force, simulate,justnew,offline,mute):
 #     self.install(packages=installed_list, last=True, force=None,justnew=True)
 
 
-@packages.command()
+@package.command()
 @click.option("--db", flag_value=False, default=True)
 @click.option("--simulate", flag_value=True, default=False)
 def update_all(db,simulate):

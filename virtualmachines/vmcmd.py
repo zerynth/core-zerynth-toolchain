@@ -11,8 +11,23 @@ permits to the users to execute their Zerynth Projects uplinked on their device.
 Every Virtual Machine can be created after a device registration and can be compiled for the specific related device
 with the real time operative system and features choosen by the users.
 
-..
-"""
+
+Virtual Machine Commands
+========================
+
+This module contains all Zerynth Toolchain Commands for managing Zerynth Virtual Machine Entities.
+With this commands the Zerynth Users can handle all their virtual machines using the command-line interface terminal.
+
+In all commands is present a ``--help`` option to show to the users a brief description of the related selected command and its syntax including argument and option informations.
+
+All commands return several log messages grouped in 4 main levels (info, warning, error, fatal) to inform the users about the results of the operation. 
+The actions that can be executed on Zerynth Virtual Machines are:
+
+* :ref:`create<Create a Virtual Machine>`: to create a Zerynth Virtual Machine
+* :ref:`download<Download a Virtual Machine>`: to download an already compiled owned Zerynth Virtual Machine
+* :ref:`list<List Virtual Machines>`: to list all owned Zerynth Virtual Machines
+* :ref:`available<Retrieve a Virtual Machine>`: to retrieve a specific owned Zerynt Virtual Machine
+    """
 from base import *
 import click
 import datetime
@@ -32,32 +47,16 @@ def download_vm(uid,version):
         fatal("Can't download virtual machine:", rj["message"])
 
 
-@cli.group()
+@cli.group(help="Manage Zerynth Virtual Machine. This module contains all Zerynth Toolchain Commands for managing Zerynth Virtual Machine Entities.")
 def vm():
-    """
-Virtual Machine Commands
-========================
-
-This module contains all Zerynth Toolchain Commands for managing Zerynth Virtual Machine Entities.
-With this commands the Zerynth Users can handle all their virtual machine using the command-line interface terminal.
-
-In all commands is present a ``--help`` option to show to the users a brief description of the related selected command and its syntax including argument and option informations.
-
-All commands return several log messages grouped in 4 main levels (info, warning, error, fatal) to inform the users about the results of the operation. 
-The actions that can be executed on Zerynth Virtual Machines are:
-    * :ref:`create<Create a Virtual Machine>`: to create a Zerynth Virtual Machine
-    * :ref:`download<Download a Virtual Machine>`: to download an already compiled owned Zerynth Virtual Machine
-    * :ref:`list<List Virtual Machines>`: to list all owned Zerynth Virtual Machines
-    * :ref:`available<Retrieve a Virtual Machine>`: to retrieve a specific owned Zerynt Virtual Machine
-    """
     pass
 
-@vm.command()
+@vm.command(help="Create a Zerynth Virtual Machine. \n\n Arguments: \n\n DEVICE: alias name of the z-device. \n\n VERSION: version of the z-virtual machine. \n\n RTOS: rtos of the z-virtual machine.")
 @click.argument("device")
 @click.argument("version")
 @click.argument("rtos")
-@click.option("-feat", multiple=True, type=str,help="add an axtra feature to the requested virtual machine (multivalue field)")
-@click.option("--name", default="",help="name of the virtual machine")
+@click.option("-feat", multiple=True, type=str,help="Add an axtra feature to the requested virtual machine ((multi-value option)")
+@click.option("--name", default="",help="Name of the virtual machine")
 def create(device,version,rtos,feat,name):
     """ 
 Create a Virtual Machine
@@ -118,7 +117,7 @@ This command take as input the following arguments:
         critical("Can't create vm", exc=e)
 
 
-@vm.command()
+@vm.command(help="Download a Zerynth Virtual Machine. \n\n Arguments: \n\n UID: uid of the z-virtual machine. \n\n VERSION: version of the z-virtual machine.")
 @click.argument("uid")
 @click.argument("version")
 def download(uid,version):
@@ -152,69 +151,77 @@ This command take as input the following arguments:
         critical("Can't download vm", exc=e)
 
 
-@vm.command("list")
-@click.option("--from","_from",default=0)
-@click.option("--pretty","pretty",flag_value=True, default=False,help="output info in readable format")
-@click.option("--core_dep",default=None)
-def __list(_from,pretty,core_dep):
+@vm.command("list", help="List proper Zerynth Virtual Machine.")
+@click.option("--from","_from",default=0,help="Number from which display the z-virtual machine list")
+@click.option("--core_dep",default=None,help="Select the z-virtual machine according to core dependency")
+def __list(_from,core_dep):
     """ 
 List Virtual Machines
 =====================
 
-This command is used to list all proper Zerynth Virtual Machine already compiled from the command line running: ::
+This command is used to list all proper Zerynth Virtual Machines already compiled from the command line running: ::
 
-    Syntax:   ./ztc vm list --from --pretty --core_dep
-    Example:  ./ztc vm list --from 0 --pretty 
+    Syntax:   ./ztc vm list --from --core_dep
+    Example:  ./ztc vm list --from 0  
 
 This command take as input the following arguments:
     * **from** (int) --> the number from which display the virtual machine list (**optional**, default=0)
-    * **pretty** (bool) --> flag to display the json output in readble format (**optional**, default=False)
     * **core_dep** (str) --> select the virtual machine from availables according to the related core dependency (**optional**, default=None)
 
 **Errors**:
     * Wrong data for the virtual machine list
 
     """
-    indent = 4 if pretty else None
+    table=[]
     try:
         prms = {"from":_from}
         if core_dep: prms["core_dep"]=core_dep
         res = zget(url=env.api.vm,params=prms)
         rj = res.json()
         if rj["status"]=="success":
-            log(json.dumps(rj["data"],indent=indent))
+            if env.human:
+                for k in rj["data"]["list"]:
+                    table.append([_from,k["uid"],k["name"],k["core_dep"],k["versions"],k["dev_type"],k["rtos"],k["features"]])
+                    _from += 1
+                log_table(table,headers=["Number","UID","Name","Core Dep","Versions","Dev Type","Rtos","Features"])
+            else:
+                log_json(rj["data"])                
         else:
             critical("Can't get vm list",rj["message"])
     except Exception as e:
         critical("Can't get vm list",exc=e)
 
-@vm.command()
+@vm.command(help="Retrieve a Zerynth Virtual Machine. \n\n Arguments: \n\n TARGET: target of the z-virtual machine")
 @click.argument("target")
-@click.option("--pretty","pretty",flag_value=True, default=False,help="output info in readable format")
-def available(target,pretty):
+def available(target):
     """ 
 Retrieve a Virtual Machine
 ==========================
 
-This command is used to retrieve a specific owned Zerynth Virtual Machine informations from the command line with this syntax: ::
+This command is used to retrieve a specific Zerynth Virtual Machine informations according to the target argument from the command line with this syntax: ::
 
-    Syntax:   ./ztc vm available targef --pretty
-    Example:  ./ztc vm available 3Ss_HOgpQGW7oKtYmNESPQ --pretty 
+    Syntax:   ./ztc vm available target
+    Example:  ./ztc vm available particle_photon
 
-This command take as input the following arguments:
-    * **target** (str) --> (**requireq**)
-    * **pretty** (bool) --> flag to display json output in readble format (**optional**, default=False)
+This command take as input the following argument:
+    * **target** (str) --> target of the virtual machine(**required**)
 
 **Errors**:
     * Wrong data for retriving virtual machine
 
     """
-    indent = 4 if pretty else None
+    table=[]
     try:
         res = zget(url=env.api.vmlist+"/"+target)
         rj = res.json()
         if rj["status"]=="success":
-            log(json.dumps(rj["data"],indent=indent))
+            if env.human:
+                for k in rj["data"]:
+                    for vm in rj["data"][k]:
+                       table.append([k,vm["title"],vm["description"],vm["rtos"],vm["features"],vm["pro"]])
+                log_table(table,headers=["Version","Title","Description","Rtos","Features","Pro"])
+            else:
+                log_json(rj["data"])
         else:
             fatal("Can't get vm list",rj["message"])
     except Exception as e:

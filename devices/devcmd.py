@@ -1,3 +1,10 @@
+"""
+.. module:: Devices
+
+*******
+Devices
+*******
+"""
 from base import *
 from .discover import *
 import click
