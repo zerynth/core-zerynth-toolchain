@@ -158,12 +158,13 @@ class Zpm():
 
     def _clear_tmp_folder(self):
         try:
-            dirs = fs.dirs(env.tmp)
-            for dd in dirs:
-                fs.rmtree(dd)
-            files = fs.files(env.tmp)
-            for ff in files:
-                fs.rm_file(ff)
+            # dirs = fs.dirs(env.tmp)
+            # for dd in dirs:
+            #     fs.rmtree(dd)
+            # files = fs.files(env.tmp)
+            # for ff in files:
+            #     fs.rm_file(ff)
+            pass
         except Exception as e:
             warning("Warning:",e)
 
