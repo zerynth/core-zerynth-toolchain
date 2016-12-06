@@ -4,7 +4,12 @@
 	"copyright":"Zerynth Team",
 	"files":[
 		["Zerynth Toolchain","ztc.py"],
+		["Users","user/usercmd.py"],
 		["Projetcs","projects/projectcmd.py"],
-		["Virtual Machines","virtualmachines/vmcmd.py"]
+		["Devices","devices/devcmd.py"],
+		["Compiler and Uplinker","comp_up.json"],
+		["Virtual Machines","virtualmachines/vmcmd.py"],
+		["Namespaces","packages/nscmd.py"],
+		["Packages","packages/packagecmd.py"]
 	]
 }

@@ -1,0 +1,9 @@
+{
+	"title":"Compiler and Uplinker",
+	"text":"The Zerynth Compiler permits to compile the z-projects for a related board and the Zerynth Uplinker permits to load the compiled bytecode on the device",
+	"files":[
+		["Compiler","compiler/compilercmd.py"],
+		["Uplinker","uplinker/uplinker.py"],
+		["Linter", "linter/lintercmd.py"]
+	]
+}

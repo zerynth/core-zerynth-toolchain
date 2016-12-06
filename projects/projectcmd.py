@@ -8,8 +8,23 @@ Projects
 A Zerynth Project is a folder with all the source files and other supported extra file needed to the project itself.
 Every Project can be created anywhere on users pc (according to the runner users permissions) and will include a :file:`.zproject` json file with all the main related informations.
 
-..
-"""
+Project Commands
+================
+
+This module contains all Zerynth Toolchain Commands for managing Zerynth Project Entities.
+With this commands the Zerynth Users can handle all his projects using the command-line interface terminal.
+
+In all commands is present a ``--help`` option to show to the users a brief description of the related selected command and its syntax including argument and option informations.
+
+All commands return several log messages grouped in 4 main levels (info, warning, error, fatal) to inform the users about the results of the operation. 
+The actions that can be executed on Zerynth Projects are:
+
+* :ref:`create<Create a Project>`: to create a Zerynth Project
+* :ref:`create_remote<Create a Remote Project>`: to create a Remote Project Entity in Zerynth Backend
+* :ref:`delete<Delete a Project>`: to delete a Zerynth Project
+* :ref:`git_init<Initialize a Git Repository>`: to initialize the project folder as a git repository stored in Zerynth Backend
+* :ref:`make_doc<Compile a Documentation>`: to generate a documentation related to the project
+    """
 
 from base import *
 import click
@@ -38,33 +53,15 @@ def create_project_entity(path):
     else:
         return None
 
-@cli.group()
+@cli.group(help="Manage Zerynth Projects. This module contains all Zerynth Toolchain Commands for managing Zerynth Project Entities.")
 def project():
-    """
-
-Project Commands
-================
-
-This module contains all Zerynth Toolchain Commands for managing Zerynth Project Entities.
-With this commands the Zerynth Users can handle all his projects using the command-line interface terminal.
-
-In all commands is present a ``--help`` option to show to the users a brief description of the related selected command and its syntax including argument and option informations.
-
-All commands return several log messages grouped in 4 main levels (info, warning, error, fatal) to inform the users about the results of the operation. 
-The actions that can be executed on Zerynth Projects are:
-    * :ref:`create<Create a Project>`: to create a Zerynth Project
-    * :ref:`create_remote<Create a Remote Project>`: to create a Remote Project Entity in Zerynth Backend
-    * :ref:`delete<Delete a Project>`: to delete a Zerynth Project
-    * :ref:`git_init<Initialize a Git Repository>`: to initialize the project folder as a git repository stored in Zerynth Backend
-    * :ref:`make_doc<Compile a Documentation>`: to generate a documentation related to the project
-    """
     pass
 
-@project.command()
+@project.command(help="Create a new Zerynth Project. \n\n Arguments: \n\n TITLE: title of the z-project. \n\n PATH: path of the z-project.")
 @click.argument("title")
 @click.argument("path",type=click.Path())
-@click.option("--from","_from",default=False,help="source to clone another project")
-@click.option("--description",default="[Project description goes here]",help="description of the project")
+@click.option("--from","_from",default=False,help="Source to clone another project.")
+@click.option("--description",default="[Project description goes here]",help="Description of the project.")
 def create(title,path,_from,description):
     """ 
 Create a Project
@@ -120,7 +117,7 @@ This command take as input the following arguments:
             print(e)
         fs.set_json(pinfo,fs.path(path,".zproject"))
 
-@project.command()
+@project.command(help="Create a new Zerynth Remote Project.\n\n Arguments: \n\n PATH: path of the z-project.")
 @click.argument("path",type=click.Path())
 def create_remote(path):
     """ 
@@ -154,7 +151,7 @@ This command take as input the following argument:
     else:
         info("Project",res["title"],"created with uid:", res["uid"])
 
-@project.command()
+@project.command(help="Delete a Zerynth Project.\n\n Arguments: \n\n PATH: path of the z-project.")
 @click.argument("path",type=click.Path())
 def delete(path):
     """ 
@@ -193,7 +190,7 @@ This command take as input the following argument:
     else:
         error("no project in this path")
 
-@project.command()
+@project.command(help="Inizialize a Git Repository.\n\n Arguments: \n\n PATH: path of the z-project.")
 @click.argument("path",type=click.Path())
 def git_init(path):
     """ 
@@ -215,9 +212,10 @@ This command take as input the following argument:
     * Passing a path with a zproject already initialized as a git repository in the Zerynth Backend
     * Receiving Errors from the Zerynth Backend
     
-.. note:: After completing this operation, the project folder became a git repository and every git operations can be executed on it in standard way.
-          If the users want to push/pull to/from the Zerynth Backend they must execute the git operation with the Zerynth Remote Master. ::
-              Example:  git push/pull zerynth master
+.. note:: 
+    After completing this operation, the project folder became a git repository and every git operations can be executed on it in standard way.
+    If the users want to push/pull to/from the Zerynth Backend they must execute the git operation with the Zerynth Remote Master. ::
+    Example:  git push/pull zerynth master
     """
     res = create_project_entity(path)
     if res is False:
@@ -264,7 +262,7 @@ This command take as input the following argument:
 # def clone():
 #     pass
 
-@project.command()
+@project.command(help="Compile a documentation.\n\n Arguments: \n\n PATH: path of the z-project.")
 @click.argument("path",type=click.Path())
 def make_doc(path):
     """ 
