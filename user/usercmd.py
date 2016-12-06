@@ -26,7 +26,7 @@ def check_installation():
             except:
                 warning("Exception while sending installation data")
     except Exception as e:
-        critical("Exception while checking installation",exc=e)
+        warning("Exception while checking installation",str(e))
 
 
 @cli.command("login")
