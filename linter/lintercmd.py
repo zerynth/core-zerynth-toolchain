@@ -7,7 +7,7 @@ Linter
 
 The Zerynth Linter permits to check Python code against some of the style conventions.
 
-In z-linter command is present a ``--help`` option to show to the users a brief description of the related command and its syntax including argument and option informations.
+In z-linter command is present a ``--help`` option to show to the users a brief description of the related command and its syntax including arguments and option informations.
 
 The command return several log messages grouped in 4 main levels (info, warning, error, fatal) to inform the users about the results of the operation. 
 The action that can be executed on Zerynth Linter is:

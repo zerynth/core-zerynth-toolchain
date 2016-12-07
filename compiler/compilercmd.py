@@ -13,7 +13,7 @@ Once compiled a z-project, the z-user could uplink the related bytecode on prope
 Compile Command
 ---------------
 
-In the Compile Command is present a ``--help`` option to show to the users a brief description of the related command and its syntax including argument and option informations.
+In the Compile Command is present a ``--help`` option to show to the users a brief description of the related command and its syntax including arguments and option informations.
 
 The command return several log messages grouped in 4 main levels (info, warning, error, fatal) to inform the users about the results of the operation. 
 This command is used to compile a Zerynth Project from the command line running: ::

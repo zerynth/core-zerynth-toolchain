@@ -18,7 +18,7 @@ Virtual Machine Commands
 This module contains all Zerynth Toolchain Commands for managing Zerynth Virtual Machine Entities.
 With this commands the Zerynth Users can handle all their virtual machines using the command-line interface terminal.
 
-In all commands is present a ``--help`` option to show to the users a brief description of the related selected command and its syntax including argument and option informations.
+In all commands is present a ``--help`` option to show to the users a brief description of the related selected command and its syntax including arguments and option informations.
 
 All commands return several log messages grouped in 4 main levels (info, warning, error, fatal) to inform the users about the results of the operation. 
 The actions that can be executed on Zerynth Virtual Machines are:
@@ -26,7 +26,7 @@ The actions that can be executed on Zerynth Virtual Machines are:
 * :ref:`create<Create a Virtual Machine>`: to create a Zerynth Virtual Machine
 * :ref:`download<Download a Virtual Machine>`: to download an already compiled owned Zerynth Virtual Machine
 * :ref:`list<List Virtual Machines>`: to list all owned Zerynth Virtual Machines
-* :ref:`available<Retrieve a Virtual Machine>`: to retrieve a specific owned Zerynt Virtual Machine
+* :ref:`available<Retrieve a Virtual Machine>`: to retrieve a specific owned Zerynth Virtual Machine
     """
 from base import *
 import click

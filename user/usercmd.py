@@ -1,3 +1,30 @@
+"""
+.. module:: Users
+
+*****
+Users
+*****
+
+The Zerynth User is a Database Entity collecting all account and session informations.
+
+Every Z-User will be automaically created after a registration and can be managed and completed with some extra informations
+through the following commands.
+
+User Commands
+=============
+
+This module contains all Zerynth Toolchain Commands for managing the Zerynth User Account.
+With this commands the Zerynth Users can execute the z-login (or the z-registration if first accesss) and personalize proper account informations.
+
+In all commands is present a ``--help`` option to show to the users a brief description of the related selected command and its syntax including argument and option informations.
+
+All commands return several log messages grouped in 4 main levels (info, warning, error, fatal) to inform the users about the results of the operation. 
+The actions that can be executed on Zerynth Accounts are:
+
+* :ref:`login<Login>`: to enter/register in proper Zerynth Account
+* :ref:`reset<Reset Password>`: to reset the account password
+* :ref:`profile<Change Profile Informations>`: to view or insert/modify profile informations
+    """
 from base import *
 import click
 import time

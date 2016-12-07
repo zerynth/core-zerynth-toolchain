@@ -15,7 +15,7 @@ Namespace Commands
 This module contains all Zerynth Toolchain Commands for managing Zerynth Namespace Entities.
 With this commands the Zerynth Users can handle and monitor all their namespaces using the command-line interface terminal.
 
-In all commands is present a ``--help`` option to show to the users a brief description of the related selected command and its syntax including argument and option informations.
+In all commands is present a ``--help`` option to show to the users a brief description of the related selected command and its syntax including arguments and option informations.
 
 All commands return several log messages grouped in 4 main levels (info, warning, error, fatal) to inform the users about the results of the operation. 
 The actions that can be executed on Zerynth Namespaces are:
