@@ -20,8 +20,8 @@ In all commands is present a ``--help`` option to show to the users a brief desc
 All commands return several log messages grouped in 4 main levels (info, warning, error, fatal) to inform the users about the results of the operation. 
 The actions that can be executed on Zerynth Namespaces are:
 
-* :ref:`create<Create a Namespace>`: to create a Zerynth Namespace
-* :ref:`list<List Namespaces>`: to list all owned Zerynth Namespaces
+* create__: to create a Zerynth Namespace
+* list__: to list all owned Zerynth Namespaces
     """
 from base import *
 import click
@@ -35,8 +35,12 @@ def namespace():
 @click.argument("name")
 def create(name):
     """ 
+__ create_ns_
+
+.. _create_ns:
+
 Create a Namespace
-==================
+------------------
 
 This command is used to create and download a new Zerynth Namespace from the command line with this syntax: ::
 
@@ -67,8 +71,12 @@ This command take as input the following arguments:
 @namespace.command("list")
 def __list():
     """ 
+__ list_ns_
+
+.. _list_ns:
+
 List Namespaces
-===============
+---------------
 
 This command is used to list all proper Zerynth Namespaces already compiled from the command line running: ::
 

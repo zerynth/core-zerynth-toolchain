@@ -12,7 +12,9 @@ In z-linter command is present a ``--help`` option to show to the users a brief 
 The command return several log messages grouped in 4 main levels (info, warning, error, fatal) to inform the users about the results of the operation. 
 The action that can be executed on Zerynth Linter is:
 
-* :ref:`pep8<Linter Command - pep8>`: to check Python script with pep8 style convention
+* pep8_: to check Python script with pep8 style convention
+
+.. _pep8:
 
 Linter Command - pep8
 ---------------------

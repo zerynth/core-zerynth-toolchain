@@ -21,9 +21,9 @@ In all commands is present a ``--help`` option to show to the users a brief desc
 All commands return several log messages grouped in 4 main levels (info, warning, error, fatal) to inform the users about the results of the operation. 
 The actions that can be executed on Zerynth Accounts are:
 
-* :ref:`login<Login>`: to enter/register in proper Zerynth Account
-* :ref:`reset<Reset Password>`: to reset the account password
-* :ref:`profile<Change Profile Informations>`: to view or insert/modify profile informations
+* login__: to enter/register in proper Zerynth Account
+* reset_: to reset the account password
+* profile_: to view or insert/modify profile informations
     """
 from base import *
 import click
@@ -60,8 +60,12 @@ def check_installation():
 @click.option("--token",default=None,help="Token to authenticate z-user identity.")
 def __login(token):
     """
+__ user_login_
+
+.. _user_login:
+
 Login
-=====
+-----
 
 This command is used to create a new Zerynth Account or to enter in existing one from the command line interface running: ::
 
@@ -99,8 +103,10 @@ This command take as input the following argument:
 @click.argument("email")
 def reset(email):
     """
+.. _reset:
+
 Reset Password
-==============
+--------------
 
 This command is used to send a "reset account password" request to the Zerynth Backend from the command line with this syntax: ::
 
@@ -143,8 +149,10 @@ This command take as input the following argument:
 @click.option("--age","age",default="",help="Age related to the Zerynth Account.")
 def profile(job,company,age,name,surname,country,__set):
     """
+.. _profile:
+
 Change Profile Informations
-===========================
+---------------------------
 
 This command is used to view or insert/modify the Zerynth Account Profile Informations from the command line running: ::
 

@@ -32,15 +32,15 @@ In all commands is present a ``--help`` option to show to the users a brief desc
 All commands return several log messages grouped in 4 main levels (info, warning, error, fatal) to inform the users about the results of the operation. 
 The actions that can be executed on Zerynth Packages are:
 
-* :ref:`info<Display Package Info>`: to display a Zerynth Package informations
-* :ref:`install<Install a Package>`: to install one or more Zerynth Packages
-* :ref:`search<Search Packages>`: to search Zerynth Packages according to keywords passed as text query
-* :ref:`publish<Publish a Package>`: to publisha new Zerynth Package
-* :ref:`update_all<Update all Packages>`: to update to the last version all Zerynth Packages already installed
-* :ref:`sync<Syncronize all Local Repositories>`: to sync all z-user local repository database
-* :ref:`published<List of Published Packages>`: to display the list of published z-packages 
-* :ref:`installed<List of Installed Packages>`: to display the list of installed z-packages
-* :ref:`updated<List of Updated Packages>`: to display the list of updated z-packages
+* info_: to display a Zerynth Package informations
+* install_: to install one or more Zerynth Packages
+* search__: to search Zerynth Packages according to keywords passed as text query
+* publish_: to publisha new Zerynth Package
+* update_all_: to update to the last version all Zerynth Packages already installed
+* sync_: to sync all z-user local repository database
+* published_: to display the list of published z-packages 
+* installed_: to display the list of installed z-packages
+* updated_: to display the list of updated z-packages
     """
 from base import *
 import click
@@ -123,8 +123,11 @@ def package():
 @click.argument("fullname")
 def __info(fullname):
     """
+.. _info: 
+    
 Display Package Info
-====================
+--------------------
+
 
 This command is used to display informations for specific Zerynth Package passed as argument from the command line running: ::
 
@@ -168,8 +171,10 @@ This command take as input the following argument:
 @click.option("--mute", flag_value=True, default=False,help="Flag for no diplay log message output.")
 def install(p, db, last, force, simulate,justnew,offline,mute):
     """
+.. _install:
+
 Install a Package
-=================
+-----------------
 
 This command is used to install one or more Zerynth Packages on proper installation from the command line running: ::
 
@@ -247,8 +252,12 @@ This command take as input the following arguments:
 @click.option("--types", default="lib",help="Comma separated list of package types: lib, sys, board, vhal, core, meta.")
 def search(query,types):
     """
+__ search_pack_
+
+.. _search_pack:
+
 Search Packages
-===============
+---------------
 
 This command is used to search Zerynth Packages on Zerynth Database from the command line with the following syntax: ::
 
@@ -289,14 +298,15 @@ This command take as input the following arguments:
 @click.argument("path",type=click.Path())
 @click.argument("version")
 @click.option("--git", default=False)
-#@click.option("--username", default=False)
-#@click.option("--password", default=False)
-def publish(path, version, git):    ###TODO remove comment ,username,password):
+def publish(path, version, git):
     """
+.. _publish:
+
 Publish a Package
-=================
+-----------------
 
 This command is used to publish a owned Zerynth Project transforming it in a new Zerynth Package.
+Before publish a z-packages, the Zerynth Users must create their onw namespace to assiciate the related z-package.
 The Zerynth Users can publish only "library" type z-packages running from the command line: ::
 
     Syntax:   ./ztc package publish path version
@@ -389,35 +399,34 @@ This command take as input the following arguments:
 
 
     # manage git repository for project
-    ## TODO: UNCOMMENT and add support for meta packages
-    # try:
-    #     #####TODO check signature configuration of pygit2
-    #     repo_path = pygit2.discover_repository(path)
-    #     repo = pygit2.Repository(repo_path)
-    #     regex = re.compile('^refs/tags')
-    #     tags = filter(lambda r: regex.match(r), repo.listall_references())
-    #     tags = [x.replace("refs/tags/","") for x in tags]
-    #     if version in tags:
-    #         fatal("Version",version,"already present in repo tags",tags)
-    #     index = repo.index
-    #     index.add_all()
-    #     tree = repo.index.write_tree()
-    #     commit = repo.create_commit("HEAD", repo.default_signature, repo.default_signature, "version: "+version, tree, [repo.head.target])
-    #     #print(commit)
-    #     cc = repo.revparse_single("HEAD")
-    #     remote = "zerynth" if not git else "origin"
-    #     credentials = None if (not username and not password) else pygit2.RemoteCallbacks(pygit2.UserPass(username,password))
-    #     repo.remotes[remote].push(['refs/heads/master'],credentials)
+    try:
+        #####TODO check signature configuration of pygit2
+        repo_path = pygit2.discover_repository(path)
+        repo = pygit2.Repository(repo_path)
+        regex = re.compile('^refs/tags')
+        tags = filter(lambda r: regex.match(r), repo.listall_references())
+        tags = [x.replace("refs/tags/","") for x in tags]
+        if version in tags:
+            fatal("Version",version,"already present in repo tags",tags)
+        index = repo.index
+        index.add_all()
+        tree = repo.index.write_tree()
+        commit = repo.create_commit("HEAD", repo.default_signature, repo.default_signature, "version: "+version, tree, [repo.head.target])
+        #print(commit)
+        cc = repo.revparse_single("HEAD")
+        remote = "zerynth" if not git else "origin"
+        credentials = None if (not username and not password) else pygit2.RemoteCallbacks(pygit2.UserPass(username,password))
+        repo.remotes[remote].push(['refs/heads/master'],credentials)
 
-    #     try:
-    #         tag = repo.create_tag(version, cc.hex, pygit2.GIT_OBJ_COMMIT, cc.author, cc.message)
-    #         #print(tag)
-    #         repo.remotes[remote].push(['refs/tags/'+version],credentials)
-    #         info("Updated repository with new tag:",version,"for", pack_contents["fullname"])
-    #     except Exception as e:
-    #         critical("Can't create package", exc=e)
-    # except KeyError:
-    #     fatal("no git repositories in this path")
+        try:
+            tag = repo.create_tag(version, cc.hex, pygit2.GIT_OBJ_COMMIT, cc.author, cc.message)
+            #print(tag)
+            repo.remotes[remote].push(['refs/tags/'+version],credentials)
+            info("Updated repository with new tag:",version,"for", pack_contents["fullname"])
+        except Exception as e:
+            critical("Can't create package", exc=e)
+    except KeyError:
+        fatal("no git repositories in this path")
 
     ###prepare data to load the new version
     details = {
@@ -451,8 +460,10 @@ def download_callback(cursize,prevsize,totsize):
 @click.option("--simulate", flag_value=True, default=False,help="Flag for simulating the update of all installed packages.")
 def update_all(db,simulate):
     """
+.. _update_all:
+
 Update all Packages
-===================
+-------------------
 
 This command is used to update all the Zerynth Packages installed on the z-user pc from the command line running: ::
 
@@ -503,8 +514,10 @@ This command take as input the following arguments:
 @package.command(help="Sync local repo database with the remote one.")
 def sync():
     """
+.. _sync:
+
 Syncronize all Local Repositories
-=================================
+---------------------------------
 
 This command is used to sync all the Local Repository Database with the Zerynth Remote Repository Database accessible for the related z-user from the command line running: ::
 
@@ -525,8 +538,10 @@ This command take no argument as input:
 @click.option("--from","_from",default=0,help="Number from which list the published z-packages.")
 def published(_from):
     """
+.. _published:
+
 List of Published Packages
-==========================
+--------------------------
 
 This command is used to list all proper Published Zerynth Packages from the command line running: ::
 
@@ -555,8 +570,10 @@ This command take as input the following argument:
 @click.option("--extended","extended",flag_value=True, default=False,help="Flag for output full package info.")
 def installed(extended):
     """
+.. _installed:
+
 List of Installed Packages
-==========================
+--------------------------
 
 This command is used to list all the already Installed Zerynth Packages from the command line running: ::
 
@@ -588,8 +605,10 @@ This command take as input the following argument:
 @click.option("--db", flag_value=False, default=True,help="Flag for not updating local z-package database.")
 def updated(db):
     """
+.. _updated:
+
 List of Updated Packages
-========================
+------------------------
 
 This command is used to list all Zerynth Packages that are updated against all those installed on the z-user pc from the command line running: ::
 
