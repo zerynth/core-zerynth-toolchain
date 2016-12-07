@@ -30,7 +30,6 @@ class WinUsb():
 		devs=[]
 		for x in self.wmi.Win32_SerialPort():
 			vid,pid,sid = self._get_win_device_id(x.PNPDeviceID)
-			print("#",vid,pid,sid)
 			if sid:
 				ddisk=None
 				if sid not in pnps:
