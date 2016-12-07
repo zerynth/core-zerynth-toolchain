@@ -315,10 +315,9 @@ This command take as input the following argument:
     htmlpath = fs.path(fs.get_hashdir("docs"+path),"html")
     print(htmlpath)
     docidx  = fs.path(docpath,"index.rst")
-    ##############TO REMOVE these comments
-    # if not fs.exists(fs.path(path,".zproject")):
-    #     error("No project at",path)
-    # proj = fs.get_json(fs.path(path,".zproject"))
+    if not fs.exists(fs.path(path,".zproject")):
+        error("No project at",path)
+    proj = fs.get_json(fs.path(path,".zproject"))
     if not fs.exists(docpath) or not fs.exists(docjson) or not fs.exists(docidx):
         # create docs skeleton
         fs.makedirs(docpath)

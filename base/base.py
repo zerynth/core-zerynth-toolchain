@@ -137,7 +137,7 @@ def cli(verbose,nocolors,notraceback,user_agent,__j,pretty):
     _options["traceback"]=notraceback
     _options["verbose"]=verbose
     from .cfg import env
-    env.user_agent = user_agent+"/"+env.var.version
+    env.user_agent = user_agent+"/"+env.var.version+"/"+env.platform
     env.human = not __j
     global indent 
     indent = 4 if pretty else None

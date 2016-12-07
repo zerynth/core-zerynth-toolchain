@@ -210,10 +210,8 @@ def init_cfg():
     zdir = "zerynth2" if env.is_windows() else ".zerynth2"
     env.home      = fs.path(fs.homedir(),zdir)
     env.cfg       = fs.path(env.home,"cfg")
-    env.env       = fs.path(env.home,"env")
     env.tmp       = fs.path(env.home,"tmp")
     env.sys       = fs.path(env.home,"sys")
-    env.workspace = fs.path(env.home,"workspace")
     env.vms       = fs.path(env.home,"vms")
     env.edb       = fs.path(env.home,"cfg","edb")
     env.zdb       = fs.path(env.home,"cfg","zdb")
@@ -240,12 +238,10 @@ def init_cfg():
     env.nest      = fs.path(env.home,"dist",version,"nest")
     env.stdlib    = fs.path(env.home,"dist",version,"stdlib")
     env.vhal      = fs.path(env.home,"dist",version,"vhal") 
-    #env.vhal      = fs.path(fs.homedir(),".zerynth","env","core","official","vhal") #TODO: remove
     env.studio    = fs.path(env.home,"dist",version,"studio")
     env.docs      = fs.path(env.home,"dist",version,"docs")
     env.examples  = fs.path(env.home,"dist",version,"examples")
     env.devices    = fs.path(env.home,"dist",version,"devices")
-    #env.devices    = fs.path(fs.homedir(),"git","ZerynthBoards") #TODO: remove
 
     env.dist_dir = lambda x: fs.path(env.home,"dist",x)
     env.ztc_dir = lambda x: fs.path(x,"ztc")
@@ -265,7 +261,6 @@ def init_cfg():
     fs.makedirs(env.dirs())
 
     # backend & api
-    #env.backend="https://backend.zerynth.com/v1"
     env.api = Var({
         "project":env.backend+"/projects",
         "renew":env.backend+"/user/renew",
@@ -286,28 +281,3 @@ def init_cfg():
 
 
 add_init(init_cfg,prio=0)
-
-
-    # ### TODO mactchdb true and parse board infomations
-    # dev_list = _dsc.run_one(matchdb=False)
-    # if uid in dev_list:
-    #     #print(dev_list[uid])
-    #     ### TODO load basic firmware and parse device informations (on_chip_id, type, etc.)
-    #     dinfo = {
-    #         "name": name,
-    #         "on_chip_id": "123456789",
-    #         "type": "flipnclick_sam3x",
-    #         "category": "AT91SAM3X8E"
-    #     }
-    #     headers = {"Authorization": "Bearer "+env.token}
-    #     try:
-    #         res = zpost(url=dev_url, headers=headers, data=dinfo)
-    #         #print(res.json())
-    #         if res.json()["status"] == "success":
-    #             info("Device",name,"created with uid:", res.json()["data"]["uid"])
-    #             ### TODO save mongodb uid in sqlite db
-    #         else:
-    #             error("Error in device data:", res.json()["message"])
-    #     except Exception as e:
-    #         error("Can't create device entity")
-    #         
