@@ -9,6 +9,6 @@
     "keywords": [],
     "repo": "official",
     "title": "Zerynth Toolchain",
-    "version": "r2.0.4",
-    "whatsnew": "First release"
+    "version": "r2.0.5",
+    "whatsnew": "Fix compiler and doc"
 }

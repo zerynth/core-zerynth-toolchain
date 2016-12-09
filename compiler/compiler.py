@@ -181,9 +181,9 @@ class Compiler():
                     raise CNativeNotFound(0,0,vblf)
             elif vbl.startswith("VHAL_"):
                 self.cdefines.add(vbl)
-                lookup = self.families()[self.board.family_name]
+                lookup = self.board.family[self.board.family_name]
                 if vbl in lookup["vhal"]:
-                    for x in lookup["vhal"][vbCNativeErrorl]["src"]:
+                    for x in lookup["vhal"][vbl]["src"]:
                         self.cfiles.add(os.path.realpath(os.path.join(vconf.envdirs["vhal"],lookup["path"],x)))
                     for x in lookup["vhal"][vbl]["inc"]:
                         self.cincpaths.add(os.path.realpath(os.path.join(vconf.envdirs["vhal"],lookup["path"],x)))

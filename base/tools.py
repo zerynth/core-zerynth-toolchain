@@ -176,6 +176,17 @@ class Tools():
                     res[module]=imports
         return res
 
+    def get_vhal(self):
+        vhal = {}
+        arch_dirs = fs.dirs(env.vhal)
+        for ad in arch_dirs:
+            fmdirs = fs.dirs(ad)
+            for fm in fmdirs:
+                vhal_file = fs.path(fm,"vhal.json")
+                if fs.exists(vhal_file):
+                    vj = fs.get_json(vhal_file)
+                    vhal.update(vj)
+        return vhal
 
 
 
