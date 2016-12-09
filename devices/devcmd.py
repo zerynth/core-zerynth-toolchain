@@ -26,8 +26,8 @@ def device():
 def discover(loop,looptime,matchdb):
     try:
         _dsc.run(loop,looptime,matchdb)
-    except:
-        pass
+    except Exception as e:
+        warning("Exception while discovering devices:",str(e))
 
 
 @device.command()

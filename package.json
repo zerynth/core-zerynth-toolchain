@@ -5,7 +5,7 @@
     },
     "description": "",
     "fullname": "core.zerynth.toolchain",
-    "git_pointer": "zerynth://zerynth-core/zerynth-toolchain",
+    "git_pointer": "zerynth://zernth-core/zerynth-toolchain",
     "keywords": [],
     "repo": "official",
     "title": "Zerynth Toolchain",

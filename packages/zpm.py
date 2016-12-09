@@ -470,16 +470,19 @@ class Zpm():
         #     fs.rmtree(esrc)
         if package.fullname == "core.zerynth.studio":
             #change package.json for nw.js
-            fs.set_json({
+            packjson = {
                           "name": "Zerynth Studio",
                           "main": "index.html",
                           "window": {
-                            "icon":"img/Logo512.png",
                             "frame": True,
-                            "min_width": 1024,
-                            "min_height": 768
+                            "min_width": 800,
+                            "min_height": 600
                           }
-                        },fs.path(dst,"package.json"))
+                        }
+            # no icon for mac, it's already in the browser
+            if not env.is_mac():
+                packjson["window"].update({"icon":"img/Logo512.png"})
+            fs.set_json(packjson,fs.path(dst,"package.json"))
         self._install_package(package,version)
 
 

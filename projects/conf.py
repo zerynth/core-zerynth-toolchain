@@ -41,15 +41,23 @@ with open("layout.html","w") as ff:
   ff.write('{% extends "!layout.html" %}\n\n')
   ff.write('{%- block footer %}\n')
   ff.write(' <script type="text/javascript">\n')
-  ff.write(' var vurl\n')
-  ff.write(' if(location.href.indexOf("127.0.0.1")>=0) vurl=location.protocol+"//"+location.host+"/docs"\n')
-  ff.write(' else vurl="http://doc.zerynth.com"\n')
-  ff.write(' $(document).ready(function(){\n')
-  ff.write('                   $(\'.wy-breadcrumbs a:contains("Docs")\').before(\'<a href="\'+vurl+\'">Zerynth</a> &#187;\')\n')
-  ff.write('                   $(\'.wy-side-nav-search > a\').removeClass("fa-home").removeClass("fa")\n')
-  ff.write('                   $(\'.wy-side-nav-search\').prepend(\'<div class="zerynth-circle"><a href="\'+vurl+\'"><span style="color:#1c5e60" class="zerynth-Logo2"></span></a></div>\')\n')
-  ff.write(' })\n')
+  # ff.write(' var vurl\n')
+  # ff.write(' if(location.href.indexOf("127.0.0.1")>=0) vurl=location.protocol+"//"+location.host+"/docs"\n')
+  # ff.write(' else vurl="http://doc.zerynth.com"\n')
+  # ff.write(' $(document).ready(function(){\n')
+  # ff.write('                   $(\'.wy-breadcrumbs a:contains("Docs")\').before(\'<a href="\'+vurl+\'">Zerynth</a> &#187;\')\n')
+  # ff.write('                   $(\'.wy-side-nav-search > a\').removeClass("fa-home").removeClass("fa")\n')
+  # ff.write('                   $(\'.wy-side-nav-search\').prepend(\'<div class="zerynth-circle"><a href="\'+vurl+\'"><span style="color:#1c5e60" class="zerynth-Logo2"></span></a></div>\')\n')
+  # ff.write(' })\n')
   ff.write(' </script>\n')
+  ff.write(' <script>\n')
+  ff.write(" (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){")
+  ff.write(" (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),")
+  ff.write(" m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)")
+  ff.write(" })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');")
+  ff.write(" ga('create', 'UA-64288331-2', 'auto');")
+  ff.write(" ga('send', 'pageview');")
+  ff.write("</script>")
   ff.write('{% endblock %}\n')
 
 # The version info for the project you're documenting, acts as replacement for
@@ -57,7 +65,7 @@ with open("layout.html","w") as ff:
 # built documents.
 #
 # The short X.Y version.
-version = conf.get("version","")
+version = ""#conf.get("version","")
 # The full version, including alpha/beta/rc tags.
 release = version
 
