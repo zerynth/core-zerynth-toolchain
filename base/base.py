@@ -125,13 +125,13 @@ def sleep(n):
     time.sleep(n)
 ## Main entrypoint gathering 
 
-@click.group()
-@click.option("-v","verbose",flag_value=True,default=False,help="verbose")
-@click.option("--colors/--no-colors","nocolors",default=True,help="enable/disable colors")
-@click.option("--traceback/--no-traceback","notraceback",default=True,help="enable/disable exception traceback printing on criticals")
-@click.option("--user_agent",default="ztc")
-@click.option("--pretty","pretty",flag_value=True, default=False,help="pretty json output")
-@click.option("-J","__j",flag_value=True,default=False)
+@click.group(help="Zerynth Toolchain.")
+@click.option("-v","verbose",flag_value=True,default=False,help="Verbose.")
+@click.option("--colors/--no-colors","nocolors",default=True,help="To enable/disable colors.")
+@click.option("--traceback/--no-traceback","notraceback",default=True,help="To enable/disable exception traceback printing on criticals.")
+@click.option("--user_agent",default="ztc",help="To insert custom user agent.")
+@click.option("--pretty","pretty",flag_value=True, default=False,help="To display pretty json output.")
+@click.option("-J","__j",flag_value=True,default=False,help="To display the output in json format.")
 def cli(verbose,nocolors,notraceback,user_agent,__j,pretty):
     _options["colors"]=nocolors
     _options["traceback"]=notraceback

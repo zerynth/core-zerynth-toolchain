@@ -1,3 +1,30 @@
+"""
+.. module:: Users
+
+*****
+Users
+*****
+
+The Zerynth User is a Database Entity collecting all account and session informations.
+
+Every Z-User will be automaically created after a registration and can be managed and completed with some extra informations
+through the following commands.
+
+User Commands
+=============
+
+This module contains all Zerynth Toolchain Commands for managing the Zerynth User Account.
+With this commands the Zerynth Users can execute the z-login (or the z-registration if first accesss) and personalize proper account informations.
+
+In all commands is present a ``--help`` option to show to the users a brief description of the related selected command and its syntax including argument and option informations.
+
+All commands return several log messages grouped in 4 main levels (info, warning, error, fatal) to inform the users about the results of the operation. 
+The actions that can be executed on Zerynth Accounts are:
+
+* login__: to enter/register in proper Zerynth Account
+* reset_: to reset the account password
+* profile_: to view or insert/modify profile informations
+    """
 from base import *
 import click
 import time
@@ -33,8 +60,12 @@ def check_installation():
 @click.option("--token",default=None,help="Token to authenticate z-user identity.")
 def __login(token):
     """
+__ user_login_
+
+.. _user_login:
+
 Login
-=====
+-----
 
 This command is used to create a new Zerynth Account or to enter in existing one from the command line interface running: ::
 
@@ -72,8 +103,10 @@ This command take as input the following argument:
 @click.argument("email")
 def reset(email):
     """
+.. _reset:
+
 Reset Password
-==============
+--------------
 
 This command is used to send a "reset account password" request to the Zerynth Backend from the command line with this syntax: ::
 
@@ -116,8 +149,10 @@ This command take as input the following argument:
 @click.option("--age","age",default="",help="Age related to the Zerynth Account.")
 def profile(job,company,age,name,surname,country,__set):
     """
+.. _profile:
+
 Change Profile Informations
-===========================
+---------------------------
 
 This command is used to view or insert/modify the Zerynth Account Profile Informations from the command line running: ::
 

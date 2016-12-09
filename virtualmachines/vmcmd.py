@@ -18,15 +18,15 @@ Virtual Machine Commands
 This module contains all Zerynth Toolchain Commands for managing Zerynth Virtual Machine Entities.
 With this commands the Zerynth Users can handle all their virtual machines using the command-line interface terminal.
 
-In all commands is present a ``--help`` option to show to the users a brief description of the related selected command and its syntax including argument and option informations.
+In all commands is present a ``--help`` option to show to the users a brief description of the related selected command and its syntax including arguments and option informations.
 
 All commands return several log messages grouped in 4 main levels (info, warning, error, fatal) to inform the users about the results of the operation. 
 The actions that can be executed on Zerynth Virtual Machines are:
 
-* :ref:`create<Create a Virtual Machine>`: to create a Zerynth Virtual Machine
-* :ref:`download<Download a Virtual Machine>`: to download an already compiled owned Zerynth Virtual Machine
-* :ref:`list<List Virtual Machines>`: to list all owned Zerynth Virtual Machines
-* :ref:`available<Retrieve a Virtual Machine>`: to retrieve a specific owned Zerynt Virtual Machine
+* create__: to create a Zerynth Virtual Machine
+* download_: to download an already compiled owned Zerynth Virtual Machine
+* list__: to list all owned Zerynth Virtual Machines
+* available_: to retrieve a specific owned Zerynth Virtual Machine
     """
 from base import *
 import click
@@ -59,8 +59,12 @@ def vm():
 @click.option("--name", default="",help="Name of the virtual machine")
 def create(device,version,rtos,feat,name):
     """ 
+__ create_vm_
+
+.. _create_vm:
+
 Create a Virtual Machine
-========================
+------------------------
 
 This command is used to create and download a new Zerynth Virtual Machine from the command line with this syntax: ::
 
@@ -122,8 +126,10 @@ This command take as input the following arguments:
 @click.argument("version")
 def download(uid,version):
     """ 
+.. _download:
+
 Download a Virtual Machine
-==========================
+--------------------------
 
 This command is used to download an existing Zerynth Virtual Machine from the command line with this syntax: ::
 
@@ -156,8 +162,12 @@ This command take as input the following arguments:
 @click.option("--core_dep",default=None,help="Select the z-virtual machine according to core dependency")
 def __list(_from,core_dep):
     """ 
+__ list_vm_
+
+.. _list_vm:
+
 List Virtual Machines
-=====================
+---------------------
 
 This command is used to list all proper Zerynth Virtual Machines already compiled from the command line running: ::
 
@@ -195,8 +205,10 @@ This command take as input the following arguments:
 @click.argument("target")
 def available(target):
     """ 
+.. _available:
+
 Retrieve a Virtual Machine
-==========================
+--------------------------
 
 This command is used to retrieve a specific Zerynth Virtual Machine informations according to the target argument from the command line with this syntax: ::
 
