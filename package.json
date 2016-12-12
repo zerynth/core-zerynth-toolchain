@@ -9,6 +9,6 @@
     "keywords": [],
     "repo": "official",
     "title": "Zerynth Toolchain",
-    "version": "r2.0.7",
-    "whatsnew": "Fixed timeouts and human readability"
+    "version": "r2.0.8",
+    "whatsnew": "Fixed paths in windows CodeCache"
 }

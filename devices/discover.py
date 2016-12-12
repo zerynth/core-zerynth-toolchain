@@ -118,11 +118,12 @@ class Discover():
                 dd = v.to_dict()
                 dd["hash"]=k
                 if env.human:
-                    table.append([v["name"],v["alias"],v["uid"],v["chipid"],v["classname"],v["port"],v["disk"]])
+                    table.append([v["name"],v["alias"],v["taeget"],v["uid"],v["chipid"],v["remote_id"],v["classname"],v["port"],v["disk"]])
                 else:
                     log_json(dd)
             if env.human:
-                log_table(table,headers=["Name","Alias","uid","chipid","class","port","disk"])
+                table = sorted(table,key=lambda x:x[3])
+                log_table(table,headers=["name","alias","target","uid","chipid","remote_id","classname","port","disk"])
         log("")
 
     def compare_dbs(self, new_db, old_db):
@@ -241,7 +242,7 @@ class Discover():
                 self.output_devices()
 
             if loop: 
-                sleep(looptime)
+                sleep(looptime/1000)
             else:
                 break
         

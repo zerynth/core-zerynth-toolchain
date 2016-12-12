@@ -1,4 +1,5 @@
-.. _ztc-cmd-project
+.. _ztc-cmd-project:
+
 ********
 Projects
 ********
@@ -22,7 +23,7 @@ A project can be created by issuing the following command: ::
 
     ztc project create title path
 
-where :samp:`title` is a string (preferably enclosed in double quotes) representing the title of the project and :samp:`path` is the path to the directory that will hold the project files. If such directory does not exists, it is created. If a project already exists at :samp:`path`, the command fails. 
+where :samp:`title` is a string (preferably enclosed in double quotes) representing the title of the project and :samp:`path` is the path to the directory that will hold the project files. If such directory does not exist, it is created. If a project already exists at :samp:`path`, the command fails. 
 
 An empty project consists of three files:
 

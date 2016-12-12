@@ -368,11 +368,14 @@ This command take as input the following arguments:
         print(given_fields)
         print(needed_fields<given_fields)
         fatal("missing some needed fields in package.json:",needed_fields-given_fields)
-    pack_contents = {k:v for k,v in pack_contents.items() if k in (needed_fields | valid_fields)}
+    pack_contents = {k:v for k,v in pack_contents.items() if k in (needed_fields | valid_fields) or k=="git_url"}
 
     # check git url
     if git:
-        pack_contents["git_pointer"] = git
+        if "git_pointer" in pack_contents:
+            pass
+        else:
+            pack_contents["git_pointer"] = git
     elif fs.exists(fs.path(path,".zproject")):
         proj_contents = fs.get_json(fs.path(path,".zproject"))
         if "git_url" in proj_contents:
@@ -380,9 +383,7 @@ This command take as input the following arguments:
             info("Creating package from project", proj_contents["title"])
         else:
             fatal("project must be a git repository")
-    else:
-        fatal("no project in this folder")
-    
+    print(pack_contents)
     # start publishing
     pack_contents["version"]=version
     fs.set_json(pack_contents,fs.path(path,"package.json"))
@@ -401,34 +402,34 @@ This command take as input the following arguments:
 
 
     # manage git repository for project
-    try:
-        #####TODO check signature configuration of pygit2
-        repo_path = pygit2.discover_repository(path)
-        repo = pygit2.Repository(repo_path)
-        regex = re.compile('^refs/tags')
-        tags = filter(lambda r: regex.match(r), repo.listall_references())
-        tags = [x.replace("refs/tags/","") for x in tags]
-        if version in tags:
-            fatal("Version",version,"already present in repo tags",tags)
-        index = repo.index
-        index.add_all()
-        tree = repo.index.write_tree()
-        commit = repo.create_commit("HEAD", repo.default_signature, repo.default_signature, "version: "+version, tree, [repo.head.target])
-        #print(commit)
-        cc = repo.revparse_single("HEAD")
-        remote = "zerynth" if not git else "origin"
-        credentials = None if (not username and not password) else pygit2.RemoteCallbacks(pygit2.UserPass(username,password))
-        repo.remotes[remote].push(['refs/heads/master'],credentials)
+    # try:
+    #     #####TODO check signature configuration of pygit2
+    #     repo_path = pygit2.discover_repository(path)
+    #     repo = pygit2.Repository(repo_path)
+    #     regex = re.compile('^refs/tags')
+    #     tags = filter(lambda r: regex.match(r), repo.listall_references())
+    #     tags = [x.replace("refs/tags/","") for x in tags]
+    #     if version in tags:
+    #         fatal("Version",version,"already present in repo tags",tags)
+    #     index = repo.index
+    #     index.add_all()
+    #     tree = repo.index.write_tree()
+    #     commit = repo.create_commit("HEAD", repo.default_signature, repo.default_signature, "version: "+version, tree, [repo.head.target])
+    #     #print(commit)
+    #     cc = repo.revparse_single("HEAD")
+    #     remote = "zerynth" if not git else "origin"
+    #     credentials = None if (not username and not password) else pygit2.RemoteCallbacks(pygit2.UserPass(username,password))
+    #     repo.remotes[remote].push(['refs/heads/master'],credentials)
 
-        try:
-            tag = repo.create_tag(version, cc.hex, pygit2.GIT_OBJ_COMMIT, cc.author, cc.message)
-            #print(tag)
-            repo.remotes[remote].push(['refs/tags/'+version],credentials)
-            info("Updated repository with new tag:",version,"for", pack_contents["fullname"])
-        except Exception as e:
-            critical("Can't create package", exc=e)
-    except KeyError:
-        fatal("no git repositories in this path")
+    #     try:
+    #         tag = repo.create_tag(version, cc.hex, pygit2.GIT_OBJ_COMMIT, cc.author, cc.message)
+    #         #print(tag)
+    #         repo.remotes[remote].push(['refs/tags/'+version],credentials)
+    #         info("Updated repository with new tag:",version,"for", pack_contents["fullname"])
+    #     except Exception as e:
+    #         critical("Can't create package", exc=e)
+    # except KeyError:
+    #     fatal("no git repositories in this path")
 
     ###prepare data to load the new version
     details = {

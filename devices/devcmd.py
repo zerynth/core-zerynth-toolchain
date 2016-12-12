@@ -23,30 +23,18 @@ When a new device is connected, some steps must be taken in order to make it abl
 3. The device must be :ref:`registered <ztc-cmd-device-register>` in order to create virtual machines for it (:samp:`chipid` and :samp:`remote_id` are obtained in this step)
 4. The device must be :ref:`virtualized <ztc-cmd-device-virtualize>, namely a suited virtual machine must be loaded on the device microcontroller
 
+
+List of device commands:
+
+* :ref:`discover <ztc-cmd-device-discover>`
+* :ref:`alias put <ztc-cmd-device-alias_put>`
+* :ref:`register <ztc-cmd-device-register>`
+* :ref:`virtualize <ztc-cmd-device-virtualize>`
+* :ref:`supported <ztc-cmd-device-supported>`
+* :ref:`open <ztc-cmd-device-open>`
+
+
 The list of supported devices is available :ref:`here <doc-supported-boards>`
-
-Device Commands
-===============
-
-This module contains all Zerynth Toolchain Commands for managing Zerynth Device Entities.
-With this commands the Zerynth Users can register and virtualize their boards using the command-line interface terminal.
-
-Before using a z-device, the z-users must assign to it an unique alias name creating a local database device entity.
-This operation will permit to the z-users to refer to their boards for executing commands on them and 
-will permit to the Zerynth Tool to auto-recognize the boards every time z-users connect to them to their pc.
-
-In all commands is present a ``--help`` option to show to the users a brief description of the related selected command and its syntax including arguments and option informations.
-
-All commands return several log messages grouped in 4 main levels (info, warning, error, fatal) to inform the users about the results of the operation. 
-The actions that can be executed on Zerynth Devices are:
-
-* `alias put`_: to create a new local database device entity assigning an unique alias name
-* `alias del`_: to delete a z-device referred to a specific alias name
-* discover_: to discover the connected z-devices
-* supported_: to list supported z-devices
-* register_: to register new z-devices
-* virtualize_: to virtualize a z-devices
-* open_: to open serial port for the communication with the z-device
 
     """
 from base import *
@@ -60,50 +48,110 @@ import base64
 
 _dsc = None
 
-@cli.group(help="Manage Zerynth Devices.")
+@cli.group(help="Manage devices.")
 def device():
     global _dsc
     _dsc = Discover()
 
 ##### DEVICE ALIAS [PUT|DEL]
 
-@device.group(help="For managing Z-Device Locally")
+@device.group(help="Manage device aliases")
 def alias():
     pass
 
 
-#TODO test once boards are ok
-@alias.command("put", help="to create a local database device entity and assign to it an unique alias name. \n\n Arguments: \n\n UID: Uid of the device found in the discover command results. \n\n ALIAS: Unique Alias Name for the device. \n\n TARGET: Target of the device.")
+@device.command(help="Discover connected devices.")
+@click.option("--loop","loop",flag_value=True, default=False,help="Set continuous discover mode.")
+@click.option("--looptime",default=2000,help="Set polling delay for discover")
+@click.option("--matchdb","matchdb",flag_value=True, default=False,help="Match raw device data with device db.")
+def discover(loop,looptime,matchdb):
+    """ 
+.. _ztc-cmd-device-discover:
+
+Discover
+--------
+
+Device discovery is performed by interrogating the operative system database for USB connected peripherals. Each peripheral returned by the system has at least the following "raw" attributes:
+
+* :samp:`vid`, the USB vendor id
+* :samp:`pid`, the USB product id
+* :samp:`sid`, the unique identifier assigned by the operative system, used to discriminate between multiple connected devices with the same :samp:`vid:pid`
+* :samp:`port`, the virtual serial port used to communicate with the device, if present
+* :samp:`disk`, the mount point of the device, if present
+* :samp:`uid`, a unique identifier assigned by the ZTC
+* :samp:`desc`, the device description provided by the operative system (can differ between different platforms)
+
+Raw peripheral data can be obtained by running: ::
+
+    ztc device discover
+
+.. note:: In Linux peripheral data is obtained by calling into libudev functions. In Windows the WMI interface is used. In Mac calls to ioreg are used.
+
+Raw peripheral data are not so useful apart from checking the effective presence of a device. To obtain more useful data the option :option:`-- matchdb` must be provided. Such option adds another step of device discovery on top of raw peripheral data that is matched against the list of supported devices and the list of already known devices.
+
+A :option:`--matchdb` discovery returns a different set of more high level information:
+
+* :samp:`name`, the name of the device taken from the ZTC supported device list
+* :samp:`alias`, the device alias (if set)
+* :samp:`target`, the device target, specifying what kind of microcontroller and pcb routing is to be expected on the device
+* :samp:`uid`, the device uid, same as raw peripheral data
+* :samp:`chipid`, the unique identifier of the device microcontrolloer (if known)
+* :samp:`remote_id`, the unique identifier of the device in the Zerynth backend (if set)
+* :samp:`classname`, the Python class in charge of managing the device
+
+All the above information is needed to make a device usable in the ZTC. The information provided helps in distinguishing different devices with different behaviours. A device without an :samp:`alias` is a device that is not yet usable, therefore an alias must be :ref:`set <ztc-cmd-device-alias_put>`. A device without :samp:`chipid` and :samp:`remote_id` is a device that has not been :ref:`registered <ztc-cmd-device-register> yet and can not be virtualized yet.
+
+To complicate the matter, there are additional cases that can be spotted during discovery:
+
+1. A physical device can match multiple entries in the ZTC supported device list. This happens because often many different devices are built with the same serial USB chip and therefore they all appear as the same hardware to the operative system. Such device are called "ambiguous" because the ZTC can not discriminate their :samp:`target`. For example, both the Mikroelektronika Flip&Click development board and the Arduino Due, share the same microcontroller and the same USB to serial converter and they both appear as a raw peripheral with the same :samp:`vid:pid`. The only way for the ZTC to differentiate between them is to ask the user to set the device :samp:`target`. For ambiguous devices the :samp:`target` can be set while setting the :samp:`alias`. Once the :samp:`target` is set, the device is disambiguated and subsequent discovery will return only one device with the right :samp:`target`.
+2. A physical device can appear in two or more different configurations depending on its status. For example, the Particle Photon board has two different modes: the DFU modes in which the device can be flashed (and therefore virtualized) and a "normal" mode in which the device executes the firmware (and hence the Zerynth bytecode). The device appears as a different raw peripherals in the two modes with different :samp:`vid:pid`. In such cases the two different devices will have the same :samp:`target` and, once registered, the same :samp:`chipid` and :samp:`remote_id`. They will appear to the Zerynth backend as a single device (same :samp:`remote_id`), but the ZTC device list will have two different devices with different :samp:`alias` and different :samp:`classname`. The :samp:`classname` for such devices can be set while setting the alias. In the case of the Particle Photon, the :samp:`classname` will be "PhotonDFU" for DFU mode and "Photon" for normal mode. PhotonDFU is the :samp:`alter_ego` of Photon in ZTC terminology.
+3. Some development boards do not have USB circuitry and can be programmed only through a JTAG or an external usb-to-serial converter. Such devices can not be discovered. To use them, the programmer device (JTAG or usb-to-serial) must be configured by setting :samp:`alias` and :samp:`target` to the ones the development device.
+
+Finally, the :command:`discover` command can be run in continuous mode by specifying the option :option:`--loop`. With :option:`--loop` the command keeps printing the set of discovered devices each time it changes (i.e. a new device is plugged or a connected device is unplugged). In some operative system the continuous discovery is implemented by polling the operative system device database for changes. The polling time can be set with option :option:`--looptime milliseconds`, by default it is 2000 milliseconds.
+
+    """
+    try:
+        _dsc.run(loop,looptime,matchdb)
+    except Exception as e:
+        warning("Exception while discovering devices:",str(e))
+
+
+@alias.command("put", help="assign an unique alias to a device. \n\n Arguments: \n\n UID: device uid. \n\n ALIAS: device alias. \n\n TARGET: device target.")
 @click.argument("uid")
 @click.argument("alias")
 @click.argument("target")
-@click.option("--name",default=False,help="Name of the Zerynth Device.")
+@click.option("--name",default=False,help="Set device name.")
 @click.option("--chipid",default="")
 @click.option("--remote_id",default="")
-@click.option("--classname",default="",help="Classname of the Zerynth Device.")
+@click.option("--classname",default="",help="Set device classname.")
 def alias_put(uid,alias,name,target,chipid,remote_id,classname):
     """ 
-.. _alias_put:
+.. _ztc-cmd-device-alias_put
 
-Alias Put
----------
+Device configuration
+--------------------
 
-This command is used to create a new local database device entity with a custom unique alias name from the command line with this syntax: ::
+Before usage a device must be configured. The configuration consists in linking a physical device identified by its :samp:`uid` to a logical device identified by its :samp:`alias` and :samp:`target` attributes. Additional attributes can be optionally set.
+The configuration command is: ::
 
-    Syntax:   ./ztc device alias put uid alias target --name --chipid --remote_id --classname
-    Example:  ./ztc device alias put 776ff4bc8fdfd700ef92005c7024b3af914b86e6 uid_alias_name --name "myBoard"
+    ztc device alias put uid alias target
 
-This command take as input the following arguments:
-    * **uid** (str) -->  the uid of the related device found in the `discover` command diplay results (**required**)
-    * **alias** (str) --> the unique alias name to assign to the device (**required**)
-    * **target** (str) -->  the target of the z-device (**required**)
-    * **name** (str) --> the name of the z-device (**optional**, default=False)
-    * **classname** (str) --> the classname of the z-device (**optional**, default="")
+where :samp:`uid` is the device hardware identifier (as reported by the discovery algorithm), :samp:`alias` is the user defined device name (no spaces allowed) and :samp:`target` is one of the supported the :ref:`supported <ztc-cmd-device-supported>` devices target. A :samp:`target` specifies what kind of microcontroller, pin routing and additional perpherals can be found on the device. For example, the :samp:`target` for NodeMCU2 development board id :samp:`nodemcu2` and informs the ZTC about the fact that the configured device is a NodeMCU2 implying an esp8266 microcontroller, a certain pin routing and an onboard FTDI controller. 
+
+There is no need to write the whole :samp:`uid` in the command, just a few initial character suffice, as the list of known uids is scanned and compared to the given partial :samp:`uid` (may fail if the given partial :samp:`uid` matches more than one uid).
+
+Additional options can be given to set other device attributes:
+
+* :option:`--name name` set the human readable device name to :samp:`name` (enclose in double quotes if the name contains spaces)
+* :option:`--chipid chipid` used by external tools to set the device :samp:`chipid` manually
+* :option:`--remote_id remote_id` used by external tools to set device :samp:`remote_id` manually
+* :option:`--classname classname` used to set the device :samp:`classname` in case of ambiguity.
+
+Aliases can be also removed from the known device list with the command: ::
+
+    ztc device alias del alias
 
 
-**Errors**:
-    * Missing input required data
-    * Errors on matching device target or classname (for multiclass devices) 
 
     """
     #if not re.match("^[A-Za-z0-9_:-]{4,}$",alias):
@@ -141,91 +189,11 @@ This command take as input the following arguments:
         #TODO open devdb, get/set uid+unique_alias+name+shortname(this disambiguate a device)
 
 
-@alias.command("del", help="to delete a z-device from the local device database. \n\n Arguments: \n\n ALIAS: The alias of the z-device.")
+@alias.command("del", help="Delete a device from the known device list. \n\n Arguments: \n\n ALIAS: The alias of the device to remove.")
 @click.argument("alias")
 def alias_del(alias):
-    """ 
-.. _alias_del:
-
-Alias Del
----------
-
-This command is used to delete a z-device from the local database running this command from the terminal: ::
-
-    Syntax:   ./ztc project alias del alias
-    Example:  ./ztc project alias del uid_alias_name
-
-This command take as input the following arguments:
-    * **alias** (str) --> the unique alias name to assign to the device (**required**)
-    
-**Errors**:
-    * Missing input required data
-    * Wrong Alias
-
-    """
     env.del_dev(Var({"alias":alias}))
-    
 
-@device.command(help="To discover connected devices.")
-@click.option("--loop","loop",flag_value=True, default=False,help="Flag for infinity loop execution.")
-@click.option("--looptime",default=2,help="Sleep time in the infinity loop in second.")
-@click.option("--matchdb","matchdb",flag_value=True, default=False,help="Flag for finding matches in device db.")
-def discover(loop,looptime,matchdb):
-    """ 
-.. _discover:
-
-Discover Devices
-----------------
-
-This command is used to discover devices connected to the z-user pc using the command line with this syntax: ::
-
-    Syntax:   ./ztc device discover --loop --looptime --matchdb
-    Example:  ./ztc device discover --matchdb
-
-This command take as input the following arguments:
-    * **loop** (bool) --> flag to exec in infinite loop this command (**optional**, default=False)
-    * **looptime** (int) --> time to sleep at the end of the loop operations (**optional**, default=2)
-    * **matchdb** (bool) --> flag to enable the matching between devices connected and z-device in local database (**optional**; default=False)
-
-    """
-    try:
-        _dsc.run(loop,looptime,matchdb)
-    except Exception as e:
-        warning("Exception while discovering devices:",str(e))
-
-
-@device.command(help="List of supported Zerynth Devices.")
-@click.option("--type",default="board",type=click.Choice(["board","jtag","usbtoserial"]),help="type of device [board,jtag,usbtoserial]")
-def supported(type):
-    """ 
-.. _supported:
-
-List of Supported Devices
--------------------------
-
-This command is used to list supported devices from the command line with this syntax: ::
-
-    Syntax:   ./ztc device supported --type
-    Example:  ./ztc device supported --type board
-
-This command take as input the following argument:
-    * **type** (str) --> type of the device (**optional**, default=“board")
-
-.. note:: the type of devices available are: "board", "jtag", and "usbtoserial"
-
-    """
-    table = []
-    for k,v in _dsc.device_cls.items():
-        if v["type"]==type:
-            if env.human:
-                table.append([v["target"],v["path"]])
-            else:
-                log_json({
-                    "target":v["target"],
-                    "path":v["path"]
-                })
-    if env.human:
-        log_table(table,headers=["Target","Path"])
 
 
 #TODO: remove
@@ -236,29 +204,27 @@ def _target_exists(target):
             return True
     return False
 
-@device.command(help="To Register a new Zerynth Device. \n\n Arguments: \n\n ALIAS: The alias of the z-device.")
+@device.command(help="Register a new device. \n\n Arguments: \n\n ALIAS: device alias")
 @click.argument("alias")
 def register(alias):
     """ 
-.. _register:
+.. _ztc-cmd-device-register:
 
-Register a Device
------------------
+Device Registration
+-------------------
 
-This command is used to register a new Zerynth Device on the Zerynth Backend Database from the command line with this syntax: ::
+To obtain a virtual machine a device must be registered first. The registration process consists in flashing a registration firmware on the device, obtaining the microcontroller unique identifier and communicating it to the Zerynth backend.
+The process is almost completely automated, it may simply require the user to put the device is a mode compatible with burning firmware.
 
-    Syntax:   ./ztc device register alias
-    Example:  ./ztc device register uid_alias_name
+Device registration is performed by issuing the command: ::
 
-This command take as input the following argument:
-    * **alias** (str) --> the alias od the z-device (**required**)
+    ztc device register alias
 
-**Errors**:
-    * Missing input required data
-    * Wrong Alias
-    * Receiving Zerynth Backend response errors
+where :samp:`alias` is the device alias previously set (or just the initial part of it).
 
-.. note:: This operation is needed before first virtualization of a z-device;  
+The result of a correct registration is a device with the registration firmware on it, the device :samp:`chipid` and the device :samp:`remote_id`. Such attributes are automatically added to the device entry in the known device list.
+
+.. note:: Devices with multiple modes can be registered one at a time only!
 
     """
     tgt = _dsc.search_for_device(alias)
@@ -342,15 +308,18 @@ This command take as input the following argument:
         env.put_dev(alter_ego)
 
 
+
+
+
 @device.command(help="To virtualize the Zerynth Device. \n\n Arguments: \n\n ALIAS: The alias of the z-device. \n\n VMUID: The uid of the Zerynth Virtual Machine.")
 @click.argument("alias")
 @click.argument("vmuid")
 def virtualize(alias,vmuid):
     """ 
-.. _virtualize:
+.. _ztc-cmd-device-virtualize:
 
-Virtualize a Device
--------------------
+Virtualization
+--------------
 
 This command is used to virtualize a Zerynth Device installing on the board the real time operative system to
 abilitate for running customer application code. the ``virtualize`` command has this syntax: ::
@@ -440,5 +409,41 @@ This command take as input the following arguments:
     #     data = ser.read()
     #     log(data.decode("ascii","replace"),sep="",end="")
     #     #print(,sep="",end="")
+
+
+
+@device.command(help="List of supported Zerynth Devices.")
+@click.option("--type",default="board",type=click.Choice(["board","jtag","usbtoserial"]),help="type of device [board,jtag,usbtoserial]")
+def supported(type):
+    """ 
+.. _supported:
+
+List of Supported Devices
+-------------------------
+
+This command is used to list supported devices from the command line with this syntax: ::
+
+    Syntax:   ./ztc device supported --type
+    Example:  ./ztc device supported --type board
+
+This command take as input the following argument:
+    * **type** (str) --> type of the device (**optional**, default=“board")
+
+.. note:: the type of devices available are: "board", "jtag", and "usbtoserial"
+
+    """
+    table = []
+    for k,v in _dsc.device_cls.items():
+        if v["type"]==type:
+            if env.human:
+                table.append([v["target"],v["path"]])
+            else:
+                log_json({
+                    "target":v["target"],
+                    "path":v["path"]
+                })
+    if env.human:
+        log_table(table,headers=["Target","Path"])
+
 
 

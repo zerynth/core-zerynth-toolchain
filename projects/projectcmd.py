@@ -1,5 +1,6 @@
 """
-.. _ztc-cmd-project
+.. _ztc-cmd-project:
+
 ********
 Projects
 ********

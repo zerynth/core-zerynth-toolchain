@@ -28,7 +28,7 @@ The ZTC opens the default system browser to the login/registration page and wait
 
 In the login/registration page, the user can login providing a valid email and the corresponding password. 
 It is also possible (and faster) to login using Google plus or Facebook OAuth services. If the user do not have a Zerynth account it is possible to register
-providing a valid email, a nick name and a password. Social login is again available for registration via OAuth.
+providing a valid email, a nick name and a password. Social login is also available for registration via OAuth.
 
 Once a correct login/registration is performed, the browser will display an authentication token. Such token can be copied and pasted to the ZTC prompt.
 
