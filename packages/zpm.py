@@ -43,7 +43,6 @@ class Zpm():
 
     def load_ipack_db(self,cfgdir,dbname="packages.db"):
         try:
-            print("IDB at",cfgdir)
             fs.makedirs(cfgdir)
             if self._ipack_db: 
                 self._ipack_db.shutdown()
