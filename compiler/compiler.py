@@ -7,6 +7,8 @@ import ast
 import struct
 import base64
 import hashlib
+import os
+import os.path
 
 from compiler.env import Env
 from compiler.astprep import AstPreprocessor
@@ -172,21 +174,21 @@ class Compiler():
                 afile = [file.replace("\\","/")]
             self.cfiles.update(afile)
         for vbl in vbls:
-            if vbl.startswith("VBL_"):
-                vblf = fs.path(vconf.envdirs["vm"],"common","vbl",vbl.lower()+".c")
-                if os.path.exists(vblf):
-                    self.cfiles.add(vblf)
-                    self.cincpaths.add(os.path.realpath(os.path.join(vconf.envdirs["vm"],"common","vbl")))
-                else:
-                    raise CNativeNotFound(0,0,vblf)
-            elif vbl.startswith("VHAL_"):
+            # if vbl.startswith("VBL_"):
+            #     vblf = fs.path(env.stdlib,"__common","vbl",vbl.lower()+".c")
+            #     if os.path.exists(vblf):
+            #         self.cfiles.add(vblf)
+            #         self.cincpaths.add(os.path.realpath(os.path.join(vconf.envdirs["vm"],"common","vbl")))
+            #     else:
+            #         raise CNativeNotFound(0,0,vblf)
+            if vbl.startswith("VHAL_"):
                 self.cdefines.add(vbl)
                 lookup = self.board.family[self.board.family_name]
                 if vbl in lookup["vhal"]:
                     for x in lookup["vhal"][vbl]["src"]:
-                        self.cfiles.add(os.path.realpath(os.path.join(vconf.envdirs["vhal"],lookup["path"],x)))
+                        self.cfiles.add(os.path.realpath(os.path.join(env.vhal,lookup["path"],x)))
                     for x in lookup["vhal"][vbl]["inc"]:
-                        self.cincpaths.add(os.path.realpath(os.path.join(vconf.envdirs["vhal"],lookup["path"],x)))
+                        self.cincpaths.add(os.path.realpath(os.path.join(env.vhal,lookup["path"],x)))
                     self.cdefines.update(lookup["vhal"][vbl]["defs"])
             else:
                 self.cdefines.add(vbl)
@@ -394,7 +396,8 @@ class Compiler():
                             for k,v in err.items():
                                 for vv in v:
                                     error(k,"=> line",vv["line"],vv["msg"])
-                            raise CNativeError(None,None,None,None)
+                            #TODO: fix exception
+                            raise CNativeError(0,0,cfile,"---")
             info("Linking...")
             obcfile = fs.path(tmpdir,"zerynth.vco") 
             ofile = fs.path(tmpdir,"zerynth.rlo")

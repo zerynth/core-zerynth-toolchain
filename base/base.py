@@ -79,9 +79,14 @@ def critical(*args,**kwargs):
         exc = kwargs.pop("exc")
     else:
         exc = None
-    echo(Critical("[fatal]>"),*args,err=True,**kwargs)
-    if exc and _options["traceback"]:
-        traceback.print_exc()
+    if exc:
+        if _options["traceback"]:
+            echo(Critical("[fatal]>"),*args,err=True,**kwargs)
+            traceback.print_exc()
+        else:
+            echo(Critical("[fatal]>"),str(exc),*args,err=True,**kwargs)
+    else:
+        echo(Critical("[fatal]>"),*args,err=True,**kwargs)
     sys.exit(2)
     
 
@@ -128,7 +133,7 @@ def sleep(n):
 @click.group(help="Zerynth Toolchain.")
 @click.option("-v","verbose",flag_value=True,default=False,help="Verbose.")
 @click.option("--colors/--no-colors","nocolors",default=True,help="To enable/disable colors.")
-@click.option("--traceback/--no-traceback","notraceback",default=True,help="To enable/disable exception traceback printing on criticals.")
+@click.option("--traceback/--no-traceback","notraceback",default=False,help="To enable/disable exception traceback printing on criticals.")
 @click.option("--user_agent",default="ztc",help="To insert custom user agent.")
 @click.option("--pretty","pretty",flag_value=True, default=False,help="To display pretty json output.")
 @click.option("-J","__j",flag_value=True,default=False,help="To display the output in json format.")

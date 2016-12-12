@@ -5,10 +5,10 @@
     },
     "description": "",
     "fullname": "core.zerynth.toolchain",
-    "git_pointer": "zerynth://zernth-core/zerynth-toolchain",
+    "git_pointer": "zerynth://zerynth-core/zerynth-toolchain",
     "keywords": [],
     "repo": "official",
     "title": "Zerynth Toolchain",
-    "version": "r2.0.5",
-    "whatsnew": "Fix compiler and doc"
+    "version": "r2.0.7",
+    "whatsnew": "Fixed timeouts and human readability"
 }

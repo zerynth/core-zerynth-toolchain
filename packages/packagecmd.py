@@ -64,7 +64,6 @@ def check_db(repo):
     except Exception as e:
         warning(e)
         crc = 0
-    info("hash for",repo,crc)
     headers = {"If-None-Match": str(crc)}
     try:
         res = zget(url=env.api.db+"/"+repo, headers=headers,auth="conditional")
@@ -79,7 +78,10 @@ def update_zdb(repolist):
         repopath = fs.path(env.edb, repo)
         info("Checking repository",repo)
         res = check_db(repo)
-        if res.status_code == 304:
+        if not res:
+            warning("Can't update repository",repo)
+            continue
+        elif res.status_code == 304:
             info(repo, "repository is in sync")
         elif res.status_code == 200:
             info(repo, "repository downloaded")
@@ -238,7 +240,7 @@ This command take as input the following arguments:
                     info("New Zerynth version is",res)
                 info("Done")
         except ZpmException as ze:
-            fatal("Error during install",ze)
+            critical("Error during install",exc=ze)
         except Exception as e:
             critical("Impossible to install packages:", exc=e)
 
@@ -496,7 +498,7 @@ This command take as input the following arguments:
             if res:
                 info("New Zerynth version is",res)
     except Exception as e:
-        fatal("Impossible to install packages:", e)
+        critical("Impossible to install packages:", exc=e)
 
 # #TODO: check uninstall
 # @package.command()

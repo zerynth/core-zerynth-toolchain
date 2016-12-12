@@ -1,29 +1,18 @@
 """
-.. module:: Users
+.. _ztc-cmd-user:
 
-*****
-Users
-*****
+************************
+Account related commands
+************************
 
-The Zerynth User is a Database Entity collecting all account and session informations.
+The ZTC allows the user to authenticate against the Zerytnh backend and modify profile information.
 
-Every Z-User will be automaically created after a registration and can be managed and completed with some extra informations
-through the following commands.
+The following commands are available:
 
-User Commands
-=============
+* :ref:`login <ztc-cmd-user-login>` to retrieve an authentication token.
+* :ref:`reset <ztc-cmd-user-reset>` reset to request a password reset.
+* :ref:`profile <ztc-cmd-user-profile>` set and get profile information.
 
-This module contains all Zerynth Toolchain Commands for managing the Zerynth User Account.
-With this commands the Zerynth Users can execute the z-login (or the z-registration if first accesss) and personalize proper account informations.
-
-In all commands is present a ``--help`` option to show to the users a brief description of the related selected command and its syntax including argument and option informations.
-
-All commands return several log messages grouped in 4 main levels (info, warning, error, fatal) to inform the users about the results of the operation. 
-The actions that can be executed on Zerynth Accounts are:
-
-* login__: to enter/register in proper Zerynth Account
-* reset_: to reset the account password
-* profile_: to view or insert/modify profile informations
     """
 from base import *
 import click
@@ -56,33 +45,40 @@ def check_installation():
         warning("Exception while checking installation",str(e))
 
 
-@cli.command("login",help="Enter/Register in Zerynth Account.")
-@click.option("--token",default=None,help="Token to authenticate z-user identity.")
+@cli.command("login",help="Obtain an authentication token")
+@click.option("--token",default=None,help="set the token in non interactive mode")
 def __login(token):
     """
-__ user_login_
-
-.. _user_login:
+.. _ztc-cmd-user-login:
 
 Login
 -----
 
-This command is used to create a new Zerynth Account or to enter in existing one from the command line interface running: ::
+The :command:`login` command enables the user to retrieve an authentication token. The token is used in most ZTC commands to communicate with the Zerynth backend.
 
-    Syntax:   ./ztc login --token
-    Example:  ./ztc login
+The :command:`login` can be issued in interactive and non interactive mode. Interactive mode is started by typing: ::
 
-This command take as input the following argument:
-    * **token** (str) --> the token to authenticate the user identity (**optional**, default=None)
-    
-**Errors**:
-    * Bad token for the authentication
+    ztc login
 
-.. note:: If token option not passed, the system will open the Zerynth Login/Registration web page to obtain the token.
-          In this page, the user can enter the Zerynth Account through manual (username, password) or social (Google, Facebook) credentials.
-          Once authenticated, the user must copy and paste the Zerynth Token value in the terminal to complete the operation.
-.. warning:: For manual registrations, the email address confirmation is needed.
-             The user must click on 'Verification Link' received by email to confirm the address
+The ZTC opens the default system browser to the login/registration page and waits for user input.
+
+In the login/registration page, the user can login providing a valid email and the corresponding password. 
+It is also possible (and faster) to login using Google plus or Facebook OAuth services. If the user do not have a Zerynth account it is possible to register
+providing a valid email, a nick name and a password. Social login is also available for registration via OAuth.
+
+Once a correct login/registration is performed, the browser will display an authentication token. Such token can be copied and pasted to the ZTC prompt.
+
+.. warning:: multiple logins with different methods (manual or social) are allowed provided that the email linked to the social OAuth service is the same as the one used in the manual login.
+
+
+Non interactive mode is started by typing: ::
+
+    ztc login --token authentication_token
+
+The :samp:`authentication_token` can be obtained by manually opening the login/registration `page <https://backend.zerynth.com/v1/sso>`_
+
+
+.. warning:: For manual registrations, email address confirmation is needed. An email will be sent at the provided address with instructions.
 
     """
     if not token:
@@ -96,33 +92,26 @@ This command take as input the following argument:
         env.set_token(token)
         check_installation()
     else:
-        error("Bad token!")
+        error("Token needed!")
 
 
-@cli.command(help="Reset the Zerynth Account Password. \n\n Arguments: \n\n EMAIL: email related to Zerynth Account")
+@cli.command(help="Password reset. \n\n Arguments: \n\n EMAIL: email linked to the user account")
 @click.argument("email")
 def reset(email):
     """
-.. _reset:
+.. _ztc-cmd-user-reset:
 
 Reset Password
 --------------
 
-This command is used to send a "reset account password" request to the Zerynth Backend from the command line with this syntax: ::
+If a manual registration has been performed, it is possible to change the password by issuing a password reset: ::
 
-    Syntax:   ./ztc reset email
-    Example:  ./ztc reset user@mail.com
+    ztc reset email
 
-This command take as input the following argument:
-    * **email** (str) --> the email address related to the Zerynth Account (**required**)
+where :samp:`email` is the email address used in the manual registration flow. An email with instruction will be sent to such address in order to allow a password change.
 
-**Errors**:
-    * Missing required data
-    * Receiving Zerynth Backend response errors
-    * Passing email not associated to a Zerynth Account
+.. note:: on password change, all active sessions of the user will be invalidated and a new token must be retrieved.
 
-.. note:: Once sent the request, the user will receive, via email, a "Reset Link" to complete the operation.
-          Clicking on "Reset Link", the user can proceed to change the password re-entering the old one and inserting twice the new one.
     """
     try:
         res = zget(env.api.pwd_reset,auth=False,params={"email":email})
@@ -149,29 +138,54 @@ This command take as input the following argument:
 @click.option("--age","age",default="",help="Age related to the Zerynth Account.")
 def profile(job,company,age,name,surname,country,__set):
     """
-.. _profile:
+.. _ztc-cmd-user-profile:
 
-Change Profile Informations
----------------------------
+Get/Set Profile Info
+--------------------
 
-This command is used to view or insert/modify the Zerynth Account Profile Informations from the command line running: ::
+By issuing the command: ::
 
-    Syntax:   ./ztc profile --set --name -- surname --job --country --company --age
-    Example1: ./ztc profile  
-    Example2: ./ztc profile --set --name "ZUser" --company "Zerynth"
+    ztc profile
 
-This command take as input the following arguments:
-    * **set** (bool) --> flag to view, if true, or insert/modify, if false, Zerynth Account Informations (**optional**, default=False)
-    * **name** (str) --> name related to the Zerynth Account (**optional**, default="")
-    * **surname** (str) --> surname related to the Zerynth Account (**optional**, default="")
-    * **job** (str) --> job related to the Zerynth Account (**optional**, default="")
-    * **country** (str) --> country related to the Zerynth Account (**optional**, default="")
-    * **company** (str) --> company related to the Zerynth Account (**optional**, default="")
-    * **age** (str) --> age related to the Zerynth Account (**optional**, default="")
+the user profile is retrieved and displayed. The user profile consists of the following data:
 
-**Errors**:
-    * Receiving Zerynth Backend response errors
-    * Unauthorized Request
+* Generic Info
+
+    * Display Name (non mutable)
+    * Email (non mutable)
+    * Name
+    * Surname
+    * Age
+    * Country
+    * Job
+    * Company
+
+* Subscription Info
+
+    * Subscription type
+    * Date of subscription expiration
+    * List of roles
+    * List of active repositories
+
+* Asset list 
+
+    * List of account linked assets
+    * List of bought virtual machine packs
+
+
+The profile  command can be used to change mutable generic info with the following syntax: ::
+
+    ztc profile --set options
+
+where :samp:`options` is a list of one or more of the following options: 
+
+* :option:`--name name` update the Name field
+* :option:`--surname name` update the Surname field
+* :option:`--age age` update the Age field
+* :option:`--country country` update the Country field
+* :option:`--job job` update the Job field
+* :option:`--company company` update the Company field
+
     """
     if __set:
         try:
@@ -199,25 +213,47 @@ This command take as input the following arguments:
                     table.append([
                         rj["data"]["display_name"],
                         rj["data"]["email"],
+                        rj["data"]["name"],
+                        rj["data"]["surname"],
+                        rj["data"]["age"],
+                        rj["data"]["country"],
+                        rj["data"]["company"],
+                        rj["data"]["job"],
+                    ])
+                    log()
+                    info("General Info")
+                    log_table(table,headers=["Display Name","Email","Name","Surname","Age","Country","Company","Job"])
+                    
+                    table = []
+                    table.append([
                         rj["data"]["subscription"],
                         rj["data"]["pro"],
                         rj["data"]["roles"],
-                        rj["data"]["repositories"],
-                        rj["data"]["assets"],
-                        rj["data"]["name"],
-                        rj["data"]["surname"],
-                        rj["data"]["job"],
-                        rj["data"]["country"],
-                        rj["data"]["company"],
-                        rj["data"]["age"]
+                        rj["data"]["repositories"]
                     ])
-                    log_table(table,headers=["Display Name","Email","Subscription","Pro Expiry","Roles","Repositories","Assets","Name","Surname","Job","Country","Company","Age"])
+                    
+                    log()
+                    info("Account info")
+                    log_table(table,headers=["Subscription","Pro Expiry","Roles","Repositories"])
+
+                    table = []
+                    freeassets = rj["data"]["assets"].get("free",[])
+                    vmassets = rj["data"]["assets"].get("vm",[])
+                    for asset in freeassets:
+                        table.append([asset["target"],asset["current"],asset["limit"]])
+                    for asset in vmassets:
+                        table.append([asset["target"],asset["current"],asset["limit"]])
+                    
+                    log()
+                    info("Assets")
+                    log_table(table,headers=["target","used","max"])
                 else:
-                    log_json(rj["data"])            
+                    log_json(rj["data"])
             elif rj["code"]==403:
                 log("\"Unauthorized\"")
             else:
                 critical("Can't get profile",rj["message"])
         except Exception as e:
             critical("Can't get profile",e)
+
 

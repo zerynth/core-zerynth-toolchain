@@ -134,6 +134,7 @@ class Environment():
         fs.makedirs(self.studio_dir(distpath))
         fs.makedirs(self.docs_dir(distpath))
         fs.makedirs(self.examples_dir(distpath))
+        fs.makedirs(self.idb_dir(distpath))
 
 
     def get_token(self):
@@ -215,8 +216,7 @@ def init_cfg():
     env.vms       = fs.path(env.home,"vms")
     env.edb       = fs.path(env.home,"cfg","edb")
     env.zdb       = fs.path(env.home,"cfg","zdb")
-    env.idb       = fs.path(env.home,"cfg","idb")
-
+    
 
     # load configuration
     env.load(env.cfg)
@@ -242,6 +242,7 @@ def init_cfg():
     env.docs      = fs.path(env.home,"dist",version,"docs")
     env.examples  = fs.path(env.home,"dist",version,"examples")
     env.devices    = fs.path(env.home,"dist",version,"devices")
+    env.idb       = fs.path(env.home,"dist",version,"idb")
 
     env.dist_dir = lambda x: fs.path(env.home,"dist",x)
     env.ztc_dir = lambda x: fs.path(x,"ztc")
@@ -252,6 +253,7 @@ def init_cfg():
     env.devices_dir = lambda x: fs.path(x,"devices")
     env.docs_dir = lambda x: fs.path(x,"docs")
     env.examples_dir = lambda x: fs.path(x,"examples")
+    env.idb_dir = lambda x: fs.path(x,"idb")
 
 
     # set global temp dir

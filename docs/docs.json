@@ -7,9 +7,11 @@
 		["Users","user/usercmd.py"],
 		["Projetcs","projects/projectcmd.py"],
 		["Devices","devices/devcmd.py"],
-		["Compiler and Uplinker","comp_up.json"],
+		["Compiler","compiler/compilercmd.py"],
+		["Uplinker","uplinker/uplinker.py"],
 		["Virtual Machines","virtualmachines/vmcmd.py"],
 		["Namespaces","packages/nscmd.py"],
-		["Packages","packages/packagecmd.py"]
+		["Packages","packages/packagecmd.py"],
+		["Miscellanea","misc/misccmd.py"]
 	]
 }

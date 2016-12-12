@@ -11,10 +11,10 @@ import lzma
 class Zpm():
 
     def __init__(self):
-        self.load_ipack_db(env.idb,"packages.db")
-        self.load_zpack_db(env.zdb,"packages.db")
+        self.load_ipack_db(env.idb)
+        self.load_zpack_db(env.zdb)
 
-    def load_zpack_db(self,cfgdir,dbname):
+    def load_zpack_db(self,cfgdir,dbname="packages.db"):
         try:
             fs.makedirs(cfgdir)
             self._zpack_db_cfgdir=cfgdir
@@ -38,9 +38,11 @@ class Zpm():
         except Exception as e:
             critical("can't save configuration",exc=e)
 
-    def load_ipack_db(self,cfgdir,dbname):
+    def load_ipack_db(self,cfgdir,dbname="packages.db"):
         try:    
             fs.makedirs(cfgdir)
+            if self._ipack_db: 
+                self._ipack_db.shutdown()
             self._ipack_db_cfgdir=cfgdir
             self._ipack_db_dbname=dbname
             self._ipack_db = sqlite3.connect(fs.path(cfgdir,dbname),check_same_thread=False)
@@ -337,6 +339,8 @@ class Zpm():
             # need to create a new dist
             dpath = env.dist_dir(core)
             fs.copytree(env.dist,dpath)
+            #reload installed packages db
+            self.load_ipack_db(env.idb_dir(dpath))
         else:
             # no dist change
             dpath = env.dist

@@ -1,40 +1,74 @@
 """
-.. module:: ZTC
-
-*****************
-Zerynth Toolchain
-*****************
-
-The Zerynth Toolchain is composed by a set of programming tools that allow the users to manage and interact with all the Zerynth Entities and Functionalities with che Command Line Interface.
-
-This software has been designed to give the possibility to work and develop with Zerynth Tools without GUI.
-The Zerynth Toolchain can also be integrated with other or preferred Integrated Development Environments (IDEs) that 
-can be customized for using the ZTC Commands.
-
-.. note:: To execute any ZTC Command is needed an active internet connection and the users must be logged in their Zerynth Account
 
 
-Zerynth ToolChain Commands
-==========================
+.. _ztc-synopsis:
 
-This module contains all Zerynth Toolchain Commands for managing Zerynth Toolchain Entities.
+Synopsis
+========
 
-In all commands is present a ``--help`` option to show to the users a brief description of the related selected command and its syntax including arguments and option informations.
+The ZTC is launched by typing :command:`ztc` in a console. 
 
-All commands return several log messages grouped in 4 main levels (info, warning, error, fatal) to inform the users about the results of the operation. 
-The Zerynth Entities that can be managed by ZTC are:
+.. note:: In Windows and Mac installations, the :envvar:`PATH` environmental variable is automatically updated in such a way that :command:`ztc` is globally available for the user. In Linux installations, due to the many different shells, the :envvar:`PATH` must be set manually to the following path: :file:`<installation-dir>/ztc/linux64`.
 
-* :ref:`Users`: to manage proper Zerynth Account and Profile
-* :ref:`Projects`: to manage Zerynth Projects
-* :ref:`Devices`: to manage Zerynth Devices
-* :ref:`Compiler, Uplinker and Linter`: to manage compilation and uplink operations
-* :ref:`Virtual Machines`: to manage Zerynth Virtual Machine
-* :ref:`Namespaces`: to manage Zerynth Namespaces
-* :ref:`Packages`: to manage Zerynth Packages
+:command:`ztc` takes commands and options as arguments::
+    
+    ztc [g_options] [command] [l_options]
+
+* [g_options] are global options that alter the behaviour of all subcommands
+* [command] is a specific command for the available :ref:`list of commands <ztc-cmd-list>`
+* [l_options] are options specific to the command and are documented in each command section
+
+Global options
+--------------
+
+The following global options are accepted by :command:`ztc`
+
+* :option:`--help` shows the global options and avaialable commands. :option:`--help` can also be used as a local option showing the help relative to the given command.
+* :option:`--colors / --no-colors` enables/disables colored output. Default is enabled. :command:`ztc` automatically detect if it is launched in a terminal capable of colored output and disables colors if not supported.
+* :option:`--traceback / --no-traceback` enables/disables the full output for exceptions. The ZTC is written in Python and in case of unexpected errors can output the full Python traceback for debugging purposes.
+* :option:`--user-agent agent` set the user-agent http header used in REST calls. It is used to monitor the integration of the ZTC in different tools. In general the :samp:`agent` value should be the name of the tool integrating the ZTC. The value :samp:`ztc` and :samp:`ide` are reserved for command line usage of the ZTC or usage through Zerynth Studio, respectively.
+* :option:`-J` enables the JSON output for commands. It is generally used by external tools using the ZTC to get easily machine readable output. If the :option:`-J` is not given, the output of commands is more human readable. 
+* :option:`--pretty` is used in conjuction with :option:`-J` and produces nicely formatted JSON output.
+
+
+.. _ztc-cmd-list
+
+Command List
+------------
+
+The ZTC contains many different commands and each one may take subcommand as additional parameters. Commands are best listed by grouping them by functionality as follows.
+
+* :ref:`Account related commands <ztc-cmd-user>`
+* :ref:`Project related commands <ztc-cmd-project>`
+* :ref:`Device related commands <ztc-cmd-device>`
+* :ref:`Virtual Machine related commands <ztc-cmd-vm>`
+* :ref:`Compile command <ztc-cmd-compile>`
+* :ref:`Uplink command <ztc-cmd-uplink>`
+* :ref:`Package related commands <ztc-cmd-package>`
+* :ref:`Namespace related commands <ztc-cmd-namespace>`
+* :ref:`Other commands <ztc-cmd-misc>`
+
+
+Output conventions
+------------------
+
+All commands can produce tagged and untagged messages. Tagged messages are prefixed by :samp:`[type]` where :samp:`type` can be one of:
+
+* :samp:`info`: informative message, printed to :samp:`stdout`
+* :samp:`warning`: warning message, printed to :samp:`stderr`
+* :samp:`error`: error message, printed to :samp:`stderr`. Signals a non fatal error condition without stopping the execution
+* :samp:`fatal`: error message, printed to :samp:`stderr`. Signals a fatal error condition stopping the execution and setting an error return value. It can optionally be followed by a Python traceback in case of unexpected Exception.
+
+Untagged messages are not colored and not prefixed. The result of a command  generally consists of one or more untagged messages. If the :option:`-J` option is given without :option:`--pretty`, almost every command output is a single untagged line.
+
+
+
+
     """
 
 import sys
 import os
+# set sys.path to the directory containing ztc.py (this file) so that modules can be loaded correctly
 sys.path = [os.path.dirname(os.path.realpath(__file__))]+sys.path
 
 import click
@@ -47,120 +81,8 @@ import packages
 import virtualmachines
 import user
 import linter
+import misc
 
-import json
-
-
-
-@cli.command("info",help="Display Zerynth Toolchain informations.")
-@click.option("--tools","__tools",flag_value=True, default=False,help="Show installed tools.")
-@click.option("--version","__version",flag_value=True, default=False,help="Show current version.")
-@click.option("--modules","__modules",flag_value=True, default=False,help="Show list of installed modules.")
-@click.option("--devices","__devices",flag_value=True, default=False,help="Show installed devices.")
-@click.option("--vms","__vms",help="Show installed virtual machines (target must be specified).")
-@click.option("--examples","__examples",flag_value=True, default=False,help="Show installed examples.")
-def __info(__tools,__devices,__vms,__examples,__version,__modules):
-    """ 
-Info Command
-------------
-
-This command is used to display Zerynth Toolchain System Informations from the command line with this syntax: ::
-
-    Syntax:   ./ztc info --tools --version --modules --devices --vms --examples
-    Example:  ./ztc info --devices --vms target
-
-This command take as input the following arguments:
-    * **tools** (bool) --> flag to display all installed system tools on current Zerynth installation (**optional**, default=False)
-    * **version** (bool) --> flag to display current version of the installed Zerynth Tool (**optional**, default=False)
-    * **modules** (bool) --> flag to display all installed modules on current Zerynth installation (**optional**; default=False)
-    * **devices** (bool) --> flag to diplay all installed devices in current Zerynth installation (**optional**; default=False)
-    * **vms** (str) --> to display all vms installed in the current Zerynth installation (**optional**, target device must be specified)
-    * **examples** (bool) --> flag to display all installed example in current Zerynth installation (**optional**, default=False)
-
-.. note:: All ZTC commands have some generic option that can be setted for formatting output, enabling colors, etc.
-          Here below the sintax and the complete list of options: ::
-
-              Syntax:   ./ztc -v --colors/--no-colors --traceback/--no-traceback --user_agent -J --pretty "rest of ztc command"
-              Example:  ./ztc -J --pretty "rest of ztc command"
-            
-          * **-v, verbose** (bool) --> flag to display details about the results of running command (**optional**, default=False)
-          * **colors/no-colors, nocolors** (bool) --> flag to enable/disable colors in log messages (**optional**, default=True)
-          * **traceback/no-traceback** (bool) --> flag to enable/disable exception traceback printing on criticals (**optional**, default=True)
-          * **user_agent** (str) --> to insert custom user agent (**optional**, default=“ztc")
-          * **J** (bool) --> to display output in json format (**optional**, default=False)
-          * **pretty** (bool) --> to display pretty pretty json output (woking only with 'J' flag enabled) (**optional**, default=False)
-
-    """
-    if __tools:
-        if env.human:
-            table = []
-            for k,v in tools.tools.items():
-                if isinstance(v,str):
-                    table.append([k,v])
-                    log(k,"=>",v)
-                else:
-                    for kk,vv in v.items():
-                        table.append([k+"."+kk,vv])
-            log_table(table)
-        else:
-            log_json(tools.tools)
-        return
-
-    if __devices:
-        for dev in tools.get_devices():
-            if env.human:
-                #TODO: print in human readable format
-                log_json(dev)
-            else:
-                log_json(dev)
-        return
-    if __vms:
-        if ":" in __vms:
-            __vms,chipid = __vms.split(":")
-        else:
-            chipid = None
-        vms = tools.get_vms(__vms,chipid)
-        vmdb = {
-        }
-        for uid,vmf in vms.items():
-            vm = fs.get_json(vmf)
-            target = vm["dev_type"]
-            if target not in vmdb:
-                vmdb[target]={}
-            if vm["on_chip_id"] not in vmdb[target]:
-                vmdb[target][vm["on_chip_id"]]=[]
-
-            vmdb[target][vm["on_chip_id"]].append({
-                "file": vmf,
-                "target":target,
-                "uuid":uid,
-                "version":vm["version"],
-                "features": [x for x in vm["features"] if not x.startswith("RTOS=")],
-                "hash_features": vm["hash_features"],
-                "chipid":vm["on_chip_id"],
-                "name":vm["name"],
-                "desc":vm.get("desc",""),
-                "rtos":vm["rtos"]
-            })
-        if env.human:
-            table = []
-            for target,chv in vmdb.items():
-                for chipid,nfo in chv.items():
-                    for nn in nfo:
-                        table.append([target,chipid,nn["uuid"],nn["rtos"],nn["features"],nn["file"]])
-            log_table(table,headers=["target","chipid","uid","rtos","features","path"])
-        else:
-            log_json(vmdb)
-        return
-
-    if __examples:
-        log_json(tools.get_examples())
-
-    if __version:
-        log(env.var.version)
-
-    if __modules:
-        log_json(tools.get_modules())
 
 if __name__=="__main__":
     init_all()

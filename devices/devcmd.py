@@ -1,15 +1,29 @@
 """
-.. module:: Devices
+.. _ztc-cmd-device:
 
 *******
 Devices
 *******
 
-A Zerynth Device corresponds to a physical electronic board, enabled by Zerynth, that a customer can connect and schedule with the Zerynth Tools.
+In the ZTC a device is a peripheral that can execute Zerynth bytecode. In order to do so a device must be prepared and customized with certain attributes.
+The main attributes of a device are:
 
-To run proper applications developed by Zerynth, the z-users must virtualize the board with a dedicated Zerynth Virtual Machine and uplink their application codes.
+* :samp:`alias`, a unique name given by the user to the device in order to identify it in ZTC commands
+* :samp:`uid`, a unique id provided by the operative system identifying the device at hardware level
+* :samp:`target`, specifies what kind of virtual machine can be run by the device
+* :samp:`name`, a human readable name describing the device. Automatically set by the ZTC
+* :samp:`chipid`, the unique identifier of the microcontroller present on the device
+* :samp:`remote_id`, the unique identifier of the device in the pool of user registered device
+* :samp:`classname`, a Python class name identifying the class containing commands to configure the device
 
-To know the z-devices enabled by Zerynth Team, here the list of `supported boards`_.
+When a new device is connected, some steps must be taken in order to make it able to run Zerynth code:
+
+1. The device must be :ref:`discovered <ztc-cmd-device-discover>`, namely its hardware parameters must be collected (:samp:`uid`).
+2. Once discovered an :samp:`alias` must be :ref:`assigned <ztc-cmd-device-alias_put>`. Depending on the type of device :samp:`target` and :samp:`classname` can be assigned in the same step.
+3. The device must be :ref:`registered <ztc-cmd-device-register>` in order to create virtual machines for it (:samp:`chipid` and :samp:`remote_id` are obtained in this step)
+4. The device must be :ref:`virtualized <ztc-cmd-device-virtualize>, namely a suited virtual machine must be loaded on the device microcontroller
+
+The list of supported devices is available :ref:`here <doc-supported-boards>`
 
 Device Commands
 ===============

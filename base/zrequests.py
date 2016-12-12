@@ -10,6 +10,7 @@ import time
 TimeoutException = requests.exceptions.Timeout
 _ssl_verify = fs.path(fs.dirname(__file__),"certs.pem")
 _default_timeout=5
+_default_retries=3
 
 ################### json special type encoder
 class ZjsonEncoder(json.JSONEncoder):
@@ -24,9 +25,15 @@ def zpost(url,data,headers={},auth=True,timeout=_default_timeout):
         token = get_token()
         hh.update({"Authorization": "Bearer "+token})
     hh.update(headers)
-    return requests.post(url=url, headers=hh, data=json.dumps(data, cls=ZjsonEncoder),timeout=timeout,verify=_ssl_verify)
+    for x in range(_default_retries):
+        try:
+            return requests.post(url=url, headers=hh, data=json.dumps(data, cls=ZjsonEncoder),timeout=timeout,verify=_ssl_verify)
+        except TimeoutException:
+            warning("Timeout! Retrying...")
+            timeout=timeout*2
+    raise TimeoutException
 
-def zget(url,headers={},params={},auth=True,token=None,stream=False):
+def zget(url,headers={},params={},auth=True,token=None,stream=False,timeout=_default_timeout):
     hh = {"Content-Type": "application/json","User-agent":env.user_agent}
     if auth:
         if auth=="conditional":
@@ -36,23 +43,41 @@ def zget(url,headers={},params={},auth=True,token=None,stream=False):
                 token = get_token()
     if token: hh.update({"Authorization": "Bearer "+token})
     hh.update(headers)
-    return requests.get(url=url, headers=hh,timeout=_default_timeout,params=params,verify=_ssl_verify,stream=stream)
+    for x in range(_default_retries):
+        try:
+            return requests.get(url=url, headers=hh,timeout=timeout,params=params,verify=_ssl_verify,stream=stream)
+        except TimeoutException:
+            warning("Timeout! Retrying...")
+            timeout=timeout*2
+    raise TimeoutException
 
-def zdelete(url,headers={},auth=True):
+def zdelete(url,headers={},auth=True,timeout=_default_timeout):
     hh = {"Content-Type": "application/json","User-agent":env.user_agent}
     if auth:
         token = get_token()
         hh.update({"Authorization": "Bearer "+token})
     hh.update(headers)
-    return requests.delete(url=url, headers=hh,timeout=_default_timeout,verify=_ssl_verify)
+    for x in range(_default_retries):
+        try:
+            return requests.delete(url=url, headers=hh,timeout=timeout,verify=_ssl_verify)
+        except TimeoutException:
+            warning("Timeout! Retrying...")
+            timeout=timeout*2
+    raise TimeoutException
 
-def zput(url, data,headers={},auth=True):
+def zput(url, data,headers={},auth=True,timeout=_default_timeout):
     hh = {"Content-Type": "application/json","User-agent":env.user_agent}
     if auth:
         token = get_token()
         hh.update({"Authorization": "Bearer "+token})
     hh.update(headers)
-    return requests.put(url=url, headers=hh, data=json.dumps(data, cls=ZjsonEncoder),timeout=_default_timeout,verify=_ssl_verify)
+    for x in range(_default_retries):
+        try:
+            return requests.put(url=url, headers=hh, data=json.dumps(data, cls=ZjsonEncoder),timeout=timeout,verify=_ssl_verify)
+        except TimeoutException:
+            warning("Timeout! Retrying...")
+            timeout=timeout*2
+    raise TimeoutException
 
 
 def get_token(continue_if_none=False):

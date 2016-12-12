@@ -1,63 +1,64 @@
-.. module:: ZTC
+.. _ztc-synopsis:
 
-*****************
-Zerynth Toolchain
-*****************
+Synopsis
+========
 
-The Zerynth Toolchain is composed by a set of programming tools that allow the users to manage and interact with all the Zerynth Entities and Functionalities with che Command Line Interface.
+The ZTC is launched by typing :command:`ztc` in a console. 
 
-This software has been designed to give the possibility to work and develop with Zerynth Tools without GUI.
-The Zerynth Toolchain can also be integrated with other or preferred Integrated Development Environments (IDEs) that 
-can be customized for using the ZTC Commands.
+.. note:: In Windows and Mac installations, the :envvar:`PATH` environmental variable is automatically updated in such a way that :command:`ztc` is globally available for the user. In Linux installations, due to the many different shells, the :envvar:`PATH` must be set manually to the following path: :file:`<installation-dir>/ztc/linux64`.
 
-.. note:: To execute any ZTC Command is needed an active internet connection and the users must be logged in their Zerynth Account
-
-
-Zerynth ToolChain Commands
-==========================
-
-This module contains all Zerynth Toolchain Commands for managing Zerynth Toolchain Entities.
-
-In all commands is present a ``--help`` option to show to the users a brief description of the related selected command and its syntax including arguments and option informations.
-
-All commands return several log messages grouped in 4 main levels (info, warning, error, fatal) to inform the users about the results of the operation. 
-The Zerynth Entities that can be managed by ZTC are:
-
-* :ref:`Users`: to manage proper Zerynth Account and Profile
-* :ref:`Projects`: to manage Zerynth Projects
-* :ref:`Devices`: to manage Zerynth Devices
-* :ref:`Compiler, Uplinker and Linter`: to manage compilation and uplink operations
-* :ref:`Virtual Machines`: to manage Zerynth Virtual Machine
-* :ref:`Namespaces`: to manage Zerynth Namespaces
-* :ref:`Packages`: to manage Zerynth Packages
+:command:`ztc` takes commands and options as arguments::
     
-Info Command
+    ztc [g_options] [command] [l_options]
+
+* [g_options] are global options that alter the behaviour of all subcommands
+* [command] is a specific command for the available :ref:`list of commands <ztc-cmd-list>`
+* [l_options] are options specific to the command and are documented in each command section
+
+Global options
+--------------
+
+The following global options are accepted by :command:`ztc`
+
+* :option:`--help` shows the global options and avaialable commands. :option:`--help` can also be used as a local option showing the help relative to the given command.
+* :option:`--colors / --no-colors` enables/disables colored output. Default is enabled. :command:`ztc` automatically detect if it is launched in a terminal capable of colored output and disables colors if not supported.
+* :option:`--traceback / --no-traceback` enables/disables the full output for exceptions. The ZTC is written in Python and in case of unexpected errors can output the full Python traceback for debugging purposes.
+* :option:`--user-agent agent` set the user-agent http header used in REST calls. It is used to monitor the integration of the ZTC in different tools. In general the :samp:`agent` value should be the name of the tool integrating the ZTC. The value :samp:`ztc` and :samp:`ide` are reserved for command line usage of the ZTC or usage through Zerynth Studio, respectively.
+* :option:`-J` enables the JSON output for commands. It is generally used by external tools using the ZTC to get easily machine readable output. If the :option:`-J` is not given, the output of commands is more human readable. 
+* :option:`--pretty` is used in conjuction with :option:`-J` and produces nicely formatted JSON output.
+
+
+.. _ztc-cmd-list
+
+Command List
 ------------
 
-This command is used to display Zerynth Toolchain System Informations from the command line with this syntax: ::
+The ZTC contains many different commands and each one may take subcommand as additional parameters. Commands are best listed by grouping them by functionality as follows.
 
-    Syntax:   ./ztc info --tools --version --modules --devices --vms --examples
-    Example:  ./ztc info --devices --vms target
+* :ref:`Account related commands <ztc-cmd-user>`
+* :ref:`Project related commands <ztc-cmd-project>`
+* :ref:`Device related commands <ztc-cmd-device>`
+* :ref:`Virtual Machine related commands <ztc-cmd-vm>`
+* :ref:`Compile command <ztc-cmd-compile>`
+* :ref:`Uplink command <ztc-cmd-uplink>`
+* :ref:`Package related commands <ztc-cmd-package>`
+* :ref:`Namespace related commands <ztc-cmd-namespace>`
+* :ref:`Other commands <ztc-cmd-misc>`
 
-This command take as input the following arguments:
-    * **tools** (bool) --> flag to display all installed system tools on current Zerynth installation (**optional**, default=False)
-    * **version** (bool) --> flag to display current version of the installed Zerynth Tool (**optional**, default=False)
-    * **modules** (bool) --> flag to display all installed modules on current Zerynth installation (**optional**; default=False)
-    * **devices** (bool) --> flag to diplay all installed devices in current Zerynth installation (**optional**; default=False)
-    * **vms** (str) --> to display all vms installed in the current Zerynth installation (**optional**, target device must be specified)
-    * **examples** (bool) --> flag to display all installed example in current Zerynth installation (**optional**, default=False)
 
-.. note:: All ZTC commands have some generic option that can be setted for formatting output, enabling colors, etc.
-          Here below the sintax and the complete list of options: ::
+Output conventions
+------------------
 
-              Syntax:   ./ztc -v --colors/--no-colors --traceback/--no-traceback --user_agent -J --pretty "rest of ztc command"
-              Example:  ./ztc -J --pretty "rest of ztc command"
-            
-          * **-v, verbose** (bool) --> flag to display details about the results of running command (**optional**, default=False)
-          * **colors/no-colors, nocolors** (bool) --> flag to enable/disable colors in log messages (**optional**, default=True)
-          * **traceback/no-traceback** (bool) --> flag to enable/disable exception traceback printing on criticals (**optional**, default=True)
-          * **user_agent** (str) --> to insert custom user agent (**optional**, default=“ztc")
-          * **J** (bool) --> to display output in json format (**optional**, default=False)
-          * **pretty** (bool) --> to display pretty pretty json output (woking only with 'J' flag enabled) (**optional**, default=False)
+All commands can produce tagged and untagged messages. Tagged messages are prefixed by :samp:`[type]` where :samp:`type` can be one of:
+
+* :samp:`info`: informative message, printed to :samp:`stdout`
+* :samp:`warning`: warning message, printed to :samp:`stderr`
+* :samp:`error`: error message, printed to :samp:`stderr`. Signals a non fatal error condition without stopping the execution
+* :samp:`fatal`: error message, printed to :samp:`stderr`. Signals a fatal error condition stopping the execution and setting an error return value. It can optionally be followed by a Python traceback in case of unexpected Exception.
+
+Untagged messages are not colored and not prefixed. The result of a command  generally consists of one or more untagged messages. If the :option:`-J` option is given without :option:`--pretty`, almost every command output is a single untagged line.
+
+
+
 
     
