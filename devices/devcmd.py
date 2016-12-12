@@ -55,7 +55,7 @@ def device():
 
 ##### DEVICE ALIAS [PUT|DEL]
 
-@device.group(help="Manage device aliases")
+@device.group(help="Manage device configuration.")
 def alias():
     pass
 
@@ -311,7 +311,7 @@ The result of a correct registration is a device with the registration firmware 
 
 
 
-@device.command(help="To virtualize the Zerynth Device. \n\n Arguments: \n\n ALIAS: The alias of the z-device. \n\n VMUID: The uid of the Zerynth Virtual Machine.")
+@device.command(help="Virtualize a device. \n\n Arguments: \n\n ALIAS: device alias. \n\n VMUID: Virtual Mahine identifier.")
 @click.argument("alias")
 @click.argument("vmuid")
 def virtualize(alias,vmuid):
@@ -320,6 +320,11 @@ def virtualize(alias,vmuid):
 
 Virtualization
 --------------
+
+Device virtualization consists in flashing a Zerynth virtual machine on a registered device. One or more virtual machines for a device can be obtained with specific :ref:`commands <ztc-cmd-vm-create>`.
+Virtualization is started by: ::
+
+    ztc device virtualize
 
 This command is used to virtualize a Zerynth Device installing on the board the real time operative system to
 abilitate for running customer application code. the ``virtualize`` command has this syntax: ::

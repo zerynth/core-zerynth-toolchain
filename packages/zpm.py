@@ -11,6 +11,8 @@ import lzma
 class Zpm():
 
     def __init__(self):
+        self._ipack_db = None
+        self._zpack_db = None
         self.load_ipack_db(env.idb)
         self.load_zpack_db(env.zdb)
 
@@ -23,6 +25,7 @@ class Zpm():
             self._zpack_db.execute("create table IF NOT EXISTS packages(uid TEXT PRIMARY KEY, fullname TEXT, title TEXT, description TEXT, type TEXT, repo TEXT, author TEXT, last_version TEXT, dependencies TEXT, whatsnew TEXT, rating REAL, num_of_votes INTEGER, num_of_downloads INTEGER, versions TEXT, keywords TEXT, last_update TEXT)")
             self._zpack_db.execute("create unique index IF NOT EXISTS packagenames on packages(fullname)")
         except Exception as e:
+            warning("Error in package zdb:",e)
             self._zpack_db = None
 
     def clear_zpack_db(self):
@@ -39,7 +42,8 @@ class Zpm():
             critical("can't save configuration",exc=e)
 
     def load_ipack_db(self,cfgdir,dbname="packages.db"):
-        try:    
+        try:
+            print("IDB at",cfgdir)
             fs.makedirs(cfgdir)
             if self._ipack_db: 
                 self._ipack_db.shutdown()
@@ -49,6 +53,7 @@ class Zpm():
             self._ipack_db.execute("create table IF NOT EXISTS packages(uid TEXT PRIMARY KEY, fullname TEXT, title TEXT, description TEXT, type TEXT, repo TEXT, author TEXT, last_version TEXT, dependencies TEXT, whatsnew TEXT, rating REAL, num_of_votes INTEGER, num_of_downloads INTEGER, versions TEXT, keywords TEXT, last_update TEXT)")
             self._ipack_db.execute("create unique index IF NOT EXISTS packagenames on packages(fullname)")
         except Exception as e:
+            warning("Error in package idb:",e)
             self._ipack_db = None
 
     def save_ipack_db(self):

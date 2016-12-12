@@ -630,7 +630,7 @@ This command take as input the following argument:
     pkgs = {p.fullname:v for p,v in _zpm.get_all_packages() if p.fullname in installed_list and installed_list[p.fullname]!=v}
     if env.human:
         table = [[k,pkgs[k]] for k in sorted(pkgs)]
-        log_table(table,headers=["fullaname","version"])
+        log_table(table,headers=["fullname","version"])
     else:
         log_json(pkgs,cls=ZpmEncoder)
 
