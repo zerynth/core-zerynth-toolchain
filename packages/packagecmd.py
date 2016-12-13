@@ -1,46 +1,35 @@
 """
-.. module:: Packages
+.. _ztc-cmd-package:
 
 ********
 Packages
 ********
 
-The Zerynth Package is extra plug-in of the Zerynth Backend composed by a file or a group of files 
-encasing several specific tested features that customers can add to their projects installing it on their pc.
+The ZTC features a package manager to search, install and publish components of the Zerynth ecosystem.
+A package is an archive generated from a tagged git repository and identified by a unique :samp:`fullname`.
+There exist several package types, each one targeting a different Zerynth functionality:
 
-Each z-package is published in a domain related to a namespace directly linked to owner user in order to 
-permit that every package has an unique and unambiguous path.
+* :samp:`core` packages contain core Zerynth components (i.e. the ZTC, the Studio, etc...)
+* :samp:`sys` packages contain plaform dependent third party tools used by the ZTC (i.e. gcc, device specific tools, the Python runtime, etc..)
+* :samp:`board` packages contain device definitions
+* :samp:`vhal` packages contain low level drivers for various microcontroller families
+* :samp:`meta` packages contain sets of other packages
+* :samp:`lib` packages contain Zerynth libraries to add new modules to Zerynth programs
 
-There are several types of Zerynth Packages; here a brief description:
+A package :samp:`fullname` is composed of three fields uniquely identifying the package:
 
-* **core**: principal z-packages on which are based all the Zerynth Tools (Zerynth Studio, Zerynth Toolchain, Standard Library)
-* **sys**: z-packages to add system tool platform dependent (Windows, Linux, Mac)
-* **board**: z-packages to add new devices to the Zerynth Tools
-* **vhal**: z-packages for virtual hardware abstract layer to add low level drivers grouped for microcontroller families
-* **lib**: z-packages to add specific class and features to improve new features the z-devices
-* **meta**: z-packages that contains list of other z-packages to be installed
+* type
+* :ref:`namespace <ztc-cmd-namespace>`
+* package name
 
-Package Commands
-================
+For example, the package :samp:`lib.broadcom.bmc43362` contains the Python driver for the Broadcom bcm43362 wifi chip. 
+Its fullname contains the type (:samp:`lib`), the namespace (:samp:`broadcom`) grouping all packages implementing Broadcom drivers, and the actual package name (:samp:`bcm43362`) specifying which particular driver is implemented.
+A package has one or more available versions each one tagged following a modified `semantic versionig <http://semver.org>`_ scheme.
 
-This module contains all Zerynth Toolchain Commands for interacting with Zerynth Package Entities.
-With this commands the Zerynth Users can install new available packages in their installation or can publish a new one 
-using the command-line interface terminal.
+Moreover packages can belong to multiple "repositories" (collections of packages). There are two main public repositories, the :samp:`official` one, containing packages created, published and mantained by the Zerynth team, and the :samp:`community` one, containing packages created by community members.
 
-In all commands is present a ``--help`` option to show to the users a brief description of the related selected command and its syntax including arguments and option informations.
+The ZTC mantains a local databases of installed packages and refers to the online database of packages to check for updates and new packages.
 
-All commands return several log messages grouped in 4 main levels (info, warning, error, fatal) to inform the users about the results of the operation. 
-The actions that can be executed on Zerynth Packages are:
-
-* info_: to display a Zerynth Package informations
-* install_: to install one or more Zerynth Packages
-* search__: to search Zerynth Packages according to keywords passed as text query
-* publish_: to publisha new Zerynth Package
-* update_all_: to update to the last version all Zerynth Packages already installed
-* sync_: to sync all z-user local repository database
-* published_: to display the list of published z-packages 
-* installed_: to display the list of installed z-packages
-* updated_: to display the list of updated z-packages
     """
 from base import *
 import click
@@ -114,36 +103,27 @@ def update_repos():
     repolist = env.load_repo_list()+["community","official"]
     update_zdb(repolist)
 
-@cli.group(help="Manage Zerynth Package. This module contains all Zerynth Toolchain Commands for managing Zerynth Package Entities.")
+@cli.group(help="Manage packages.")
 def package():
     global _zpm
     _zpm = Zpm()
 
 
 
-@package.command("info", help="Display Zerynth Package information. \n\n Arguments: \n\n FULLNAME: fullname of the z-package.")
+@package.command("info", help="Display package info. \n\n Arguments: \n\n FULLNAME: pacakge fullname.")
 @click.argument("fullname")
 def __info(fullname):
     """
-.. _info: 
+.. _ztc-cmd-package-info: 
     
-Display Package Info
---------------------
+Package Info
+------------
 
+The command: ::
 
-This command is used to display informations for specific Zerynth Package passed as argument from the command line running: ::
+    ztc package info fullname
 
-    Syntax:   ./ztc package info fullname
-    Example:  ./ztc package info pack_type.namespace.pack_name
-
-This command take as input the following argument:
-    * **fullname** (str) --> the fullname of the z-package (**required**) 
-
-**Errors**:
-    * Missing required data
-    * Receiving Zerynth Backend response errors
-
-.. note::   The fullname of a z-package is composed by the package type, the package namespace and the package name separated by a dot.
+displays information about the package identified by :samp:`fullname`.
             
     """
     pack = _zpm.get_pack(fullname)
@@ -162,42 +142,44 @@ This command take as input the following argument:
         log_json(pack.to_dict(),cls=ZpmEncoder)
 
 
-@package.command(help="Install a Zerynth Package.")
-@click.option("-p", multiple=True, type=str,help="Array of packages (fullname:version) to be installed (multi-value option).")
-@click.option("--db", flag_value=False, default=True,help="Flag for not updating local z-package database.")
-@click.option("--last", flag_value=True, default=False,help="Flag for installing z-package last version.")
-@click.option("--force", flag_value=True, default=False,help="Flag for forcing installation of z-packages.")
-@click.option("--simulate", flag_value=True, default=False,help="Flag for simulatin z-package installation.")
-@click.option("--justnew", flag_value=True, default=False, help="Flag for installing only new z-packages.")
-@click.option("--offline", default=False, help="The path of the package for the offline installation.")
-@click.option("--mute", flag_value=True, default=False,help="Flag for no diplay log message output.")
+@package.command(help="Install/update packages.")
+@click.option("-p", multiple=True, type=str,help="fullname:version of the package (multi-value option)")
+@click.option("--db", flag_value=False, default=True,help="do not sync with online pacakge database")
+@click.option("--last", flag_value=True, default=False,help="select most up to date packages")
+@click.option("--force", flag_value=True, default=False,help="force installation in case of dependencies errors")
+@click.option("--simulate", flag_value=True, default=False,help="print list of required packages without installing them")
+@click.option("--justnew", flag_value=True, default=False, help="do not reinstall already installed packages")
+@click.option("--offline", default=False, help="path to the directory holding offline packages")
+@click.option("--mute", flag_value=True, default=False,help="suppress stdout")
 def install(p, db, last, force, simulate,justnew,offline,mute):
     """
-.. _install:
+.. _ztc-cmd-package-install:
 
-Install a Package
------------------
+Install
+-------
 
-This command is used to install one or more Zerynth Packages on proper installation from the command line running: ::
+Packages can be added to the current Zerynth installation with the command: ::
 
-    Syntax:   ./ztc package install -p --db --last --force --simulate --justnew --offline --mute
-    Example:  ./ztc package install -p pack1_type.namespace1.pack1_name -p pack2_type.namespace2.pack_name2 
+    ztc package install -p fullname:version
 
-This command take as input the following arguments:
-    * **p** (array) --> list of packages in format fullname:version to be installed (**optional**, default=[]) 
-    * **db** (bool) --> flag for not updating local z-package database (**optional**, default=True)
-    * **last** (bool) --> flag for installing z-package last version (**optional**, default=False) 
-    * **force** (bool) --> flag for forcing installation of z-packages (**optional**, default=False) 
-    * **simulate** (bool) --> flag for simulating package installation and display the Zerynth Package Manager operation results (**optional**, default=False) 
-    * **justnew** (bool) --> flag for installing only new z-packages against the already installed packages (**optional**, default=False) 
-    * **offline** (str) --> the path of the package for the offline installation (**optional**, default=False) 
-    * **mute** (bool) --> flag for no diplay log message output (**optional**, default=False) 
+where :samp:`fullname` is the package fullname and :samp:`version` is the version of the package to install (or update if a previous version is already installed).
+The command first downloads the online package database and then recursively check package dependencies in order to install all required packages.
 
-**Errors**:
-    * Missing required data
-    * Conflicts in Package Dependencies
-    * Zerynth Package Manager error messages
-    * Receiving Zerynth Backend response errors
+The command accepts many additional options:
+
+* :option:`-p fullname:version` can be repeated multiple times to install more than one package at a time
+* :option:`--db` skips the downloading of the online package database
+* :option:`--last` while checking dependencies, selects the more up to date version of the dependency
+* :option:`--force` performs installation of packages ignoring dependencies errors (warning: this could break the ZTC, use with caution)
+* :option:`--justnew` while checking dependencies, avoids installing packages whose version is already installed
+* :option:`--simulate` performs a simulated install, printing the list of modified packages only
+* :option:`--offline path` performs installation searching packages in :samp:`path` instead of downloading them. Used for offline installations.
+* :option:`--mute` supresses messages to stdout
+
+
+.. note:: when the package :samp:`meta.zerynth.core` is installed, a new ZTC version is created and will be automatically used on subsequent executions of the ZTC. Previously installed versions of the ZTC can be reactivated by modifying the :file:`config.json` setting the :samp:`version` field to the desired value. 
+
+.. note:: packages :samp:`sys.zerynth.runtime` and :samp:`sys.zerynt.browser` are not automatically installed! They are downloaded and uncompressed under :file:`sys/newpython` and :file:`sys/newbrowser` directories respectively. For the packages to be activated, such directories must be renamed to :file:`sys/python` and :file:`sys/browser` respectively.
 
     """
     
@@ -249,30 +231,31 @@ This command take as input the following arguments:
 #     installed_list = self.get_installed_list()
 #     self.install(packages=installed_list, last=True, force=None,justnew=True)
 
-@package.command(help="Search Zerynth Packages by query. \n\n Arguments: \n\n QUERY: text query for searching in the Zerynth Database.")
+@package.command(help="Search packages. \n\n Arguments: \n\n QUERY: text query (enclosed in double quotes)")
 @click.argument("query")
 @click.option("--types", default="lib",help="Comma separated list of package types: lib, sys, board, vhal, core, meta.")
 def search(query,types):
     """
-__ search_pack_
+.. _ztc-cmd-package-search:
 
-.. _search_pack:
+Search
+------
 
-Search Packages
----------------
+To search the online package database issue the command: ::
 
-This command is used to search Zerynth Packages on Zerynth Database from the command line with the following syntax: ::
+    ztc package search query
 
-    Syntax:   ./ztc package search query --types
-    Example:  ./ztc package search "key1 && (key2 || key3)" --types "lib,board"  
+where :samp:`query` is a string composed of terms separated by spaces and optionally by logical operators. Allowed operators are :samp:`&&` for AND and :samp:`||` for OR. Round parentesis can also used.
 
-This command take as input the following arguments:
-    * **query** (str) --> text query allowing logic operations between keyword (**required**) 
-    * **types** (str) --> Comma separated list of package types: lib, sys, board, vhal, core, meta (**optional**, default=“lib")
-    
-**Errors**:
-    * Missing required data
-    * Receiving Zerynth Backend response errors
+The terms provided in the :samp:`query` are searched in the following attributes of a package:
+
+* title
+* description
+* fullname
+* list of package keywords
+
+The command accepts the option :option:`--types typelist` where :samp:`typelist` is a comma separated list of package types to be searched. By default, the search is performed on :samp:`lib` packages only and only the first 50 results ordered by relevance are returned.
+
 
     """
     ####TODO validate 
@@ -296,59 +279,19 @@ This command take as input the following arguments:
         critical("Can't search package", exc=e)
 
 
-@package.command(help="Publish a new Zerynth Package. \n\n Arguments: \n\n PATH: Path to the z-project to be published. \n\n VERSION: version of the published package.")
+@package.command(help="Publish a package. \n\n Arguments: \n\n PATH: project path. \n\n VERSION: version to be published.")
 @click.argument("path",type=click.Path())
 @click.argument("version")
 @click.option("--git", default=False)
 def publish(path, version, git):
     """
-.. _publish:
+.. _ztc-cmd-package-publish:
 
-Publish a Package
------------------
+Publishing a package
+--------------------
 
-This command is used to publish a owned Zerynth Project transforming it in a new Zerynth Package.
-Before publish a z-packages, the Zerynth Users must create their onw namespace to assiciate the related z-package.
-The Zerynth Users can publish only "library" type z-packages running from the command line: ::
+Not documented yet.
 
-    Syntax:   ./ztc package publish path version
-    Example:  ./ztc package publish ~/my/proj/folder "r1.0.0"  
-
-This command take as input the following arguments:
-    * **path** (str) --> path of the z-project to be published (**required**) 
-    * **version** (str) --> version of the published package (**required**)
-    
-**Errors**:
-    * Missing required data
-    * Missing package.json file with related required fields
-    * Missing z-project or git repository associated
-    * Receiving Zerynth Backend response errors
-
-.. note:: For publishing a new package is needed a :file:`package.json` file inside
-          the passed path argument containing a dictionary with the following required fields: ::
-            
-            {
-                "name":"Z-Package Name",
-                "description": "Z-Package Description",
-                "fullname": "Z-Package Fullname,
-                "keywords":[
-                    "key1",
-                    "key2",
-                    "...",
-                ]
-                "dependencies":{
-                    "dep_pack1": "vers_dep_pack1",
-                    "dep_pack2": "vers_dep_pack2",
-                    "...": "...",
-                },
-                "whatsnew":{
-                    "description": "What's new description",
-                },
-                "repo": [
-                    "official/community",
-                    "...",
-                ]
-            }
 
     """
     ####TODO check here if version is in correct ZpmVersion format??
@@ -458,30 +401,23 @@ def download_callback(cursize,prevsize,totsize):
 
 
 
-@package.command(help="Update all installed z-packages.")
-@click.option("--db", flag_value=False, default=True, help="Flag for not updating local z-package database.")
-@click.option("--simulate", flag_value=True, default=False,help="Flag for simulating the update of all installed packages.")
+@package.command(help="Update all installed packages.")
+@click.option("--db", flag_value=False, default=True, help="do not sync with online pacakge database")
+@click.option("--simulate", flag_value=True, default=False,help="print list of required packages without installing them")
 def update_all(db,simulate):
     """
-.. _update_all:
+.. _ztc-cmd-packages-update_all:
 
-Update all Packages
+Update all packages
 -------------------
 
-This command is used to update all the Zerynth Packages installed on the z-user pc from the command line running: ::
+The current ZTC installation can be updated with the following command: ::
 
-    Syntax:   ./ztc package update_all --db --simulate
-    Example:  ./ztc package update_all   
+    ztc package update_all
 
-This command take as input the following arguments:
-    * **db** (bool) -->  flag for not updating local z-package database (**optional**, default=True) 
-    * **simulate** (bool) --> flag for simulating the update of all installed packages and display the Zerynth Package Manager operation results (**optional**, default=False)
-    
-**Errors**:
-    * Conflicts in Package Dependencies
-    * Zerynth Package Manager error messages
-    * Receiving Zerynth Backend response errors
+All packages are checked for new versions and installed. If the :samp:`meta.zerynth.core` packages is updated, a new ZTC installation is also created.
 
+Options :option:`--db` and :option:`--simulate` are available with the same meaning as in the :ref:`install <ztc-cmd-package-install>` command.
     """
     if db:
         update_repos()
@@ -514,48 +450,34 @@ This command take as input the following arguments:
 #         fatal("impossible to unistall packages:", e)
 
 
-@package.command(help="Sync local repo database with the remote one.")
+@package.command(help="Download online package database")
 def sync():
     """
-.. _sync:
+.. _ztc-cmd-package-sync:
 
-Syncronize all Local Repositories
----------------------------------
+Sync
+----
 
-This command is used to sync all the Local Repository Database with the Zerynth Remote Repository Database accessible for the related z-user from the command line running: ::
+The local database of available packages is a copy of the online package database. The command: ::
 
-    Syntax:   ./ztc package sync
-    Example:  ./ztc package sync   
+    ztc package sync
 
-This command take no argument as input:
-    
-**Errors**:
-    * Receiving Zerynth Backend response errors
-
-.. note:: The Syncronization of local repositories is automatically executed in the "install","update_all" and "updated" commands without the ``--db`` flag.
+overwrites the local database with the online one. Subsequent ZTC commands on packages will use the updated database.
+Most package commands automatically sync package database before executing. Such behaviour can be disabled by providing the :option:`--db` option
 
     """
     update_repos()
 
-@package.command(help="List all published Zerynth Packages.")
-@click.option("--from","_from",default=0,help="Number from which list the published z-packages.")
+@package.command(help="List all user published packages.")
+@click.option("--from","_from",default=0,help="skip the first n published packages")
 def published(_from):
     """
-.. _published:
+.. ztc-cmd-package-published:
 
-List of Published Packages
---------------------------
+Published packages
+------------------
 
-This command is used to list all proper Published Zerynth Packages from the command line running: ::
-
-    Syntax:   ./ztc package published --from
-    Example:  ./ztc package published   
-
-This command take as input the following argument:
-    * **from** (int) --> number from which list the published z-packages (**optional**, default=0) 
-    
-**Errors**:
-    * Receiving Zerynth Backend response errors
+Not documented yet
 
     """
     try:
@@ -573,18 +495,16 @@ This command take as input the following argument:
 @click.option("--extended","extended",flag_value=True, default=False,help="Flag for output full package info.")
 def installed(extended):
     """
-.. _installed:
+.. _ztc-cmd-package-installed:
 
-List of Installed Packages
---------------------------
+Installed packages
+------------------
 
-This command is used to list all the already Installed Zerynth Packages from the command line running: ::
+The list of currently installed packages can be retrieved with: ::
 
-    Syntax:   ./ztc package installed --extended
-    Example:  ./ztc package installed   
+    ztc package installed
 
-This command take as input the following argument:
-    * **extended** (bool) --> flag for output full package info (**optional**, default=False) 
+providing the :option:`--extended` prints additional information.
 
     """
     table = []
@@ -604,25 +524,18 @@ This command take as input the following argument:
     else:
         log_json(installed_list,cls=ZpmEncoder)
 
-@package.command(help="List all Updatable Zerynth Package.")
-@click.option("--db", flag_value=False, default=True,help="Flag for not updating local z-package database.")
+@package.command(help="List all updatable pacakges.")
+@click.option("--db", flag_value=False, default=True,help="do not sync with online pacakge database")
 def updated(db):
     """
-.. _updated:
+.. ztc-cmd_package-updated:
 
-List of Updated Packages
-------------------------
+Updated packages
+----------------
 
-This command is used to list all Zerynth Packages that are updated against all those installed on the z-user pc from the command line running: ::
-
-    Syntax:   ./ztc package updated --db
-    Example:  ./ztc package updated 
-
-This command take as input the following argument:
-    * **db** (bool) -->  flag for not updating local z-package database (**optional**, default=True) 
+The list of packages with updated versions with respect to the current installation can be retrieved with: ::
     
-**Errors**:
-    * Receiving Zerynth Backend response errors
+    ztc package updated
 
     """
     if db: update_repos()

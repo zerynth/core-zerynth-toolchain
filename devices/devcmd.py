@@ -321,27 +321,14 @@ def virtualize(alias,vmuid):
 Virtualization
 --------------
 
-Device virtualization consists in flashing a Zerynth virtual machine on a registered device. One or more virtual machines for a device can be obtained with specific :ref:`commands <ztc-cmd-vm-create>`.
+Device virtualization consists in flashing a Zerynth virtual machine on a registered device. One or more virtual machines for a device can be obtained with specific ZTC :ref:`commands <ztc-cmd-vm-create>`.
 Virtualization is started by: ::
 
-    ztc device virtualize
+    ztc device virtualize alias vmuid
 
-This command is used to virtualize a Zerynth Device installing on the board the real time operative system to
-abilitate for running customer application code. the ``virtualize`` command has this syntax: ::
+where :samp:`alias` is the device alias and :samp:`vmuid` is the unique identifier of the chosen vm. :samp:`vmuid` can be typed partially, ZTC will try to match it against known identifiers. :samp:`vmuid` is obtained during virtual machine :ref:`creation <ztc-cmd-vm-create>`.
 
-    Syntax:   ./ztc device virtualize alias vmuid
-    Example:  ./ztc device virtualize uid_alias_name 3Ss_HOgpQGW7oKtYmNESPQ
-
-This command take as input the following arguments:
-    * **alias** (str) --> the alias of the z-device (**required**)
-    * **vmuid** (str) --> the uid of the Zerynth Virtual Machine to load on the z-device(**required**)
-
-**Errors**:
-    * Missing required data
-    * Wrong Alias
-    * Wrong uid for the virtual machine
-
-.. note:: Before virtualizing a z-device, is needed to :ref:`create<Create a Virtual Machine>` a Zerynth Virtual Machine for that specific z-device
+The virtualization process is automated, no user interaction is required.
 
     """
     tgt = _dsc.search_for_device(alias)
@@ -374,28 +361,24 @@ This command take as input the following arguments:
 
 
 
-@device.command(help="To open a serial port to communicate with the z-device. \n\n Arguments: \n\n ALIAS: The alias name of the z-device.")
+@device.command(help="Open device serial. \n\n Arguments: \n\n ALIAS: device alias.")
 @click.argument("alias")
-@click.option("--echo","__echo",flag_value=True, default=False,help="Flag for printing typed characters to stdin")
+@click.option("--echo","__echo",flag_value=True, default=False,help="print typed characters to stdin")
 def open(alias,__echo):
     """ 
-.. _open:
+.. _ztc-cmd-device-open:
 
-Open a Serial Port
-------------------
+Serial Console
+--------------
 
-This command is used to open a serial port to communicate with the z-device from the command line with this syntax: ::
+Each virtual machine provides a default serial port where the output of the program is printed. Such port can be opened in full duplex mode allowing bidirectional communication between the device and the terminal.
 
-    Syntax:   ./ztc device open alias --echo
-    Example:  ./ztc device open uid_alias_name --echo
+The command: ::
 
-This command take as input the following arguments:
-    * **alias** (str) --> the alias name of the z-device (**required**)
-    * **echo** (str) --> flag for printing typed characters to stdin (**optional**, default=False)
+    ztc device open alias
 
-**Errors**:
-    * Missing required data
-    * Wrong Alias
+tries to open the default serial port with the correct parameters for the device. Output from the device is printed to stdout while stdin is redirected to the serial port. Adding the option :option:`--echo` to the command echoes back the characters from stdin to stdout.
+
     """
     tgt = _dsc.search_for_device(alias)
     if not tgt:
@@ -417,24 +400,25 @@ This command take as input the following arguments:
 
 
 
-@device.command(help="List of supported Zerynth Devices.")
-@click.option("--type",default="board",type=click.Choice(["board","jtag","usbtoserial"]),help="type of device [board,jtag,usbtoserial]")
+@device.command(help="List of supported devices.")
+@click.option("--type",default="board",type=click.Choice(["board","jtag","usbtoserial"]),help="type of device [board, jtag,usbtoserial]")
 def supported(type):
     """ 
-.. _supported:
+.. _ztc-cmd-device-supported:
 
-List of Supported Devices
--------------------------
+Supported Devices
+-----------------
 
-This command is used to list supported devices from the command line with this syntax: ::
+Different versions of the ZTC may have a different set of supported devices. To find the device supported by the current installation type: ::
 
-    Syntax:   ./ztc device supported --type
-    Example:  ./ztc device supported --type board
+    ztc device supported
 
-This command take as input the following argument:
-    * **type** (str) --> type of the device (**optional**, default=“board")
+and a table of :samp:`target` names and paths to device support packages will be printed.
+Supported devices can be filtered by type with the :option:`--type type` option where :samp:`type` can be one of:
 
-.. note:: the type of devices available are: "board", "jtag", and "usbtoserial"
+* :samp:`board` for development boards
+* :samp:`jtag` for JTAG tools
+* :samp:`usbtoserial` for USB to Serial converters
 
     """
     table = []

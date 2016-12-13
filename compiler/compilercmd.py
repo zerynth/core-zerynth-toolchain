@@ -1,37 +1,33 @@
 """
-.. module:: Compiler
-
+.. _ztc-cmd-compile:
 
 Compiler
 ========
 
-The Zerynth Compiler permits to compile every z-project built with Zerynth.
-Every compilation needs a valid z-project path and a valid z-device target to built the related bytecode.
+The ZTC compiler takes a project as input and produces an executable bytecode file ready to be :ref:`uplinked <ztc-cmd-uplink>` on a :ref:`virtualized <ztc-cmd-device-virtualize>`.
 
-Once compiled a z-project, the z-user could uplink the related bytecode on proper device previous indicated as target.
+The command: ::
+    
+        ztc compiler project target
 
-Compile Command
----------------
+compiles the source files found at :samp:`project` (the project path) for a device with target :samp:`target`.
 
-In the Compile Command is present a ``--help`` option to show to the users a brief description of the related command and its syntax including arguments and option informations.
+The entry point of the program is the file :file:`main.py`. Every additional Python module needed wil be searched in the following order:
 
-The command return several log messages grouped in 4 main levels (info, warning, error, fatal) to inform the users about the results of the operation. 
-This command is used to compile a Zerynth Project from the command line running: ::
+1. Project directory
+2. Directories passed with the :option:`-I` option in the given order (see below)
+3. The Zerynth standard library
+4. The installed libraries
 
-    Syntax:   ./ztc compile project target --output --include --define
-    Example:  ./ztc compile ~/my/proj/folder mikroe_quail
+Since Zerynth programs allow mixed C/Python code, the compiler also scans for C source files and compiles them with the appropriate C compiler for :samp:`target`.
+C object files are packed and included in the output bytecode.
 
-This command take as input the following arguments:
-    * **project** (str) --> the path of the Zerynth Project (**required**)
-    * **target** (str) --> the target device for the compilation (**required**)
-    * **output** (str) --> the path for the output bytecode (**optional**, default=False)
-    * **include** (array, multivalue) --> the extra files to be included in compilation phase (**optional**, default=[])
-    * **define** (array, multivalue) --> the extra macro to be passed to the low level c-compiler (**optional**, default=[]) 
+The :command:`compile` command accepts additional options:
 
-**Errors**:
-    * Missing required data
-    * Passing Bad Data
-    * Compilation Errors
+* :option:`-I/--include path`, adds :samp:`path` to the list of directories scanned for Zerynth modules. This option can be repeated multiple times.
+* :option:`-D/--define def`, adds a C macro definition as a parameter for native C compiler. This option can be repeated multiple times.
+* :option:`-o/--output path`, specifies the path for the output file. If not specified it is :file:`main.vbo` in the project folder.
+
 
 """
 from base import *
@@ -39,12 +35,12 @@ from .compiler import Compiler
 from .exceptions import *
 import click
 
-@cli.command(help="Compile a Zerynth Project. \n\n Arguments: \n\n PROJECT: Path of the z-project. \n\n TARGET: target device for the compilation.")
+@cli.command(help="Compile a project. \n\n Arguments: \n\n PROJECT: project path. \n\n TARGET: device target.")
 @click.argument("project",type=click.Path())
 @click.argument("target")
-@click.option("--output","-o",default=False,help="Path for output file")
-@click.option("--include","-I",default=[],multiple=True,help="Path for including extra source files ((multi-value option)")
-@click.option("--define","-D",default=[],multiple=True,help="Defined macro to be passed to low level c-compiler (multi-value option")
+@click.option("--output","-o",default=False,help="output file path")
+@click.option("--include","-I",default=[],multiple=True,help="additional include path (multi-value option)")
+@click.option("--define","-D",default=[],multiple=True,help="additional C macro definition (multi-value option)")
 def compile(project,target,output,include,define):
     try:
         prj = fs.get_json(fs.path(project,".zproject"))
@@ -76,9 +72,13 @@ def compile(project,target,output,include,define):
     except Exception as e:
         critical("Unexpected exception",exc=e)
     if not output:
-        output=fs.basename(project)+".vbo"
-    elif not output.endswith(".vbo"):
-        output+=".vbo"
+        output=fs.path(project,"main.vbo")
+    else:
+        if fs.is_dir(output):
+            output=fs.path(output,"main.vbo")
+        else:
+            if not output.endswith(".vbo"):
+                output=output+".vbo"
     info("Saving to",output)
     binary["repr"]=[rep.toDict() for rep in reprs]
     binary["project"]=project

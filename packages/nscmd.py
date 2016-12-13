@@ -1,59 +1,39 @@
 """
-.. module:: Namespaces
+.. _ztc-cmd-namespace:
 
 **********
 Namespaces
 **********
 
-The Zerynth Namespace is a Database Entity used to organize all the published package owned by a Zerynth User.
+Namespaces are attributes of packages used to better organize them. A namespace can be created by a user and packages can be subsequently published under it.
+A namespace is owned by a single user that can publish under it. A namespace can be shared with other users to grant them publishing rights.
 
-Each Namespace is referred to an associated repository domain and includes packages that can be visualized and downloaded by all the other z-users (according to their repositories attributes).
-
-Namespace Commands
-==================
-
-This module contains all Zerynth Toolchain Commands for managing Zerynth Namespace Entities.
-With this commands the Zerynth Users can handle and monitor all their namespaces using the command-line interface terminal.
-
-In all commands is present a ``--help`` option to show to the users a brief description of the related selected command and its syntax including arguments and option informations.
-
-All commands return several log messages grouped in 4 main levels (info, warning, error, fatal) to inform the users about the results of the operation. 
-The actions that can be executed on Zerynth Namespaces are:
-
-* create__: to create a Zerynth Namespace
-* list__: to list all owned Zerynth Namespaces
     """
 from base import *
 import click
 
 
-@cli.group(help="Manage Zerynth Namespace. This module contains all Zerynth Toolchain Commands for managing Zerynth Namespace Entities.")
+@cli.group(help="Manage namespaces.")
 def namespace():
     pass
 
-@namespace.command(help="Create a Zerynth Namespace. \n\n Arguments: \n\n NAME: name of the z-namesace.")
+@namespace.command(help="Create a namespace. \n\n Arguments: \n\n NAME: namespace name.")
 @click.argument("name")
 def create(name):
     """ 
-__ create_ns_
 
-.. _create_ns:
+.. _ztc-cmd-namespace-create:
 
-Create a Namespace
-------------------
+Create
+------
 
-This command is used to create and download a new Zerynth Namespace from the command line with this syntax: ::
+The command: ::
 
-    Syntax:   ./ztc namespace create name
-    Example:  ./ztc namespace create myNS
+    ztc namespace create name
 
-This command take as input the following arguments:
-    * **name** (str) --> the name of the namespace (**required**)
+will create the namespace :samp:`name` and associate it with the user. 
+There is a limit on the number of namespaces a user can own and the command fails if the limit is reached.
 
-**Errors**:
-    * Missing required data
-    * User Asset Limit Overflow
-    * Receiving Zerynth Backend response errors
 
     """
     info("Creating namespace...")
@@ -67,26 +47,34 @@ This command take as input the following arguments:
     except Exception as e:
         critical("Can't create namespace", exc=e)
 
+@namespace.command()
+def share(user):
+    """
+
+.. _ztc-cmd-namespace-share:
+
+Share
+-----
+
+This feature is not implemented yet.
+    """
+    fatal("not implemented yet")
+
 
 @namespace.command("list")
 def __list():
     """ 
-__ list_ns_
 
-.. _list_ns:
+.. _ztc-cmd-namespace-list:
 
-List Namespaces
----------------
+List
+----
 
-This command is used to list all proper Zerynth Namespaces already compiled from the command line running: ::
+The command: ::
 
-    Syntax:   ./ztc namespace list
-    Example:  ./ztc namespace list  
+    ztc namespace list
 
-This command take no input argument.
-
-**Errors**:
-    * Receiving Zerynth Backend response errors
+retrieves the list of the user namespaces.
 
     """
     try:

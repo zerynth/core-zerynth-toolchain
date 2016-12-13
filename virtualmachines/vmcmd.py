@@ -1,32 +1,20 @@
 """
-.. module:: VMs
+.. _ztc-cmd-vm:
 
 ****************
 Virtual Machines 
 ****************
 
-The Zerynth Virtual Machine is the Multi-Thread Real Time Operative System that, once installed on the related device enabled by Zerynth,
-permits to the users to execute their Zerynth Projects uplinked on their device.
+Virtual machines are the core of Zerynth. From the point of view of the ZTC, a virtual machine is a binary blob to be flashed on a device
+in order to enable Zerynth code execution. Virtual machines are tied to the unique identifier of the device microcontroller, therefore for each microcontroller a specific virtual machine must be created.
 
-Every Virtual Machine can be created after a device registration and can be compiled for the specific related device
-with the real time operative system and features choosen by the users.
+Virtual machines can be managed with the following commands:
 
+* :ref:`create <ztc-cmd-vm-create>`
+* :ref:`download <ztc-cmd-vm-download>`
+* :ref:`list <ztc-cmd-vm-list>`
+* :ref:`available <ztc-cmd-vm-available>`
 
-Virtual Machine Commands
-========================
-
-This module contains all Zerynth Toolchain Commands for managing Zerynth Virtual Machine Entities.
-With this commands the Zerynth Users can handle all their virtual machines using the command-line interface terminal.
-
-In all commands is present a ``--help`` option to show to the users a brief description of the related selected command and its syntax including arguments and option informations.
-
-All commands return several log messages grouped in 4 main levels (info, warning, error, fatal) to inform the users about the results of the operation. 
-The actions that can be executed on Zerynth Virtual Machines are:
-
-* create__: to create a Zerynth Virtual Machine
-* download_: to download an already compiled owned Zerynth Virtual Machine
-* list__: to list all owned Zerynth Virtual Machines
-* available_: to retrieve a specific owned Zerynth Virtual Machine
     """
 from base import *
 import click
@@ -51,45 +39,34 @@ def download_vm(uid,version):
 def vm():
     pass
 
-@vm.command(help="Create a Zerynth Virtual Machine. \n\n Arguments: \n\n DEVICE: alias name of the z-device. \n\n VERSION: version of the z-virtual machine. \n\n RTOS: rtos of the z-virtual machine.")
-@click.argument("device")
+@vm.command(help="Request virtual machine creation. \n\n Arguments: \n\n ALIAS: device alias. \n\n VERSION: requested virtual machine version. \n\n RTOS: virtual machine RTOS.")
+@click.argument("alias")
 @click.argument("version")
 @click.argument("rtos")
-@click.option("-feat", multiple=True, type=str,help="Add an axtra feature to the requested virtual machine ((multi-value option)")
-@click.option("--name", default="",help="Name of the virtual machine")
-def create(device,version,rtos,feat,name):
+@click.option("--feat", multiple=True, type=str,help="add extra features to the requested virtual machine (multi-value option)")
+@click.option("--name", default="",help="Virtual machine name")
+def create(alias,version,rtos,feat,name):
     """ 
-__ create_vm_
 
-.. _create_vm:
+.. _ztc-cmd-vm-create:
 
 Create a Virtual Machine
 ------------------------
 
-This command is used to create and download a new Zerynth Virtual Machine from the command line with this syntax: ::
+Virtual machine can be created with custom features for a specific device. Creation consists in requesting a virtual machine unique identifier (:samp:`vmuid`) to the Zerynth backend for a registered device.
 
-    Syntax:   ./ztc vm create device version rtos -feat --name
-    Example:  ./ztc vm create myDev 1.0.0 chibi2 --name "myZVM"
+The command: ::
 
-This command take as input the following arguments:
-    * **device** (str) --> the alias name of the device that the users want to virtualize (**required**)
-    * **version** (str) --> the version of the virtual machine (**required**)
-    * **rtos** (str) --> the rtos choosen by the users for the virtual machine (**required**)
-    * **feat** (str, multivalue) --> the extra features choosen by the users (only pro) for the virtual machine (**optional**, default=“")
-    * **name** (str) --> the name of the virtual machine (**optional**, default=“") 
+    ztc vm create alias version rtos
 
-**Errors**:
-    * Missing required data
-    * User Asset Limit Overflow
-    * Bad alias for the Device
-    * Rtos unsupported for the device
+executes a REST call to the Zerynth backend asking for the creation of a virtual machine for the registered device with alias :samp:`alias`. The created virtual machine will run on the RTOS specified by :samp:`rtos` using the virtual machine release version :samp:`version`.
 
-.. note:: The version argument of this command must following the standard versioning nomenclature.
-          Available Versions: "r1.0.0", "r1.0.1"
-.. warning:: Extra features not available yet
+It is also possible to specify the additional option :option:`--feat feature` to customize the virtual machine with :samp:`feature`. Some features are available for pro accounts only. Multiple features can be specified repeating the option.
+
+If virtual machine creation ends succesfully, the virtual machine binary is also downloaded and added to the local virtual machine storage. The :samp:`vmuid` is printed as a result.
 
     """
-    dev = env.get_dev_by_alias(device)
+    dev = env.get_dev_by_alias(alias)
     if len(dev)==0:
         fatal("No such device")
     if len(dev)>1:
@@ -121,65 +98,64 @@ This command take as input the following arguments:
         critical("Can't create vm", exc=e)
 
 
-@vm.command(help="Download a Zerynth Virtual Machine. \n\n Arguments: \n\n UID: uid of the z-virtual machine. \n\n VERSION: version of the z-virtual machine.")
-@click.argument("uid")
-@click.argument("version")
-def download(uid,version):
-    """ 
-.. _download:
+# @vm.command(help="Download a virtual machine. \n\n Arguments: \n\n UID: uid of the virtual machine. \n\n VERSION: version of the z-virtual machine.")
+# @click.argument("uid")
+# @click.argument("version")
+# def download(uid,version):
+#     """ 
+# .. _ztc-cmd-vm-download:
 
-Download a Virtual Machine
---------------------------
+# Download a Virtual Machine
+# --------------------------
 
-This command is used to download an existing Zerynth Virtual Machine from the command line with this syntax: ::
+# Once created, virtual machines can be downloaded multiple times and added to the local virtual machine storage.
 
-    Syntax:   ./ztc vm download uid version
-    Example:  ./ztc vm download 3Ss_HOgpQGW7oKtYmNESPQ r1.0.0
+# This command is used to download an existing Zerynth Virtual Machine from the command line with this syntax: ::
 
-The uid of an already compiled and available virtual machine can be found under .Zerynth/vms folder or
-executing the :func:`list` function described in the next section.
+#     Syntax:   ./ztc vm download uid version
+#     Example:  ./ztc vm download 3Ss_HOgpQGW7oKtYmNESPQ r1.0.0
 
-This command take as input the following arguments:
-    * **uid** (str) --> the uid of the virtual machine (**required**)
-    * **version** (str) --> the version of the virtual machine (**required**)
+# The uid of an already compiled and available virtual machine can be found under .Zerynth/vms folder or
+# executing the :func:`list` function described in the next section.
 
-**Errors**:
-    * Missing required data
-    * Wrong uid for the virtual machine
+# This command take as input the following arguments:
+#     * **uid** (str) --> the uid of the virtual machine (**required**)
+#     * **version** (str) --> the version of the virtual machine (**required**)
 
-.. note:: The version argument of this command must following the standard versioning nomenclature.
-          Available Versions: "r1.0.0", "r1.0.1"
+# **Errors**:
+#     * Missing required data
+#     * Wrong uid for the virtual machine
 
-    """
-    try:
-        download_vm(uid,version)
-    except Exception as e:
-        critical("Can't download vm", exc=e)
+# .. note:: The version argument of this command must following the standard versioning nomenclature.
+#           Available Versions: "r1.0.0", "r1.0.1"
+
+#     """
+#     try:
+#         download_vm(uid,version)
+#     except Exception as e:
+#         critical("Can't download vm", exc=e)
 
 
-@vm.command("list", help="List proper Zerynth Virtual Machine.")
-@click.option("--from","_from",default=0,help="Number from which display the z-virtual machine list")
-@click.option("--core_dep",default=None,help="Select the z-virtual machine according to core dependency")
+@vm.command("list", help="List all owned virtual machines")
+@click.option("--from","_from",default=0,help="skip the first n virtual machines")
+@click.option("--core_dep",default=None,help="show virtual machines compatible with core_dep")
 def __list(_from,core_dep):
     """ 
-__ list_vm_
-
-.. _list_vm:
+.. _ztc-cmd-vm-list:
 
 List Virtual Machines
 ---------------------
 
-This command is used to list all proper Zerynth Virtual Machines already compiled from the command line running: ::
+The list of created virtual machines can be retrieved with the command: ::
 
-    Syntax:   ./ztc vm list --from --core_dep
-    Example:  ./ztc vm list --from 0  
+    ztc vm list
 
-This command take as input the following arguments:
-    * **from** (int) --> the number from which display the virtual machine list (**optional**, default=0)
-    * **core_dep** (str) --> select the virtual machine from availables according to the related core dependency (**optional**, default=None)
+The retrieved list contains at most 50 virtual machines.
 
-**Errors**:
-    * Wrong data for the virtual machine list
+Additional options can be provided to filter the returned virtual machine set:
+
+* :option:`--from n`, skip the first :samp:`n` virtual machines
+* :option:`--core_dep version`, returns only the virtual machines compatible with Zerynth version :samp:`version`.
 
     """
     table=[]
@@ -201,25 +177,25 @@ This command take as input the following arguments:
     except Exception as e:
         critical("Can't get vm list",exc=e)
 
-@vm.command(help="Retrieve a Zerynth Virtual Machine. \n\n Arguments: \n\n TARGET: target of the z-virtual machine")
+@vm.command(help="List available virtual machine parameters. \n\n Arguments: \n\n TARGET: target of the virtual machine")
 @click.argument("target")
 def available(target):
     """ 
-.. _available:
+.. _ztc-cmd-vm-available:
 
-Retrieve a Virtual Machine
+Virtual Machine parameters
 --------------------------
 
-This command is used to retrieve a specific Zerynth Virtual Machine informations according to the target argument from the command line with this syntax: ::
+For each device target a different set of virtual machines can be created that takes into consideration the features of the hardware. Not every device can run every virtual machine. The list of available virtual machines for a specific target can be retrieved by: ::
 
-    Syntax:   ./ztc vm available target
-    Example:  ./ztc vm available particle_photon
+    ztc vm available target
 
-This command take as input the following argument:
-    * **target** (str) --> target of the virtual machine(**required**)
+For the device target, a list of possible virtual machine configurations is returned with the following attributes:
 
-**Errors**:
-    * Wrong data for retriving virtual machine
+* virtual machine version 
+* RTOS
+* additional features
+* free/pro only
 
     """
     table=[]

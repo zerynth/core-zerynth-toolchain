@@ -55,6 +55,9 @@ class zfs():
         with open(dst,"w") as ff:
             json.dump(js,ff,indent=4,sort_keys=True)
 
+    def is_dir(self,src):
+        return os.path.isdir(src)
+
     def rmtree(self,dst):
         try:
             if not fs.exists(dst):
