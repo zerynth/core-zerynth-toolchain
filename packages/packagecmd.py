@@ -307,9 +307,6 @@ Not documented yet.
     valid_fields = set(["exclude","dont-pack","sys","examples","platform","targetdir","tool"])
     given_fields = set(pack_contents.keys())
     if not (needed_fields <= given_fields):
-        print(needed_fields)
-        print(given_fields)
-        print(needed_fields<given_fields)
         fatal("missing some needed fields in package.json:",needed_fields-given_fields)
     pack_contents = {k:v for k,v in pack_contents.items() if k in (needed_fields | valid_fields) or k=="git_url"}
 
@@ -326,7 +323,6 @@ Not documented yet.
             info("Creating package from project", proj_contents["title"])
         else:
             fatal("project must be a git repository")
-    print(pack_contents)
     # start publishing
     pack_contents["version"]=version
     fs.set_json(pack_contents,fs.path(path,"package.json"))

@@ -149,13 +149,13 @@ class Environment():
             })
         return token
 
-    def set_token(self,rawtoken):
+    def set_token(self,rawtoken,toktype=None):
         pl = rawtoken.split(".")[1]
         js = json.loads(decode_base64(pl).decode("utf-8"))
         token = {
             "token":rawtoken,
             "expires":js["exp"],
-            "type": None
+            "type": toktype
         }
         fs.set_json(token,fs.path(env.cfg,"token.json"))
 

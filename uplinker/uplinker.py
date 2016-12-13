@@ -171,7 +171,13 @@ def uplink(alias,bytecode,loop):
     except:
         fatal("Can't open serial:",dev.port)
 
-    version,vmuid,chuid,target = probing(ch,dev.target)
+    try:
+        version,vmuid,chuid,target = probing(ch,dev.target)
+    except:
+        if dev.uplink_reset:
+            fatal("Something wrong during the probing phase: too late reset?")
+        else:
+            fatal("Something wrong during the probing phase:",e)
 
     vms = tools.get_vm(vmuid,version,chuid,target)
     if not vms:

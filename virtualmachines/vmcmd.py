@@ -23,13 +23,14 @@ import json
 import sys
 
 
-def download_vm(uid,version):
-    res = zget(url=env.api.vm+"/"+uid+"/"+version)
+def download_vm(uid):
+    res = zget(url=env.api.vm+"/"+uid)
     rj = res.json()
     if rj["status"]=="success":
-        vmpath = fs.path(env.vms, rj["data"]["dev_type"],rj["data"]["on_chip_id"])
+        vmd = rj["data"]
+        vmpath = fs.path(env.vms, vmd["dev_type"],vmd["on_chip_id"])
         fs.makedirs(vmpath)
-        fs.set_json(rj["data"], fs.path(vmpath,uid+"_"+version+"_"+rj["data"]["hash_features"]+"_"+rj["data"]["rtos"]+".vm"))
+        fs.set_json(vmd, fs.path(vmpath,uid+"_"+vmd["version"]+"_"+vmd["hash_features"]+"_"+vmd["rtos"]+".vm"))
         info("Downloaded Virtual Machine in", vmpath,"with uid",uid)
     else:
         fatal("Can't download virtual machine:", rj["message"])
@@ -89,7 +90,7 @@ If virtual machine creation ends succesfully, the virtual machine binary is also
         if rj["status"] == "success":
             vminfo["uid"]=rj["data"]["uid"]
             info("VM",name,"created with uid:", vminfo["uid"])
-            download_vm(vminfo["uid"],vminfo["version"])
+            download_vm(vminfo["uid"])
         else:
             critical("Error while creating vm:", rj["message"])
     except TimeoutException as e:

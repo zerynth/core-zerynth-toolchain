@@ -9,6 +9,6 @@
     "keywords": [],
     "repo": "official",
     "title": "Zerynth Toolchain",
-    "version": "r2.0.9",
-    "whatsnew": "Fixed zpm"
+    "version": "r2.0.10",
+    "whatsnew": "Fixes"
 }
