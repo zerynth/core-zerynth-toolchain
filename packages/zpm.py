@@ -45,7 +45,7 @@ class Zpm():
         try:
             fs.makedirs(cfgdir)
             if self._ipack_db: 
-                self._ipack_db.shutdown()
+                self._ipack_db.close()
             self._ipack_db_cfgdir=cfgdir
             self._ipack_db_dbname=dbname
             self._ipack_db = sqlite3.connect(fs.path(cfgdir,dbname),check_same_thread=False)
