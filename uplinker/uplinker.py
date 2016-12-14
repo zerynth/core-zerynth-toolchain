@@ -1,5 +1,5 @@
 """
-.. _ztc-cmd-uplink_
+.. _ztc-cmd-uplink:
 
 Uplink
 ======

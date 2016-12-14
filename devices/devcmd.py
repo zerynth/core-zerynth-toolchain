@@ -126,7 +126,7 @@ Finally, the :command:`discover` command can be run in continuous mode by specif
 @click.option("--classname",default="",help="Set device classname.")
 def alias_put(uid,alias,name,target,chipid,remote_id,classname):
     """ 
-.. _ztc-cmd-device-alias_put
+.. _ztc-cmd-device-alias_put:
 
 Device configuration
 --------------------

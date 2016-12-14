@@ -11,7 +11,6 @@ in order to enable Zerynth code execution. Virtual machines are tied to the uniq
 Virtual machines can be managed with the following commands:
 
 * :ref:`create <ztc-cmd-vm-create>`
-* :ref:`download <ztc-cmd-vm-download>`
 * :ref:`list <ztc-cmd-vm-list>`
 * :ref:`available <ztc-cmd-vm-available>`
 

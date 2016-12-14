@@ -1,6 +1,6 @@
 """
 
-.. _ztc-misc:
+.. _ztc-cmd-misc:
 
 Miscellanea
 ===========
@@ -8,13 +8,13 @@ Miscellanea
 Non specific commands are grouped in this section.
 
 
-.. _ztc-cmd-linter
+.. _ztc-cmd-linter:
 
 Linter
 ------
 
     Not documented yet.
-    
+
    """
 
 from base import *
