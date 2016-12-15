@@ -128,15 +128,16 @@ where :samp:`email` is the email address used in the manual registration flow. A
 
 
 
-@cli.command(help="View/Insert/Modify Zerynth Account Profile Informations. \n\n")
+@cli.command(help="Manage account info.\n\n")
 @click.option("--set","__set",flag_value=True, default=False, help="Flag to set/modify profile informations.")
-@click.option("--name","name",default="",help="Name related to the Zerynth Account.")
-@click.option("--surname","surname",default="",help="Surname related to the Zerynth Account.")
-@click.option("--job","job",default="",help="Job related to the Zerynth Account.")
-@click.option("--country","country",default="",help="Country related to the Zerynth Account.")
-@click.option("--company","company",default="",help="Company related to the Zerynth Account.")
-@click.option("--age","age",default="",help="Age related to the Zerynth Account.")
-def profile(job,company,age,name,surname,country,__set):
+@click.option("--name","name",default="",help="Your Name")
+@click.option("--surname","surname",default="",help="Your Surname")
+@click.option("--job","job",default="",help="Your Job")
+@click.option("--country","country",default="",help="Your Country")
+@click.option("--company","company",default="",help="Your Company")
+@click.option("--age","age",default="",help="Your Age")
+@click.option("--website","website",default="",help="Your Website")
+def profile(job,company,age,name,surname,country,website,__set):
     """
 .. _ztc-cmd-user-profile:
 
@@ -151,7 +152,7 @@ the user profile is retrieved and displayed. The user profile consists of the fo
 
 * Generic Info
 
-    * Display Name (non mutable)
+    * Username (non mutable)
     * Email (non mutable)
     * Name
     * Surname
@@ -159,6 +160,7 @@ the user profile is retrieved and displayed. The user profile consists of the fo
     * Country
     * Job
     * Company
+    * Website
 
 * Subscription Info
 
@@ -185,6 +187,7 @@ where :samp:`options` is a list of one or more of the following options:
 * :option:`--country country` update the Country field
 * :option:`--job job` update the Job field
 * :option:`--company company` update the Company field
+* :option:`--website website` update the Website field
 
     """
     if __set:
@@ -195,7 +198,8 @@ where :samp:`options` is a list of one or more of the following options:
                 "age":age,
                 "name":name,
                 "surname":surname,
-                "country":country
+                "country":country,
+                "website":website
             })
             if res.status_code!=200:
                 error("Can't set profile",res.status_code)
@@ -219,10 +223,11 @@ where :samp:`options` is a list of one or more of the following options:
                         rj["data"]["country"],
                         rj["data"]["company"],
                         rj["data"]["job"],
+                        rj["data"]["website"]
                     ])
                     log()
                     info("General Info")
-                    log_table(table,headers=["Display Name","Email","Name","Surname","Age","Country","Company","Job"])
+                    log_table(table,headers=["Username","Email","Name","Surname","Age","Country","Company","Job","Website"])
                     
                     table = []
                     table.append([
