@@ -47,6 +47,7 @@ class Compiler():
         self.syspath.extend(syspath)
         # then add standard syspath
         self.syspath.append(env.stdlib)
+        self.syspath.append(fs.path(env.libs,"official","zerynth"))
         self.syspath.append(fs.path(env.libs,"official"))
         self.syspath.append(env.libs)
         
