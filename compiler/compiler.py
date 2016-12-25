@@ -47,9 +47,13 @@ class Compiler():
         self.syspath.extend(syspath)
         # then add standard syspath
         self.syspath.append(env.stdlib)
-        self.syspath.append(fs.path(env.libs,"official","zerynth"))
+        # then add official libraries
         self.syspath.append(fs.path(env.libs,"official"))
+        # then add all repos
         self.syspath.append(env.libs)
+        # then add a shortcut to all official zerynth libraries
+        for zd in fs.dirs(fs.path(env.libs,"official","zerynth")):
+            self.syspath.append(zd)
         
         
         self.mainfile = inputfile
