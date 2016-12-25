@@ -21,7 +21,6 @@ import click
 import datetime
 import json
 import sys
-import pygit2
 import webbrowser
 
 
@@ -210,6 +209,7 @@ Zerynth remote repositories require authentication by basic HTTP authentication 
 
 
     """
+    import pygit2
     res = create_project_entity(path)
     if res is False:
         fatal("Can't create remote project")

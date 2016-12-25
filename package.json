@@ -1,6 +1,6 @@
 {
     "dependencies": {
-        "core.zerynth.stdlib": "r2.0.0",
+        "core.zerynth.stdlib": "r2.0.1",
         "sys.zerynth.runtime": "r2.0.0"
     },
     "description": "",
@@ -9,6 +9,6 @@
     "keywords": [],
     "repo": "official",
     "title": "Zerynth Toolchain",
-    "version": "r2.0.0",
-    "whatsnew": ""
+    "version": "r2.0.1",
+    "whatsnew": "Fixed compiler and pygit2 errors"
 }

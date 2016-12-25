@@ -12,6 +12,7 @@ _ssl_verify = fs.path(fs.dirname(__file__),"certs.pem")
 _default_timeout=5
 _default_retries=3
 
+
 ################### json special type encoder
 class ZjsonEncoder(json.JSONEncoder):
     def default(self,obj):
@@ -27,7 +28,7 @@ def zpost(url,data,headers={},auth=True,timeout=_default_timeout):
     hh.update(headers)
     for x in range(_default_retries):
         try:
-            return requests.post(url=url, headers=hh, data=json.dumps(data, cls=ZjsonEncoder),timeout=timeout,verify=_ssl_verify)
+            return requests.post(url=url, headers=hh, data=json.dumps(data, cls=ZjsonEncoder),timeout=timeout,verify=_ssl_verify,proxies=env.proxies)
         except TimeoutException:
             warning("Timeout! Retrying...")
             timeout=timeout*2
@@ -45,7 +46,7 @@ def zget(url,headers={},params={},auth=True,token=None,stream=False,timeout=_def
     hh.update(headers)
     for x in range(_default_retries):
         try:
-            return requests.get(url=url, headers=hh,timeout=timeout,params=params,verify=_ssl_verify,stream=stream)
+            return requests.get(url=url, headers=hh,timeout=timeout,params=params,verify=_ssl_verify,stream=stream,proxies=env.proxies)
         except TimeoutException:
             warning("Timeout! Retrying...")
             timeout=timeout*2
@@ -59,7 +60,7 @@ def zdelete(url,headers={},auth=True,timeout=_default_timeout):
     hh.update(headers)
     for x in range(_default_retries):
         try:
-            return requests.delete(url=url, headers=hh,timeout=timeout,verify=_ssl_verify)
+            return requests.delete(url=url, headers=hh,timeout=timeout,verify=_ssl_verify,proxies=env.proxies)
         except TimeoutException:
             warning("Timeout! Retrying...")
             timeout=timeout*2
@@ -73,7 +74,7 @@ def zput(url, data,headers={},auth=True,timeout=_default_timeout):
     hh.update(headers)
     for x in range(_default_retries):
         try:
-            return requests.put(url=url, headers=hh, data=json.dumps(data, cls=ZjsonEncoder),timeout=timeout,verify=_ssl_verify)
+            return requests.put(url=url, headers=hh, data=json.dumps(data, cls=ZjsonEncoder),timeout=timeout,verify=_ssl_verify,proxies=env.proxies)
         except TimeoutException:
             warning("Timeout! Retrying...")
             timeout=timeout*2

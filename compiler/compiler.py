@@ -47,7 +47,9 @@ class Compiler():
         self.syspath.extend(syspath)
         # then add standard syspath
         self.syspath.append(env.stdlib)
+        self.syspath.append(fs.path(env.libs,"official"))
         self.syspath.append(env.libs)
+        
         
         self.mainfile = inputfile
         self.phase = 0
@@ -384,7 +386,7 @@ class Compiler():
                         #not in cache -_-
                         info("Compiling",cfile)
                         cheaders = gcc.get_headers([cfile])
-                        print("HEADERS",cheaders)
+                        #print("HEADERS",cheaders)
                         ret,wrn,err,cout = gcc.compile([cfile],o=hfile)
                         if ret==0:
                             if wrn:
@@ -440,7 +442,7 @@ class Compiler():
             undf = sym.getfrom(sym.undef)
             undf = {k:v for k,v in undf.items() if k not in set(self.vmsym)}
             for uu in undf:
-                logger.info("==>",uu)
+                info("==>",uu)
             csym = frozenset(self.cnatives)
             if not(csym<=syms):
                 error("The following @cnatives are missing:")

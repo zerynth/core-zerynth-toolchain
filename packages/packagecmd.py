@@ -36,7 +36,6 @@ import click
 import datetime
 import json
 import sys
-import pygit2
 import sqlite3
 import re
 import hashlib
@@ -339,7 +338,7 @@ Not documented yet.
     except Exception as e:
         fatal("Can't create package", e)
 
-
+    import pygit2
     # manage git repository for project
     # try:
     #     #####TODO check signature configuration of pygit2

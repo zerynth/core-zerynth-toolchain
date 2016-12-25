@@ -984,12 +984,16 @@ class AstWalker(ast.NodeVisitor):
                 OpCode.LOOKUP_NAME(self.env.addNameCode(kw.arg), kw.arg))
             code.addCode(self.visit(kw.value))
         if starargs:
-            starcode = self.visit(starargs)
+            #print(starargs)
+            starcode = self.genCodeList(starargs) #self.visit(starargs)
             code.addCode(starcode)
             code.addCode(OpCode.CALL_VAR(len(pargs), len(node.keywords)))
         else:
             code.addCode(OpCode.CALL(len(pargs), len(node.keywords)))
         return code
+
+    def visit_Starred(self,node):
+        return self.visit(node.value)
 
     def visit_Try(self,node):
         self.setup_emitter(node)

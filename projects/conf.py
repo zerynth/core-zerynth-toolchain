@@ -327,6 +327,8 @@ def generate(conf,tocname="__toc.rst"):
 
     with open(tocname,"w") as ww:
       if tocname!="__toc.rst":
+        if "label" in conf:
+          ww.write(".. _"+conf["label"]+":\n\n");  
         ww.write("*"*len(conf["title"]))
         ww.write("\n")
         ww.write(conf["title"]+"\n")

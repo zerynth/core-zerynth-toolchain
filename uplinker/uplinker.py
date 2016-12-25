@@ -173,7 +173,7 @@ def uplink(alias,bytecode,loop):
 
     try:
         version,vmuid,chuid,target = probing(ch,dev.target)
-    except:
+    except Exception as e:
         if dev.uplink_reset:
             fatal("Something wrong during the probing phase: too late reset?")
         else:

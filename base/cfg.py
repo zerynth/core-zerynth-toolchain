@@ -281,5 +281,14 @@ def init_cfg():
 
     env.user_agent = "ztc/"+version
 
+    env.proxies=None
+    env.proxyfile = fs.path(env.cfg,"proxy.json")
+    if fs.exists(env.proxyfile):
+        try:
+            env.proxies = fs.get_json(env.proxyfile)
+        except:
+            warning("Bad json in",env.proxyfile)
+
+
 
 add_init(init_cfg,prio=0)
