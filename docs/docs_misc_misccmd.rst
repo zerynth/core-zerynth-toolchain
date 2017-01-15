@@ -1,9 +1,17 @@
-.. _ztc-misc:
+.. _ztc-cmd-misc:
 
 Miscellanea
 ===========
 
-The commands in this section produce information about the ZTC status.
+Non specific commands are grouped in this section.
+
+
+.. _ztc-cmd-linter:
+
+Linter
+------
+
+    Not documented yet.
 
    
 Info

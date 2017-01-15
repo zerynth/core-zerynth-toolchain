@@ -66,7 +66,7 @@ A :option:`--matchdb` discovery returns a different set of more high level infor
 * :samp:`target`, the device target, specifying what kind of microcontroller and pcb routing is to be expected on the device
 * :samp:`uid`, the device uid, same as raw peripheral data
 * :samp:`chipid`, the unique identifier of the device microcontrolloer (if known)
-* :samp:`remote_id'`, the unique identifier of the device in the Zerynth backend (if set)
+* :samp:`remote_id`, the unique identifier of the device in the Zerynth backend (if set)
 * :samp:`classname`, the Python class in charge of managing the device
 
 All the above information is needed to make a device usable in the ZTC. The information provided helps in distinguishing different devices with different behaviours. A device without an :samp:`alias` is a device that is not yet usable, therefore an alias must be :ref:`set <ztc-cmd-device-alias_put>`. A device without :samp:`chipid` and :samp:`remote_id` is a device that has not been :ref:`registered <ztc-cmd-device-register> yet and can not be virtualized yet.
@@ -80,7 +80,7 @@ To complicate the matter, there are additional cases that can be spotted during 
 Finally, the :command:`discover` command can be run in continuous mode by specifying the option :option:`--loop`. With :option:`--loop` the command keeps printing the set of discovered devices each time it changes (i.e. a new device is plugged or a connected device is unplugged). In some operative system the continuous discovery is implemented by polling the operative system device database for changes. The polling time can be set with option :option:`--looptime milliseconds`, by default it is 2000 milliseconds.
 
     
-.. _ztc-cmd-device-alias_put
+.. _ztc-cmd-device-alias_put:
 
 Device configuration
 --------------------
@@ -132,55 +132,44 @@ The result of a correct registration is a device with the registration firmware 
 Virtualization
 --------------
 
-This command is used to virtualize a Zerynth Device installing on the board the real time operative system to
-abilitate for running customer application code. the ``virtualize`` command has this syntax: ::
+Device virtualization consists in flashing a Zerynth virtual machine on a registered device. One or more virtual machines for a device can be obtained with specific ZTC :ref:`commands <ztc-cmd-vm-create>`.
+Virtualization is started by: ::
 
-    Syntax:   ./ztc device virtualize alias vmuid
-    Example:  ./ztc device virtualize uid_alias_name 3Ss_HOgpQGW7oKtYmNESPQ
+    ztc device virtualize alias vmuid
 
-This command take as input the following arguments:
-    * **alias** (str) --> the alias of the z-device (**required**)
-    * **vmuid** (str) --> the uid of the Zerynth Virtual Machine to load on the z-device(**required**)
+where :samp:`alias` is the device alias and :samp:`vmuid` is the unique identifier of the chosen vm. :samp:`vmuid` can be typed partially, ZTC will try to match it against known identifiers. :samp:`vmuid` is obtained during virtual machine :ref:`creation <ztc-cmd-vm-create>`.
 
-**Errors**:
-    * Missing required data
-    * Wrong Alias
-    * Wrong uid for the virtual machine
-
-.. note:: Before virtualizing a z-device, is needed to :ref:`create<Create a Virtual Machine>` a Zerynth Virtual Machine for that specific z-device
+The virtualization process is automated, no user interaction is required.
 
     
-.. _open:
+.. _ztc-cmd-device-open:
 
-Open a Serial Port
-------------------
+Serial Console
+--------------
 
-This command is used to open a serial port to communicate with the z-device from the command line with this syntax: ::
+Each virtual machine provides a default serial port where the output of the program is printed. Such port can be opened in full duplex mode allowing bidirectional communication between the device and the terminal.
 
-    Syntax:   ./ztc device open alias --echo
-    Example:  ./ztc device open uid_alias_name --echo
+The command: ::
 
-This command take as input the following arguments:
-    * **alias** (str) --> the alias name of the z-device (**required**)
-    * **echo** (str) --> flag for printing typed characters to stdin (**optional**, default=False)
+    ztc device open alias
 
-**Errors**:
-    * Missing required data
-    * Wrong Alias
+tries to open the default serial port with the correct parameters for the device. Output from the device is printed to stdout while stdin is redirected to the serial port. Adding the option :option:`--echo` to the command echoes back the characters from stdin to stdout.
+
     
-.. _supported:
+.. _ztc-cmd-device-supported:
 
-List of Supported Devices
--------------------------
+Supported Devices
+-----------------
 
-This command is used to list supported devices from the command line with this syntax: ::
+Different versions of the ZTC may have a different set of supported devices. To find the device supported by the current installation type: ::
 
-    Syntax:   ./ztc device supported --type
-    Example:  ./ztc device supported --type board
+    ztc device supported
 
-This command take as input the following argument:
-    * **type** (str) --> type of the device (**optional**, default=“board")
+and a table of :samp:`target` names and paths to device support packages will be printed.
+Supported devices can be filtered by type with the :option:`--type type` option where :samp:`type` can be one of:
 
-.. note:: the type of devices available are: "board", "jtag", and "usbtoserial"
+* :samp:`board` for development boards
+* :samp:`jtag` for JTAG tools
+* :samp:`usbtoserial` for USB to Serial converters
 
     

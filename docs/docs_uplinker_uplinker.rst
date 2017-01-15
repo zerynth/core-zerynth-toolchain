@@ -1,31 +1,28 @@
-.. module:: Uplinker
+.. _ztc-cmd-uplink:
 
+Uplink
+======
 
-Uplinker
-========
+Once a Zerynth program is compiled to bytecode it can be executed by transferring such bytecode to a running virtual machine on a device. 
+This operation is called "uplinking" in the ZTC terminology.
 
-The Zerynth Uplinker permits to load every compiled z-project on the related device.
-Every uplink operation needs a valid built bytecode path and a valid, already virtualized, z-device uid to migrate the firmware on the board.
+Indeed Zerynth virtual machines act as a bootloader waiting a small amount of time after device reset to check if new bytecode is incoming.
+If not, they go on executing a previously loaded bytecode or just wait forever.
 
-Once upliked the bytecode, the z-device will be able to run the application developed.
+The command: ::
 
-Uplink Command
----------------
+    ztc uplink alias bytecode
 
-In the Uplink Command is present a ``--help`` option to show to the users a brief description of the related command and its syntax including arguments and option informations.
+will start the uplinking process for the device with alias :samp:`alias` using the compiled :samp:`.vbo` file given in the :samp:`bytecode` argument. As usual :samp:`alias` ca be partially specified.
 
-The command return several log messages grouped in 4 main levels (info, warning, error, fatal) to inform the users about the results of the operation. 
-This command is used to uplink a Zerynth Project compiled in bytecode on a device from the command line running: ::
+The uplinking process may require user interaction for manual resetting the device whan appropriate. The process consists of:
 
-    Syntax:   ./ztc uplink uid bytecode --loop
-    Example:  ./ztc uplink ntaWYcCqSLGB1QtBLXY__w ~/my/bytecode/folder 
+* a discovery phase: the device with the given alias is searched and its attributes are checked
+* a probing phase: depending on the device target a manual reset can be asked to the user. It is needed to reset the virtual machine and put it in a receptive state. In this phase a "probe" is sent to the virtual machine, asking for runtime details
+* a handshake phase: once runtime details are known, additional info are exchanged between the linker and the virtual machine to ensure correct bytecode transfer
+* a relocation phase: the bytecode is not usually executable as is and some symbols must be resolved against runtime details
+* a flashing phase: the relocated bytecode is sent to the virtual machine
 
-This command take as input the following arguments:
-    * **uid** (str) --> the uid of the z-device on which to load the bytecode (**required**)
-    * **bytecode** (str) --> the path of the bytecode file (**required**)
-    * **loop** (int) --> the number of attemps to try to load the bytecode on the device (**optional**, default=5)
-    
-**Errors**:
-    * Missing required data
-    * Passing Bad Data
-    * Uplink Operation Errors
+Each of the previous phases may fail in different ways and the cause can be determined by inspecting error messages.
+
+The :command:`uplink` may the additional :option:`--loop times` option that specifies the number of retries during the discovery phase (each retry lasts one second). 

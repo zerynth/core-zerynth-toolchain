@@ -5,3 +5,5 @@ from .proc import *
 from .comm import *
 from .tools import *
 from .zrequests import *
+from .hex2bin import *
+from .git import *

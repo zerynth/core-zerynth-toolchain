@@ -53,7 +53,7 @@ It takes the following options (one at a time):
             for k,v in tools.tools.items():
                 if isinstance(v,str):
                     table.append([k,v])
-                    log(k,"=>",v)
+                    #log(k,"=>",v)
                 else:
                     for kk,vv in v.items():
                         table.append([k+"."+kk,vv])
@@ -137,3 +137,11 @@ It takes the following options (one at a time):
             log_table(table,headers=["from","import"])
         else:
             log_json(mods)
+
+
+@cli.command("hex2bin")
+@click.argument("hexfile",type=click.Path())
+@click.option("--output","-o",default=False,help="output file path")
+@click.option("--padto","-p",default=0,help="pad with zeroes up to size")
+def __hex2bin(hexfile,output,padto):
+    hex2bin(hexfile,output,padto)

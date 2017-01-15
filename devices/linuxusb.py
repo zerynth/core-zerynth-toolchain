@@ -29,32 +29,35 @@ class LinuxUsb():
 
 	def parse(self):
 		devices = []
-		for device in self.udev.list_devices():
-			try:
-				if "SUBSYSTEM" in device and device["SUBSYSTEM"] in ("block","tty","usb"):
-					if self.devkeys.issubset(device):
-						dev={
-							"vid":device["ID_VENDOR_ID"].upper(),
-							"pid":device["ID_MODEL_ID"].upper(),
-							"sid":device["ID_SERIAL_SHORT"].upper(),
-							"port": device["DEVNAME"] if device["SUBSYSTEM"] == "tty" else None,
-							"block": device["DEVNAME"] if device["SUBSYSTEM"] == "block" else None,
-							"disk": self.find_mount_point(device["DEVNAME"]) if device["SUBSYSTEM"] == "block" else None,
-							"desc": device["ID_SERIAL"]
+		try:
+			for device in self.udev.list_devices():
+				try:
+					if "SUBSYSTEM" in device and device["SUBSYSTEM"] in ("block","tty","usb"):
+						if self.devkeys.issubset(device):
+							dev={
+								"vid":device["ID_VENDOR_ID"].upper(),
+								"pid":device["ID_MODEL_ID"].upper(),
+								"sid":device["ID_SERIAL_SHORT"].upper(),
+								"port": device["DEVNAME"] if device["SUBSYSTEM"] == "tty" else None,
+								"block": device["DEVNAME"] if device["SUBSYSTEM"] == "block" else None,
+								"disk": self.find_mount_point(device["DEVNAME"]) if device["SUBSYSTEM"] == "block" else None,
+								"desc": device["ID_SERIAL"]
+							}
+							devices.append(dev)
+					elif "SUBSYSTEM" in device and device["SUBSYSTEM"] in ("hid"):
+						dev = {
+							"vid":device["HID_ID"].split(":")[0][-4:],
+							"pid":device["HID_ID"].split(":")[1][-4:],
+							"sid":device["HID_ID"],
+							"port": None,
+							"block": None,
+							"disk": None,
+							"desc":device["HID_NAME"]
 						}
 						devices.append(dev)
-				elif "SUBSYSTEM" in device and device["SUBSYSTEM"] in ("hid"):
-					dev = {
-						"vid":device["HID_ID"].split(":")[0][-4:],
-						"pid":device["HID_ID"].split(":")[1][-4:],
-						"sid":device["HID_ID"],
-						"port": None,
-						"block": None,
-						"disk": None,
-						"desc":device["HID_NAME"]
-					}
-					devices.append(dev)
-			except Exception as e:
-				warning("Exception in usb discover: ",str(e))
+				except Exception as e:
+					warning("Exception in usb discover: ",str(e))
+		except Exception as e:
+			warning("Exception in usb discover: ",str(e))
 		return devices
 				

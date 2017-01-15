@@ -15,7 +15,7 @@ class CodeCache():
         self.hash=target+"::"+sdf
         hasher = hashlib.sha1()
         hasher.update(bytes(self.hash,"utf-8"))
-        self.path=fs.path(self.basepath,hasher.hexdigest()+"_"+prefix.replace(fs.sep,"_").replace(":","_")+"_"+target)
+        self.path=fs.path(self.basepath,hasher.hexdigest()+"_"+prefix.replace("\\","_").replace("/","_").replace(":","_")+"_"+target)
         fs.makedirs(self.path)
         try:
             self.cache=fs.get_json(fs.path(self.path,".cache"))

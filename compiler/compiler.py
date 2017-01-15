@@ -52,8 +52,9 @@ class Compiler():
         # then add all repos
         self.syspath.append(env.libs)
         # then add a shortcut to all official zerynth libraries
-        for zd in fs.dirs(fs.path(env.libs,"official","zerynth")):
-            self.syspath.append(zd)
+        self.syspath.append(fs.path(env.libs,"official","zerynth"))
+        #for zd in fs.dirs(fs.path(env.libs,"official","zerynth")):
+        #    self.syspath.append(zd)
         
         
         self.mainfile = inputfile
@@ -61,30 +62,31 @@ class Compiler():
         self.env = Env()
         self.vmsym = []
         self.target = target
-        discover = Discover()
-        if self.target not in discover.get_targets():
-            fatal("Target",target,"does not exist")
-        self.board = discover.get_target(target)
-        self.board.load_specs()
-        if not self.board.load_family():
-            fatal("Can't load family parameters for",target)
-        self.parseNatives()
-        self.builtins_module = "__builtins__"
-        
         self.prepcfiles = set()
         self.prepdefines = {}
-        self.prepdefines.update(self.board.defines)
-        self.prepdefines.update(cdefines)
+        discover = Discover()
+        if self.target!="no_device": ## no_device is passed only when no code generation is needed!
+            if self.target not in discover.get_targets():
+                fatal("Target",target,"does not exist")
+            self.board = discover.get_target(target)
+            self.board.load_specs()
+            if not self.board.load_family():
+                fatal("Can't load family parameters for",target)
+            self.parseNatives()
+            self.builtins_module = "__builtins__"
+            
+            self.prepdefines.update(self.board.defines)
+            self.prepdefines.update(cdefines)
 
-        self.astp = AstPreprocessor(self.board.allnames,self.board.pinmap,self.prepdefines,self.prepcfiles)
-        self.scopes = {}
-        self.moduletable = {}
-        self.maindir=None
-        self.resources={}
-        self.cncache = CodeCache()
-        self.scratch()
-        self.mode=mode
-        genByteCodeMap()
+            self.astp = AstPreprocessor(self.board.allnames,self.board.pinmap,self.prepdefines,self.prepcfiles)
+            self.scopes = {}
+            self.moduletable = {}
+            self.maindir=None
+            self.resources={}
+            self.cncache = CodeCache()
+            self.scratch()
+            self.mode=mode
+            genByteCodeMap()
 
 
     def scratch(self):
@@ -190,6 +192,7 @@ class Compiler():
             #         raise CNativeNotFound(0,0,vblf)
             if vbl.startswith("VHAL_"):
                 self.cdefines.add(vbl)
+                print(self.board.family)
                 lookup = self.board.family[self.board.family_name]
                 if vbl in lookup["vhal"]:
                     for x in lookup["vhal"][vbl]["src"]:
@@ -374,7 +377,7 @@ class Compiler():
             for cfile in self.cfiles:
                 if not fs.exists(cfile):
                     warning(cfile,"does not exist")
-                hfile = fs.path(tmpdir,self.target+"_"+cfile.replace(fs.sep,"_")+".o")
+                hfile = fs.path(tmpdir,self.target+"_"+cfile.replace("\\","_").replace("/","_").replace(":","_")+".o")
                 ofiles[cfile]=hfile
                 if cfile.endswith(".rvo"):
                     #handle rvo files
@@ -440,14 +443,14 @@ class Compiler():
                 raise CNativeError(0,0,"","C Native Linking Error!")
             sym = gcc.symbol_table(ofile)
             syms = sym.symbols()
-            info("Linked symbols:")
-            for ss in syms:
-                info("==>",ss)
-            info("Undefined symbols:")
+            #info("Linked symbols:")
+            #for ss in syms:
+            #    info("==>",ss)
+            #warning("Undefined symbols!")
             undf = sym.getfrom(sym.undef)
             undf = {k:v for k,v in undf.items() if k not in set(self.vmsym)}
-            for uu in undf:
-                info("==>",uu)
+            #for uu in undf:
+            #    info("==>",uu)
             csym = frozenset(self.cnatives)
             if not(csym<=syms):
                 error("The following @cnatives are missing:")
@@ -663,12 +666,22 @@ class Compiler():
                 #print("Adding Name:",m.group(1).lower())
                 self.env.addNameCode(m.group(1))
         # parse vmsymdef
+        fnames = []
         fname = fs.path(self.board.path,"port","config","vmsym.def")
-        lines = fs.readlines(fname)
-        for txt in lines:
-            m = re.match('\s*(SYM|VAR)\((.*)\)',txt)
-            if m and m.group(2):
-                self.vmsym.append(m.group(2))
+        if not fs.exists(fname):
+            for dname in fs.glob(fs.path(self.board.path,"port","config","symbols"),"*.def"):
+                fnames.append(dname)
+        else:
+            fnames.append(fname)
+        seen = set()
+        for fname in fnames:
+            lines = fs.readlines(fname)
+            for txt in lines:
+                m = re.match('\s*(SYM|VAR)\((.*)\)',txt)
+                if m and m.group(2):
+                    if m.group(2) in seen: continue
+                    seen.add(m.group(2))
+                    self.vmsym.append(m.group(2))
 
 
 

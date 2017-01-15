@@ -39,6 +39,13 @@ with open("docs.json","r") as ff:
 
 with open("layout.html","w") as ff:
   ff.write('{% extends "!layout.html" %}\n\n')
+  ff.write('{%- block extrahead %}\n')
+  ff.write('<link rel="shortcut icon" href="_static/favicon.ico" type="image/x-icon"/>\n')
+  ff.write('<link rel="icon" href="_static/favicon.ico" type="image/x-icon"/>\n')
+  ff.write('<link rel="icon" type="image/png" sizes="32x32" href="_static/favicon-32x32.png">\n')
+  ff.write('<link rel="icon" type="image/png" sizes="96x96" href="_static/favicon-96x96.png">\n')
+  ff.write('<link rel="icon" type="image/png" sizes="16x16" href="_static/favicon-16x16.png">\n')
+  ff.write('{% endblock %}\n')
   ff.write('{%- block footer %}\n')
   ff.write(' <script type="text/javascript">\n')
   # ff.write(' var vurl\n')

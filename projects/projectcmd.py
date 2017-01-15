@@ -11,7 +11,8 @@ The project directory must also contain a :file:`.zproject` file containing info
 The following project commands are available: 
 
 * :ref:`create <ztc-cmd-project-create>`
-* :ref:`git_init <ztc-cmd-project-git_init>`
+* :ref:`git_init <ztc-cmd-project-git_init>` and related repository management commands
+* :ref:`list <ztc-cmd-project-list>` remote projects
 * :ref:`make_doc <ztc-cmd-project-make_doc>`
 
     """
@@ -22,7 +23,7 @@ import datetime
 import json
 import sys
 import webbrowser
-
+import re
 
 def create_project_entity(path):
     if fs.exists(fs.path(path,".zproject")):
@@ -187,7 +188,8 @@ The :command:`create` can also accept the following options:
 #     else:
 #         error("no project in this path")
 
-@project.command(help="Inizialize a Git Repository.\n\n Arguments: \n\n PATH: path of the z-project.")
+
+@project.command(help="Initialize a repository.\n\n Arguments: \n\n PATH: project path.")
 @click.argument("path",type=click.Path())
 def git_init(path):
     """
@@ -196,17 +198,16 @@ def git_init(path):
 Initialize a Git Repository
 ---------------------------
 
-Projects can be stored as private remot git repositories on the Zerynth backend. In order to do so it is necessary to initialize a project as a git repository with the command: ::
+Projects can be stored as private remote git repositories on the Zerynth backend. In order to do so it is necessary to initialize a project as a git repository with the command: ::
 
     ztc project git_init path
 
-where :samp:`path' is the project directory.
+where :samp:`path` is the project directory.
 
 If the project is not already registered in the backend, the remote creation is performed first and a bare remote repository is setup. 
 Subsequently, if the project directory already contains a git repository, such repository is configured by adding a new remote called :samp:`zerynth`. Otherwise a fresh git repository is initialized.
 
 Zerynth remote repositories require authentication by basic HTTP authentication mechanism. The HTTPS url of the git repository is modified by adding the user token as username and :samp:`x-oath-basic` as password. If the token expires or is invalidated, the :command:`git_init` command can be repeated to update the remote with a fresh token.
-
 
     """
     import pygit2
@@ -217,41 +218,213 @@ Zerynth remote repositories require authentication by basic HTTP authentication 
         fatal("No project at",path)
     else:
         proj_contents = fs.get_json(fs.path(path,".zproject"))
-        info("Project",proj_contents["title"]," with uid:", proj_contents["uid"])
         try:
-            res = zpost(url=env.api.project+proj_contents["uid"]+"/git", data={})
+            res = zpost(url=env.api.project+"/"+proj_contents["uid"]+"/git", data={})
             if res.json()["status"] == "success":
                 proj_contents.update({"git_url": res.json()["data"]["git_url"]})
                 fs.set_json(proj_contents,fs.path(path,".zproject"))
-                info("Project",proj_contents["title"]," linked to git url:", proj_contents["git_url"])
             elif res.json()["code"] == 400:
-                warning("git repository already exists")
+                warning("Project repository already exists")
             else:
-                error("Can't create git remote repository")
-                return
+                fatal("Can't create git remote repository:",res.json()["message"])
             zgit = proj_contents["git_url"]
-            zgit = zgit.replace("local://",env.git_url)
+            zgit = zgit.replace("local://",env.git_url+"/")
+            info("Project repository created at",zgit)
+            token = get_token(True)
+            if not token:
+                fatal("Invalid token!")
+            authgit = zgit.replace("http://","http://"+token+":x-oauth-basic@")
             try:
-                repo_path = pygit2.discover_repository(path)
-                repo = pygit2.Repository(repo_path)
-                repo.create_remote("zerynth", "http://"+env.token+":x-oauth-basic@"+zgit)
-            except KeyError:
-                pygit2.init_repository(path)
-                repo_path = pygit2.discover_repository(path)
-                repo = pygit2.Repository(path)
-                repo.create_remote("zerynth", "http://"+env.token+":x-oauth-basic@"+zgit)
+                repo = git.get_repo(path,no_fatal=True)
+            except:
+                git.git_init(path)
+                repo = git.get_repo(path,no_fatal=True)
+            git.create_remote(path,"zerynth",authgit)
         except Exception as e:
-            warning("Can't create git repository", e)
+            fatal("Can't create git repository:", e)
+
+@project.command(help="Show repository status.\n\n Arguments: \n\n PATH: project path.")
+@click.argument("path",type=click.Path())
+@click.option("--remote",default="zerynth",help="select remote, default is zerynth")
+def git_status(path,remote):
+    """
+.. _ztc-cmd-project-git_status:
+
+Check repository status
+-----------------------
+
+The command: ::
+
+    ztc project git_status path
+
+Returns information about the current status of the repository at :samp:`path`. In particular the current branch and tag, together with the list of modified files not yet committed. 
+It also returns the status of the repository HEAD with respect to the selected remote. The default remote is :samp:`zerynth` and can be changed with the option :option:`--remote`.
+
+    """
+    res = git.git_status(path,remote)
+    if env.human:
+        log("Remote:",remote)
+        log("Status:",res["status"])
+        log("Branch:",res["branch"])
+        log(" Files:",len(res["changes"]))
+        for k,v in res["changes"].items():
+            log("        "+k)
+    else:
+        log_json(res)
 
 
-# @project.command("import") 
-# def prj_import():
-#     pass
+@project.command(help="Fetch repository.\n\n Arguments: \n\n PATH: project path.")
+@click.argument("path",type=click.Path())
+@click.option("--remote",default="zerynth",help="select remote, default is zerynth")
+def git_fetch(path,remote):
+    """
+.. _ztc-cmd-project-git_fetch:
+
+Fetch repository
+----------------
+
+The command: ::
+
+    ztc project git_fetch path
+
+is equivalent to the :samp:`git fetch` command executed at :samp:`path'. The default remote is :samp:`zerynth` and can be changed with the option :option:`--remote`.
+
+    """
+    git.git_fetch(path,remote)
+            
+@project.command(help="Commit changes.\n\n Arguments: \n\n PATH: project path.")
+@click.argument("path",type=click.Path())
+@click.option("-m","--msg",default="commit",help="set commit message")
+def git_commit(path,msg):
+    """
+.. _ztc-cmd-project-git_commit:
+
+Commit
+------
+
+The command: ::
+
+    ztc project git_commit path -m message
+
+is equivalent to the command sequence :samp:`git add .` and :samp:`git commit -m "message"` executed at :samp:`path`.
+
+    """
+    git.git_commit(path,msg)
+
+@project.command(help="Push changes.\n\n Arguments: \n\n PATH: project path.")
+@click.argument("path",type=click.Path())
+@click.option("--remote",default="zerynth",help="select remote, default is zerynth")
+def git_push(path,remote):
+    """
+.. _ztc-cmd-project-git_push:
+
+Push to remote
+--------------
+
+The command: ::
+
+    ztc project git_push path --remote remote
+
+is equivalent to the command :samp:`git push origin remote` executed at :samp:`path`.
+
+    """
+    git.git_push(path,remote)
+
+@project.command(help="Pull changes from remote.\n\n Arguments: \n\n PATH: project path.")
+@click.argument("path",type=click.Path())
+@click.option("--remote",default="zerynth",help="select remote, default is zerynth")
+def git_pull(path,remote):
+    """
+.. _ztc-cmd-project-git_pull:
+
+Pull from remote
+----------------
+
+The command: ::
+
+    ztc project git_pull path --remote remote
+
+is equivalent to the command :samp:`git pull` executed at :samp:`path` for remote :samp:`remote`.
+
+    """
+    git.git_pull(path,remote)
+
+@project.command(help="Create a new branch or switch to existing branch.\n\n Arguments: \n\n PATH: project path \n BRANCH: branch name.")
+@click.argument("path",type=click.Path())
+@click.argument("branch")
+@click.option("--remote",default="zerynth",help="select remote, default is zerynth")
+def git_branch(path,branch,remote):
+    """
+.. _ztc-cmd-project-git_branch:
+
+Switch/Create branch
+--------------------
+
+The command: ::
+
+    ztc project git_branch path branch  --remote remote
+
+behave differently if the :samp:`branch` already exists locally. In this case the command checks out the branch. If :samp:`branch` does not exist, it is created locally and pushed to the :samp:`remote`.
+
+    """
+    git.git_branch(path,branch,remote)
+
+@project.command(help="Clone a project repository.\n\n Arguments: \n\n PROJECT: project uid\nPATH: project path")
+@click.argument("project")
+@click.argument("path",type=click.Path())
+def git_clone(project,path):
+    """
+.. _ztc-cmd-project-git_clone:
+
+Clone a project
+---------------
+
+The command: ::
+
+    ztc project git_clone project path
+
+retrieves a project repository saved to the Zerynth backend and clones it to :samp:`path`. The parameter :samp:`project` is the project uid assigned dring project creation. It can be retrieved with the :ref:`list command <ztc-project-list>`.
+
+    """
+
+    git.git_clone(project,path)
 
 
-# @project.command()
-# def clone():
-#     pass
+
+@project.command("list", help="List remote projects")
+@click.option("--from","_from",default=0,help="skip the first n remote projects")
+def __list(_from):
+    """
+.. _ztc-cmd-project-list:
+
+List remote projects
+--------------------
+
+The command: ::
+
+    ztc project list
+
+retrieves the list of projects saved to the Zerynth backend. Each project is identified by an :samp:`uid`.
+The max number of results is 50, the option :samp:`--from n` can be used to specify the starting index of the list to be retrieved.
+
+    """
+    table=[]
+    try:
+        prms = {"from":_from}
+        res = zget(url=env.api.project,params=prms)
+        rj = res.json()
+        if rj["status"]=="success":
+            if env.human:
+                for k in rj["data"]["list"]:
+                    table.append([_from,k["uid"],k["title"],k["last_modification"],k["git_pointer"],k["published"]])
+                    _from += 1
+                log_table(table,headers=["UID","Title","Modified","Git","Published"])
+            else:
+                log_json(rj["data"])
+        else:
+            critical("Can't get project list",rj["message"])
+    except Exception as e:
+        critical("Can't get project list",exc=e)
 
 @project.command(help="Build project documentation.\n\n Arguments: \n\n PATH: project path.")
 @click.argument("path",type=click.Path())
@@ -335,11 +508,13 @@ By default the documentation is generated in a temporary directory, but it can a
     if not code:
         fs.rm_file(fs.path(docpath,"conf.py"))
         fs.rm_file(fs.path(docpath,"layout.html"))
-        fs.copyfile(fs.path(fs.dirname(__file__),"zerynth.css"),fs.path(htmlpath,"_static","zerynth.css"))
+        for ff in ["zerynth.css","favicon.ico","favicon-16x16.png","favicon-32x32.png","favicon-96x96.png"]:
+            fs.copyfile(fs.path(fs.dirname(__file__),ff),fs.path(htmlpath,"_static",ff))
         info("Docs built at",htmlpath)
         if __open:
             webbrowser.open("file://"+fs.path(htmlpath,"index.html"))
     else:
         error("Can't build docs!")
+
 
 

@@ -59,6 +59,26 @@ All commands can produce tagged and untagged messages. Tagged messages are prefi
 Untagged messages are not colored and not prefixed. The result of a command  generally consists of one or more untagged messages. If the :option:`-J` option is given without :option:`--pretty`, almost every command output is a single untagged line.
 
 
+Directories
+-----------
 
+The ZTC is organized on disk in a set of directories stored under :file:`~/zerynth2` for Linux and Mac or under :file:`C:\Users\username\zerynth2` for Windows. The following directory tree is created: ::
+
+    zerynth2
+    |
+    |--cfg    # configuration files, device database, clone of online package database
+    |
+    |--sys    # system packages, platform dependent
+    |
+    |--vms    # virtual machines storage
+    |
+    \--dist   # all installed ZTC versions
+        |
+        |--r2.0.0  # ZTC version r2.0.0
+        |--r2.0.1  # ZTC version r2.0.1
+        |
+        .
+        .
+Every successful ZTC installation or update is kept in a separate directory (:samp:`dist/version`) so that in case of corrupted installation, the previous working ZTC can be used.
 
     

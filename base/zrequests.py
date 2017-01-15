@@ -111,3 +111,14 @@ def get_token(continue_if_none=False):
     else:
         fn("No authorization token! Please run 'ztc login' to get one")
     return token
+
+
+def get_token_data():
+    token = get_token(True)
+    if not token:
+        return None
+    tks = token.split(".")
+    data = tks[1]
+    data = decode_base64(data).decode("utf-8")
+    data = json.loads(data)
+    return data

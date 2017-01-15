@@ -41,16 +41,24 @@ import click
 @click.option("--output","-o",default=False,help="output file path")
 @click.option("--include","-I",default=[],multiple=True,help="additional include path (multi-value option)")
 @click.option("--define","-D",default=[],multiple=True,help="additional C macro definition (multi-value option)")
-def compile(project,target,output,include,define):
+@click.option("--imports","-m",flag_value=True,default=False,help="only generate the list of imported modules")
+def compile(project,target,output,include,define,imports):
+    if project.endswith(".py"):
+        mainfile=project
+        project=fs.dirname(project)
+    else:
+        mainfile = fs.path(project,"main.py")
     try:
         prj = fs.get_json(fs.path(project,".zproject"))
     except:
         fatal("Can't open project at",project)
     #TODO: check target is valid
-    mainfile = fs.path(project,"main.py")
     compiler = Compiler(mainfile,target,include,define)
     try:
-        binary, reprs = compiler.compile()
+        if not imports:
+            binary, reprs = compiler.compile()
+        else:
+            modules, notfound = compiler.find_imports()
     except CModuleNotFound as e:
         fatal("Can't find module","["+e.module+"]","imported by","["+e.filename+"]","at line",e.line)
     except CNativeNotFound as e:
@@ -71,19 +79,29 @@ def compile(project,target,output,include,define):
         fatal("Unsupported feature","["+e.feature+"]","in","["+e.filename+"]","at line",e.line)
     except Exception as e:
         critical("Unexpected exception",exc=e)
-    if not output:
-        output=fs.path(project,"main.vbo")
-    else:
-        if fs.is_dir(output):
-            output=fs.path(output,"main.vbo")
+
+    if not imports:
+        if not output:
+            output=fs.path(project,"main.vbo")
         else:
-            if not output.endswith(".vbo"):
-                output=output+".vbo"
-    info("Saving to",output)
-    binary["repr"]=[rep.toDict() for rep in reprs]
-    binary["project"]=project
-    fs.set_json(binary,output)
-    info("Compilation Ok")
+            if fs.is_dir(output):
+                output=fs.path(output,"main.vbo")
+            else:
+                if not output.endswith(".vbo"):
+                    output=output+".vbo"
+        info("Saving to",output)
+        binary["repr"]=[rep.toDict() for rep in reprs]
+        binary["project"]=project
+        fs.set_json(binary,output)
+        info("Compilation Ok")
+    else:
+        if env.human:
+            table = []
+            for k,v in modules.items():
+                table.append([k,v])
+            log_table(table,headers=["File","Module"])
+        else:
+            log_json([modules,list(notfound)])
 
 
 

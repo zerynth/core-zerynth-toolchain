@@ -6,7 +6,7 @@ import json
 import base64
 import os
 
-__all__=['env','Var']
+__all__=['env','Var','decode_base64']
 
 class Var():
     def __init__(self, _dict={},recursive=True):

@@ -8,6 +8,13 @@ from compiler.env import MiniTable
 import struct
 
 
+def _tohex(bb):
+    res = ""
+    c="0123456789ABCDEF"
+    for b in bb:
+        res=res+"\\x"+c[(b>>4)&0xf]+c[b&0xf]
+    return res
+
 
 
 class CodeObj():
@@ -715,7 +722,7 @@ class CodeReprElement():
             "prgline":self.prgline,
             "opcode":self.opcode,
             "prm":self.prm.toDict() if self.prm else None,
-            "val":self.val,
+            "val":self.val if not isinstance(self.val,bytes) else _tohex(self.val),
             "pline":self.pline
         }
 
@@ -769,7 +776,7 @@ class CodeRepr():
         return {
             "src":self.filename,
             "lines":{-1 if k is None else k:v for k,v in self.prglines.items()},
-            "consts": self.consts,
+            "consts": [x if not isinstance(x,bytes) else _tohex(x) for x in self.consts],
             "stacksize":self.stacksize,
             "bcodesize":self.bcodesize,
             "args":self.args,

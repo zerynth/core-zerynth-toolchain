@@ -1,5 +1,14 @@
 @import url("css/theme.css");
 
+body {
+    background:#fff !important;
+}
+
+.wy-body-for-nav,
+.wy-nav-content {
+    background:#fff !important;
+}
+
 .wy-nav-content-wrap a {
     color: #468c8c !important;
 }

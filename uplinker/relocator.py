@@ -40,12 +40,17 @@ class Relocator():
             ofile = fs.path(tmpdir,"zerynth.rlo")
             lfile = fs.path(tmpdir,"zerynth.lo")
             fs.write_file(cobj,ofile)
+            if len(_symbols)!=len(self.vmsym): fatal("Symbols mismatch!")
             symreloc = {self.vmsym[x]:_symbols[x] for x in range(0,len(_symbols))}
             symreloc.update({"_start":0,".data":_memstart,".text":_textstart})
             ret,output = cc.link([ofile],symreloc,reloc=False,ofile=lfile)
             if ret!=0:
                 #logger.info("Relocation: %s",output)
-                fatal("Relocation error")
+                undf = output.count("undefined reference")
+                if undf > 0:
+                    fatal("There are",undf,"missing symbols! This VM does not support the requested features!")
+                else:
+                    fatal("Relocation error",output)
             #backup copy for debug
             
             #logger.info("UpLinking almost done...")

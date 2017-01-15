@@ -113,7 +113,7 @@ class Channel():
 
 
     def set_timeout(self,timeout):
-        pass
+        self.ch.timeout=timeout
 
     def write(self,data):
         if isinstance(data,str):
@@ -122,6 +122,12 @@ class Channel():
 
     def read(self,n=1):
         return self.ch.read(n)
+
+    def setDTR(self,val):
+        self.ch.setDTR(True if val else False)
+
+    def setRTS(self,val):
+        self.ch.setRTS(True if val else False)
 
     def readline(self):
         return self.ch.readline().decode("ascii","ignore")

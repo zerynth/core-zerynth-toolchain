@@ -243,7 +243,10 @@ The result of a correct registration is a device with the registration firmware 
 
     # burn register.vm
     info("Starting device registration")
-    res,out = tgt.burn(bytearray(base64.standard_b64decode(reg["bin"])),info)
+    if isinstance(reg["bin"],str):
+        res,out = tgt.burn(bytearray(base64.standard_b64decode(reg["bin"])),info)
+    else:
+        res,out = tgt.burn([ base64.standard_b64decode(x) for x in reg["bin"]],info)
     
     if not res:
         fatal("Can't burn bootloader!")
@@ -352,11 +355,14 @@ The virtualization process is automated, no user interaction is required.
             fatal("VM",vmuid,"does not exist")
     vm = fs.get_json(vms[vmuid])
     info("Starting Virtualization...")
-    res,out = tgt.burn(bytearray(base64.standard_b64decode(vm["bin"])),info)
-    if not res:
-        fatal("Error in virtualization")
+    if isinstance(vm["bin"],str):
+        res,out = tgt.burn(bytearray(base64.standard_b64decode(vm["bin"])),info)
     else:
-        info("Virtualization ok")
+        res,out = tgt.burn([ base64.standard_b64decode(x) for x in vm["bin"]],info)
+    if not res:
+        fatal("Error in virtualization",out)
+    else:
+        info("Virtualization:", out)
 
 
 

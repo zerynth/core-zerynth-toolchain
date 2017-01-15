@@ -72,7 +72,7 @@ the user profile is retrieved and displayed. The user profile consists of the fo
 
 * Generic Info
 
-    * Display Name (non mutable)
+    * Username (non mutable)
     * Email (non mutable)
     * Name
     * Surname
@@ -80,6 +80,7 @@ the user profile is retrieved and displayed. The user profile consists of the fo
     * Country
     * Job
     * Company
+    * Website
 
 * Subscription Info
 
@@ -106,5 +107,6 @@ where :samp:`options` is a list of one or more of the following options:
 * :option:`--country country` update the Country field
 * :option:`--job job` update the Job field
 * :option:`--company company` update the Company field
+* :option:`--website website` update the Website field
 
     

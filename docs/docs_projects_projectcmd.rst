@@ -10,7 +10,8 @@ The project directory must also contain a :file:`.zproject` file containing info
 The following project commands are available: 
 
 * :ref:`create <ztc-cmd-project-create>`
-* :ref:`git_init <ztc-cmd-project-git_init>`
+* :ref:`git_init <ztc-cmd-project-git_init>` and related repository management commands
+* :ref:`list <ztc-cmd-project-list>` remote projects
 * :ref:`make_doc <ztc-cmd-project-make_doc>`
 
     
@@ -45,17 +46,114 @@ The :command:`create` can also accept the following options:
 Initialize a Git Repository
 ---------------------------
 
-Projects can be stored as private remot git repositories on the Zerynth backend. In order to do so it is necessary to initialize a project as a git repository with the command: ::
+Projects can be stored as private remote git repositories on the Zerynth backend. In order to do so it is necessary to initialize a project as a git repository with the command: ::
 
     ztc project git_init path
 
-where :samp:`path' is the project directory.
+where :samp:`path` is the project directory.
 
 If the project is not already registered in the backend, the remote creation is performed first and a bare remote repository is setup. 
 Subsequently, if the project directory already contains a git repository, such repository is configured by adding a new remote called :samp:`zerynth`. Otherwise a fresh git repository is initialized.
 
 Zerynth remote repositories require authentication by basic HTTP authentication mechanism. The HTTPS url of the git repository is modified by adding the user token as username and :samp:`x-oath-basic` as password. If the token expires or is invalidated, the :command:`git_init` command can be repeated to update the remote with a fresh token.
 
+    
+.. _ztc-cmd-project-git_status:
+
+Check repository status
+-----------------------
+
+The command: ::
+
+    ztc project git_status path
+
+Returns information about the current status of the repository at :samp:`path`. In particular the current branch and tag, together with the list of modified files not yet committed. 
+It also returns the status of the repository HEAD with respect to the selected remote. The default remote is :samp:`zerynth` and can be changed with the option :option:`--remote`.
+
+    
+.. _ztc-cmd-project-git_fetch:
+
+Fetch repository
+----------------
+
+The command: ::
+
+    ztc project git_fetch path
+
+is equivalent to the :samp:`git fetch` command executed at :samp:`path'. The default remote is :samp:`zerynth` and can be changed with the option :option:`--remote`.
+
+    
+.. _ztc-cmd-project-git_commit:
+
+Commit
+------
+
+The command: ::
+
+    ztc project git_commit path -m message
+
+is equivalent to the command sequence :samp:`git add .` and :samp:`git commit -m "message"` executed at :samp:`path`.
+
+    
+.. _ztc-cmd-project-git_push:
+
+Push to remote
+--------------
+
+The command: ::
+
+    ztc project git_push path --remote remote
+
+is equivalent to the command :samp:`git push origin remote` executed at :samp:`path`.
+
+    
+.. _ztc-cmd-project-git_pull:
+
+Pull from remote
+----------------
+
+The command: ::
+
+    ztc project git_pull path --remote remote
+
+is equivalent to the command :samp:`git pull` executed at :samp:`path` for remote :samp:`remote`.
+
+    
+.. _ztc-cmd-project-git_branch:
+
+Switch/Create branch
+--------------------
+
+The command: ::
+
+    ztc project git_branch path branch  --remote remote
+
+behave differently if the :samp:`branch` already exists locally. In this case the command checks out the branch. If :samp:`branch` does not exist, it is created locally and pushed to the :samp:`remote`.
+
+    
+.. _ztc-cmd-project-git_clone:
+
+Clone a project
+---------------
+
+The command: ::
+
+    ztc project git_clone project path
+
+retrieves a project repository saved to the Zerynth backend and clones it to :samp:`path`. The parameter :samp:`project` is the project uid assigned dring project creation. It can be retrieved with the :ref:`list command <ztc-project-list>`.
+
+    
+.. _ztc-cmd-project-list:
+
+List remote projects
+--------------------
+
+The command: ::
+
+    ztc project list
+
+retrieves the list of projects saved to the Zerynth backend. Each project is identified by an :samp:`uid`.
+The max number of results is 50, the option :samp:`--from n` can be used to specify the starting index of the list to be retrieved.
 
     
 .. _ztc-cmd-project-make_doc:

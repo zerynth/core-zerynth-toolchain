@@ -122,7 +122,7 @@ class Tools():
     def get_examples(self):
         exs = {}
         exr = []
-        srcs = [fs.path(env.stdlib,"examples")]
+        srcs = [(fs.path(env.stdlib,"examples"),"core.zerynth.stdlib")]
         repos = fs.dirs(env.libs)
         if "official" in repos: #put official on top
             repos.remove("official")
@@ -132,10 +132,12 @@ class Tools():
             for nm in nms:
                 libs = fs.dirs(nm)
                 for lib in libs:
-                    srcs.append(fs.path(lib,"examples"))
-        for exlib in srcs:
+                    srcs.append((fs.path(lib,"examples"),"lib."+fs.basename(nm)+"."+fs.basename(lib)))
+        for exlib,lib in srcs:
             if fs.exists(exlib):
                 ee = self._get_examples(exlib)
+                for eee in ee:
+                    eee["lib"]=lib
                 exr.extend(ee)
         return exr
 

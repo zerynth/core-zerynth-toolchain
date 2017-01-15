@@ -167,9 +167,9 @@ Additional options can be provided to filter the returned virtual machine set:
         if rj["status"]=="success":
             if env.human:
                 for k in rj["data"]["list"]:
-                    table.append([_from,k["uid"],k["name"],k["core_dep"],k["versions"],k["dev_type"],k["rtos"],k["features"]])
+                    table.append([_from,k["uid"],k["name"],k["core_dep"],k["version"],k["dev_type"],k["rtos"],k["features"]])
                     _from += 1
-                log_table(table,headers=["Number","UID","Name","Core Dep","Versions","Dev Type","Rtos","Features"])
+                log_table(table,headers=["Number","UID","Name","Core Dep","Version","Dev Type","Rtos","Features"])
             else:
                 log_json(rj["data"])                
         else:

@@ -101,7 +101,7 @@ class AstPreprocessor(ast.NodeTransformer):
             if not isinstance(node.args[0],ast.Str):
                 raise CWrongSyntax(node.lineno,node.col_offset,self.filename,"__cfile needs a string as first argument")
             #print("__cfile: ", os.path.join(self.curpath,node.args[0].s))
-            self.cfiles.add(os.path.join(self.curpath,node.args[0].s))
+            self.cfiles.add(fs.path(self.curpath,node.args[0].s))
             return None
         else:
             return self.generic_visit(node)

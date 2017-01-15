@@ -127,7 +127,11 @@ displays information about the package identified by :samp:`fullname`.
     """
     pack = _zpm.get_pack(fullname)
     if not pack:
-        fatal("No such package:",fullname)
+        if env.human:
+            fatal("No such package:",fullname)
+        else:
+            log_json({})
+            return
     if env.human:
         table = [
             ["fullname",pack.fullname],
@@ -281,8 +285,7 @@ The command accepts the option :option:`--types typelist` where :samp:`typelist`
 @package.command(help="Publish a package. \n\n Arguments: \n\n PATH: project path. \n\n VERSION: version to be published.")
 @click.argument("path",type=click.Path())
 @click.argument("version")
-@click.option("--git", default=False)
-def publish(path, version, git):
+def publish(path, version):
     """
 .. _ztc-cmd-package-publish:
 
@@ -293,10 +296,12 @@ Not documented yet.
 
 
     """
-    ####TODO check here if version is in correct ZpmVersion format??
-    if fs.exists(fs.path(path,"package.json")):
+    info("Checking...")
+    projfile = fs.path(path,".zproject")
+    packfile = fs.path(path,"package.json")
+    if fs.exists(packfile):
         try:
-            pack_contents = fs.get_json(fs.path(path,"package.json"))
+            pack_contents = fs.get_json(packfile)
         except:
             fatal("bad json in package.json")
     else:
@@ -310,22 +315,42 @@ Not documented yet.
     pack_contents = {k:v for k,v in pack_contents.items() if k in (needed_fields | valid_fields) or k=="git_url"}
 
     # check git url
-    if git:
-        if "git_pointer" in pack_contents:
-            pass
-        else:
-            pack_contents["git_pointer"] = git
-    elif fs.exists(fs.path(path,".zproject")):
-        proj_contents = fs.get_json(fs.path(path,".zproject"))
+    if "git_pointer" in pack_contents:
+        # git_pointer is already in packge.json
+        pass
+    elif fs.exists(projfile):
+        # git_pointer not in package.json
+        # try taking it from .zproject
+        proj_contents = fs.get_json(projfile)
         if "git_url" in proj_contents:
             pack_contents["git_pointer"] = proj_contents["git_url"]
             info("Creating package from project", proj_contents["title"])
         else:
-            fatal("project must be a git repository")
-    # start publishing
-    pack_contents["version"]=version
-    fs.set_json(pack_contents,fs.path(path,"package.json"))
+            fatal("Project must be saved remotely! Create git repository first...")
+    else:
+        fatal("Project must be saved remotely! Create git repository first...")
     
+    # start publishing
+    info("Preparing git repository...")
+    pack_contents["version"]=version
+    fs.set_json(pack_contents,packfile)
+
+    # manage git repository for project
+    try:
+        repo = git.get_repo(path)
+        status = git.git_status(path,"zerynth")
+        if version in status["tags"]:
+            fatal("Version",version,"already published")
+        git.git_commit(path,"Version "+version)
+        git.git_push(path,"zerynth")
+        tag = git.git_tag(path,version)
+        git.git_push(path,"zerynth",tag)
+    except Exception as e:
+        fatal("Failed attempt at publishing:",e)
+
+
+    info("Queuing library for review...")
+    ### create remotely
     try:
         res = zpost(url=env.api.packages, data=pack_contents)
         rj = res.json()
@@ -338,38 +363,7 @@ Not documented yet.
     except Exception as e:
         fatal("Can't create package", e)
 
-    import pygit2
-    # manage git repository for project
-    # try:
-    #     #####TODO check signature configuration of pygit2
-    #     repo_path = pygit2.discover_repository(path)
-    #     repo = pygit2.Repository(repo_path)
-    #     regex = re.compile('^refs/tags')
-    #     tags = filter(lambda r: regex.match(r), repo.listall_references())
-    #     tags = [x.replace("refs/tags/","") for x in tags]
-    #     if version in tags:
-    #         fatal("Version",version,"already present in repo tags",tags)
-    #     index = repo.index
-    #     index.add_all()
-    #     tree = repo.index.write_tree()
-    #     commit = repo.create_commit("HEAD", repo.default_signature, repo.default_signature, "version: "+version, tree, [repo.head.target])
-    #     #print(commit)
-    #     cc = repo.revparse_single("HEAD")
-    #     remote = "zerynth" if not git else "origin"
-    #     credentials = None if (not username and not password) else pygit2.RemoteCallbacks(pygit2.UserPass(username,password))
-    #     repo.remotes[remote].push(['refs/heads/master'],credentials)
-
-    #     try:
-    #         tag = repo.create_tag(version, cc.hex, pygit2.GIT_OBJ_COMMIT, cc.author, cc.message)
-    #         #print(tag)
-    #         repo.remotes[remote].push(['refs/tags/'+version],credentials)
-    #         info("Updated repository with new tag:",version,"for", pack_contents["fullname"])
-    #     except Exception as e:
-    #         critical("Can't create package", exc=e)
-    # except KeyError:
-    #     fatal("no git repositories in this path")
-
-    ###prepare data to load the new version
+    ### prepare data to load the new version
     details = {
         "dependencies": pack_contents["dependencies"],
         "whatsnew": pack_contents["whatsnew"]
@@ -380,9 +374,21 @@ Not documented yet.
         if rj["status"] == "success":
             info("version",version,"of package",pack_contents["fullname"],"queued for review")
         else:
-            error("Can't publish package",rj["message"])
+            error("Can't publish:",rj["message"])
     except Exception as e:
-        critical("Can't publish package", exc=e)
+        fatal("Can't publish:", e)
+
+    ### updating .zproject
+    if fs.exists(projfile):
+        proj_contents = fs.get_json(projfile)
+        proj_contents["git_url"] = pack_contents["git_pointer"]
+        proj_contents["package"] = {
+            "fullname":pack_contents["fullname"],
+            "version":pack_contents["version"],
+            "repo":pack_contents["repo"]
+        }
+        fs.set_json(proj_contents,projfile)
+    info("Ok")
 
 #TODO: improve
 def download_callback(cursize,prevsize,totsize):
