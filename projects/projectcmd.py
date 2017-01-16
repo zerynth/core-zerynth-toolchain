@@ -233,7 +233,7 @@ Zerynth remote repositories require authentication by basic HTTP authentication 
             token = get_token(True)
             if not token:
                 fatal("Invalid token!")
-            authgit = zgit.replace("http://","http://"+token+":x-oauth-basic@")
+            authgit = zgit.replace("https://","https://"+token+":x-oauth-basic@")
             try:
                 repo = git.get_repo(path,no_fatal=True)
             except:
