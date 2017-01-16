@@ -308,7 +308,7 @@ Not documented yet.
         fatal("missing package.json")
 
     needed_fields = set(["title","description","fullname","keywords","whatsnew","dependencies","repo"])
-    valid_fields = set(["exclude","dont-pack","sys","examples","platform","targetdir","tool"])
+    valid_fields = set(["exclude","dont-pack","sys","examples","platform","targetdir","tool","git_pointer"])
     given_fields = set(pack_contents.keys())
     if not (needed_fields <= given_fields):
         fatal("missing some needed fields in package.json:",needed_fields-given_fields)
@@ -336,17 +336,17 @@ Not documented yet.
     fs.set_json(pack_contents,packfile)
 
     # manage git repository for project
-    try:
-        repo = git.get_repo(path)
-        status = git.git_status(path,"zerynth")
-        if version in status["tags"]:
-            fatal("Version",version,"already published")
-        git.git_commit(path,"Version "+version)
-        git.git_push(path,"zerynth")
-        tag = git.git_tag(path,version)
-        git.git_push(path,"zerynth",tag)
-    except Exception as e:
-        fatal("Failed attempt at publishing:",e)
+    if not pack_contents["git_pointer"].startswith("zerynth://"):
+        try:
+            repo = git.get_repo(path)
+            status = git.git_status(path,"zerynth")
+            if version not in status["tags"]:
+                git.git_commit(path,"Version "+version)
+                tag = git.git_tag(path,version)
+            git.git_push(path,"zerynth")
+            git.git_push(path,"zerynth",tag)
+        except Exception as e:
+            fatal("Failed attempt at publishing:",e)
 
 
     info("Queuing library for review...")

@@ -20,7 +20,7 @@ class MacUsb():
 
 	def find_mount_point(self,disk):
 		try:
-			code,out,_ = proc.run("diskutil info "+disk)
+			code,out,_ = proc.run("/usr/sbin/diskutil info "+disk)
 			lines = out.split("\n")
 			for line in lines:
 				if "Mount Point:" in line:
@@ -41,8 +41,8 @@ class MacUsb():
 
 	def list_usb_plane(self):
 		code,text,_ = proc.run("/usr/sbin/ioreg","-p", "IOUSB")
-		if text==self.text:
-			return None
+		#if text==self.text:
+		#	return None
 		self.text = text
 		self.usb_plane= self.parse_usb_plane(self.text)
 		return self.usb_plane
@@ -75,9 +75,9 @@ class MacUsb():
 
 	def parse(self):
 		res = self.list_usb_plane()
-		if not res:
+		#if not res:
 			# no change to usb_plane
-			return self.nodes
+			#return self.nodes
 		self.nodes = []
 		for usbid in self.usb_plane:
 			node = self.get_node_info(usbid)
