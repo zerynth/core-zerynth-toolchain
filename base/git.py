@@ -1,11 +1,26 @@
 from .zrequests import *
 import re
+import pygit2
+
+
+# hack for pygit2 gc issue on __del__ remote
+# TODO: investigate better
+pygit2_remote_del = pygit2.Remote.__del__
+
+def pygit2_newremote_del(self):
+    try:
+        pygit2_remote_del(self)
+    except Exception as e:
+        pass
+
+pygit2.Remote.__del__ = pygit2_newremote_del
+# end of hack
 
 __all__=['git']
 
 class Git():
-    def __init__(self):
-        import pygit2
+    push_error = False
+    def __init__(self):        
         self.GIT_BRANCH_LOCAL               = pygit2.GIT_BRANCH_LOCAL
         self.GIT_BRANCH_REMOTE              = pygit2.GIT_BRANCH_REMOTE
         self.GIT_MERGE_ANALYSIS_UP_TO_DATE  = pygit2.GIT_MERGE_ANALYSIS_UP_TO_DATE
@@ -14,7 +29,6 @@ class Git():
         self.GIT_OBJ_COMMIT                 = pygit2.GIT_OBJ_COMMIT
 
     def get_repo(self, path, no_fatal=False):
-        import pygit2
         try:
             repo_path = pygit2.discover_repository(path)
             repo = pygit2.Repository(repo_path)
@@ -56,26 +70,28 @@ class Git():
             
 
     def git_push(self,path,remote,refspec=None):
-        import pygit2
         repo = self.get_repo(path)
         r = self.get_remote(repo,remote)
+        Git.push_error = False
 
         class PushCallback(pygit2.RemoteCallbacks):
             @staticmethod
             def push_update_reference(refname,message):
                 if message:
-                    fatal("Push attempt refused:",message)
+                    Git.push_error="Backend refused to accept this push! ("+message+")"
 
         info("Pushing changes to remote repository...")
         try:
             ref = [repo.head.name] if refspec is None else [refspec.name]
             r.push(ref,PushCallback())
+            if Git.push_error: raise Exception(Git.push_error)
         except pygit2.GitError as e:
+            fatal(str(e))
+        except Exception as e:
             fatal(str(e))
         info("Ok")
 
     def git_pull(self,path,remote):
-        import pygit2
         repo = self.get_repo(path)
         r = self.get_remote(repo,remote)
         info("Fetching remote...")
@@ -118,7 +134,6 @@ class Git():
         info("Ok")
 
     def git_branch(self,path,branch,remote):
-        import pygit2
         repo = self.get_repo(path)
         r = self.get_remote(repo,remote)
         for b in repo.listall_branches(self.GIT_BRANCH_LOCAL):
@@ -138,7 +153,6 @@ class Git():
             bb.upstream=repo.lookup_branch(remote+"/"+branch, self.GIT_BRANCH_REMOTE)
 
     def git_status(self,path,remote):
-        import pygit2
         repo = self.get_repo(path)
         st = repo.status()
         res = {
@@ -213,7 +227,6 @@ class Git():
         info("Ok")
 
     def git_commit(self,path,msg):
-        import pygit2
         repo = self.get_repo(path)
         index = repo.index
         st = repo.status()
@@ -237,7 +250,6 @@ class Git():
 
 
     def git_clone(self,project,path):
-        import pygit2
         token = get_token()
         data = get_token_data()
         uid = data["uid"]
@@ -254,7 +266,6 @@ class Git():
         info("Ok")
 
     def git_init(self,path):
-        import pygit2
         pygit2.init_repository(path)
 
     def git_tag(self,path,tag):

@@ -13,7 +13,8 @@ class ZpmException(Exception):
 class ZpmVersion():
     
     def __init__(self,v=1):
-        if isinstance(v,str):
+        if isinstance(v,str) or isinstance(v,ZpmVersion):
+            v=str(v)
             if not v.startswith("r"):
                 raise ZpmException("Wrong version format!")
             self.v = v=v[1:]

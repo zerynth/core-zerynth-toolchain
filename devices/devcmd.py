@@ -271,7 +271,10 @@ The result of a correct registration is a device with the registration firmware 
     conn = ConnectionInfo()
     conn.set_serial(tgt.port,**tgt.connection)
     ch = Channel(conn)
-    ch.open(timeout=2)
+    try:
+        ch.open(timeout=2)
+    except:
+        fatal("Can't open serial port!")
     lines = []
     for x in range(10):
         line=ch.readline()
@@ -362,7 +365,7 @@ The virtualization process is automated, no user interaction is required.
     if not res:
         fatal("Error in virtualization",out)
     else:
-        info("Virtualization:", out)
+        info("Virtualization Ok")
 
 
 

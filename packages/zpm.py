@@ -485,7 +485,9 @@ class Zpm():
                             "frame": True,
                             "min_width": 800,
                             "min_height": 600
-                          }
+                          },
+                          "version":env.var.version,
+                          "user-agent":"ide/%ver/"+env.platform
                         }
             # no icon for mac, it's already in the browser
             if not env.is_mac():

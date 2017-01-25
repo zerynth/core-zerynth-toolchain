@@ -48,11 +48,11 @@ class zfs():
         return pth
 
     def get_json(self,src):
-        with open(src,"r") as ff:
+        with open(src,"r",encoding="utf8") as ff:
             return json.load(ff)
 
     def set_json(self,js,dst):
-        with open(dst,"w") as ff:
+        with open(dst,"w",encoding="utf8") as ff:
             json.dump(js,ff,indent=4,sort_keys=True)
 
     def is_dir(self,src):
@@ -106,6 +106,22 @@ class zfs():
     def tarxz(self,src,dst):
         pass
 
+    def unique_paths(self,pths):
+        pths = list(pths)
+        res = []
+        dups = set()
+        for i in range(len(pths)):
+            pi = pths[i]
+            for j in range(i+1,len(pths)):
+                if j in dups:
+                    continue # skip checked
+                pj = pths[j]
+                if pi==pj or os.path.samefile(pi,pj):
+                    dups.add(j)
+            if i not in dups:
+                res.append(pi)
+        return res
+
     def path(self,*args):
         return os.path.normpath(os.path.join(*args))
 
@@ -153,17 +169,24 @@ class zfs():
     def write_file(self,data,dst):
         if isinstance(data,str):
             d="w"
+            with open(dst,d,encoding="utf8") as ff:
+                ff.write(data)
         else:
             d="wb"
-        with open(dst,d) as ff:
-            ff.write(data)
+            with open(dst,d) as ff:
+                ff.write(data)
+        
 
     def readfile(self,path,param=""):
-        with open(path,"r"+param) as ff:
-            return ff.read()
+        if param:
+            with open(path,"r"+param) as ff:
+                return ff.read()
+        else:
+            with open(path,"r",encoding="utf8") as ff:
+                return ff.read()
 
     def readlines(self,path):
-        with open(path) as ff:
+        with open(path,encoding="utf8") as ff:
             return ff.readlines()
  
     def makedirs(self,dirs):

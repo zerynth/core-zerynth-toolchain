@@ -37,7 +37,7 @@ class Compiler():
     PREPROCESS = 0
     COMPILE = 1
 
-    def __init__(self, inputfile, target, syspath=[],cdefines={},mode=COMPILE):
+    def __init__(self, inputfile, target, syspath=[],cdefines={},mode=COMPILE,localmods={}):
         # build syspath
         self.syspath = []
         # add current mainfile dir
@@ -56,7 +56,7 @@ class Compiler():
         #for zd in fs.dirs(fs.path(env.libs,"official","zerynth")):
         #    self.syspath.append(zd)
         
-        
+        self.localmods = localmods
         self.mainfile = inputfile
         self.phase = 0
         self.env = Env()
@@ -192,7 +192,7 @@ class Compiler():
             #         raise CNativeNotFound(0,0,vblf)
             if vbl.startswith("VHAL_"):
                 self.cdefines.add(vbl)
-                print(self.board.family)
+                #print(self.board.family)
                 lookup = self.board.family[self.board.family_name]
                 if vbl in lookup["vhal"]:
                     for x in lookup["vhal"][vbl]["src"]:
@@ -220,7 +220,14 @@ class Compiler():
             return -1
 
     def searchModule(self,modname):
-        modfile = fs.path(*modname.split("."))+".py"
+        modfld = modname.split(".")
+        modfile = fs.path(*modfld)+".py"
+        # # search in localmods
+        # if modfld[0]=="local":
+        #     # local modules
+        # else if modname in self.localmods:
+        #     # local modules
+            
         # search syspath for modname
         for path in self.syspath:
             modpath = fs.path(path,modfile)
@@ -235,8 +242,7 @@ class Compiler():
     def find_imports(self):
         ## Preload builtins to get all __defines
         astp = AstPreprocessor({},{},self.prepdefines,self.prepcfiles,just_imports=True)
-        with open(self.mainfile) as ff:
-            modprg = ff.read()
+        modprg = fs.readfile(self.mainfile)
         tree = ast.parse(modprg)
         astp.visit(tree)
         res = {}
@@ -353,6 +359,7 @@ class Compiler():
         # #print("   Stripped modules:",mods_at_0-mods_at_3)
 
         self.cfiles.update(self.prepcfiles)
+        self.cfiles = fs.unique_paths(self.cfiles)
         if self.cfiles:
             info("#"*10,"STEP",self.phase,"- C code compilation")
             gccopts = dict(self.board.gccopts)
@@ -457,9 +464,7 @@ class Compiler():
                 for ss in csym-syms:
                     error(ss)
                 raise CNativeError(0,0,"","some C natives are not defined!!")
-            #TODO: use fs
-            with open(ofile,"rb") as ofilef:
-                ofilecnt = ofilef.read()
+            ofilecnt = fs.readfile(ofile,"b")
             if len(undf)>0:
                 error("The following symbols are undefined:")
                 for ss in undf:
@@ -495,8 +500,7 @@ class Compiler():
             headsize+=4
 
         for name in self.resources:
-            with open(os.path.join(self.maindir,name),"rb") as rf:
-                bin = rf.read()
+            bin = fs.readfile(fs.path(self.maindir,name),"b")
             rname = os.path.split(name)[1]
             head+=struct.pack("=I",len(rname))
             head+=struct.pack("=I",len(bin))

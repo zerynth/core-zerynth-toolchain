@@ -30,6 +30,7 @@ The :command:`uplink` may the additional :option:`--loop times` option that spec
 
 """
 from base import *
+from packages import *
 from .relocator import Relocator
 import click
 import devices
@@ -77,13 +78,14 @@ def get_device(alias,loop):
     dev = devs[hh]
     return dev
 
-def probing(ch,devtarget):
+def probing(ch,devtarget, adjust_timeouts=True):
     # PROBING
     starttime = time.perf_counter()
     probesent = False
     hcatcher = re.compile("^(r[0-9]+\.[0-9]+\.[0-9]+) ([0-9A-Za-z_\-]+) ([^ ]+) ([0-9a-fA-F]+) ZERYNTH")
     # reduce timeout
-    ch.set_timeout(0.5)
+    if adjust_timeouts: # Windows Driver for some USB serials (i.e. arduino_due) send simulated DTR (two zeros) when reconfiguring timeout -_- -_- -_-
+        ch.set_timeout(0.5)
     while time.perf_counter()-starttime<5:
         line=ch.readline()
         if not line and not probesent:
@@ -104,13 +106,20 @@ def probing(ch,devtarget):
     else:
         fatal("No answer to probe")
 
+    im = ZpmVersion(env.min_vm_dep)                             # minimum vm version compatible with current ztc
+    ik = ZpmVersion(version)                                    # vm version
+
+    if ik<im:
+        fatal("VM version [",version,"] is not compatible with this uplinker! Virtualize again with a newer VM...")
+
     if target!=devtarget:
         fatal("Wrong VM: uplinking for",devtarget,"and found",target,"instead")
     else:
         info("Found VM",vmuid,"for",target)
 
     # restore timeout
-    ch.set_timeout(2)
+    if adjust_timeouts:
+        ch.set_timeout(2)
     return version,vmuid,chuid,target
 
 
@@ -169,6 +178,8 @@ def uplink(alias,bytecode,loop):
     vm_chunk = dev.get("vm_chunk",4096)
     vm_fragmented_upload = dev.get("vm_fragmented_upload",None)
 
+    if not dev.port:
+        fatal("Device has no serial port! Check that drivers are installed correctly...")
     # open channel to dev TODO: sockets
     conn = ConnectionInfo()
     conn.set_serial(dev.port,**dev.connection)
@@ -179,7 +190,7 @@ def uplink(alias,bytecode,loop):
         fatal("Can't open serial:",dev.port)
 
     try:
-        version,vmuid,chuid,target = probing(ch,dev.target)
+        version,vmuid,chuid,target = probing(ch,dev.target, True if not dev.fixed_timeouts else False)
     except Exception as e:
         if dev.uplink_reset:
             fatal("Something wrong during the probing phase: too late reset?")

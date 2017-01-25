@@ -71,6 +71,8 @@ class MacUsb():
 				node[key]= value
 		if "sid" not in node and "hid" in node:
 			node["sid"]=node["hid"]
+		if "port" not in node:
+			node["port"]=None
 		return node
 
 	def parse(self):

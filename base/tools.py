@@ -65,7 +65,7 @@ class Tools():
                 vm=vmf
         return vm
 
-    def get_vms(self,target,chipid=None):
+    def get_vms(self,target,chipid=None,full_info=False):
         vms = {}
         targetpath = fs.path(env.vms,target)
         if not fs.exists(targetpath):
@@ -84,7 +84,10 @@ class Tools():
                 vmhash = vmbf[hpos+1:rpos]
                 vmversion = vmbf[vpos+1:hpos]
                 vmuid = vmbf[0:vpos] #TODO: add check
-                vms[vmuid]=vmf
+                if full_info:
+                    vms[vmuid]=(vmf,vmversion,vmrtos,vmhash)
+                else:
+                    vms[vmuid]=vmf
         return vms
 
     def _parse_order(self,path):

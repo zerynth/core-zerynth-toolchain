@@ -40,9 +40,10 @@ import click
 @click.argument("target")
 @click.option("--output","-o",default=False,help="output file path")
 @click.option("--include","-I",default=[],multiple=True,help="additional include path (multi-value option)")
+@click.option("--proj","-P",default=[],multiple=True,help="include project as library (multi-value option)")
 @click.option("--define","-D",default=[],multiple=True,help="additional C macro definition (multi-value option)")
 @click.option("--imports","-m",flag_value=True,default=False,help="only generate the list of imported modules")
-def compile(project,target,output,include,define,imports):
+def compile(project,target,output,include,define,imports,proj):
     if project.endswith(".py"):
         mainfile=project
         project=fs.dirname(project)
@@ -52,8 +53,23 @@ def compile(project,target,output,include,define,imports):
         prj = fs.get_json(fs.path(project,".zproject"))
     except:
         fatal("Can't open project at",project)
+    # create project import list
+    prjs = {}
+    for p in proj:
+        zp = fs.path(p,".zproject")
+        if not fs.exists(zp):
+            warning("No project at",p)
+            continue
+        pj = fs.get_json(zp)
+        if "package" in pj and "fullname" in pj["package"]:
+            pmod = pj["package"]["fullname"]
+        else:
+            pmod = "local"
+        if pmod not in prjs:
+            prjs[pmod]=[]
+        prjs[pmod].append(p)
     #TODO: check target is valid
-    compiler = Compiler(mainfile,target,include,define)
+    compiler = Compiler(mainfile,target,include,define,localmods=prjs)
     try:
         if not imports:
             binary, reprs = compiler.compile()

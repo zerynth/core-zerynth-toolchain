@@ -50,7 +50,7 @@ def check_db(repo):
     try:
         crc = fs.file_hash(fs.path(env.edb,repo, "packages.db"))
     except Exception as e:
-        warning(e)
+        #warning(e)
         crc = 0
     headers = {"If-None-Match": str(crc)}
     try:
@@ -109,7 +109,7 @@ def package():
 
 
 
-@package.command("info", help="Display package info. \n\n Arguments: \n\n FULLNAME: pacakge fullname.")
+@package.command("info", help="Display package info. \n\n Arguments: \n\n FULLNAME: package fullname.")
 @click.argument("fullname")
 def __info(fullname):
     """
@@ -147,7 +147,7 @@ displays information about the package identified by :samp:`fullname`.
 
 @package.command(help="Install/update packages.")
 @click.option("-p", multiple=True, type=str,help="fullname:version of the package (multi-value option)")
-@click.option("--db", flag_value=False, default=True,help="do not sync with online pacakge database")
+@click.option("--db", flag_value=False, default=True,help="do not sync with online package database")
 @click.option("--last", flag_value=True, default=False,help="select most up to date packages")
 @click.option("--force", flag_value=True, default=False,help="force installation in case of dependencies errors")
 @click.option("--simulate", flag_value=True, default=False,help="print list of required packages without installing them")
@@ -282,6 +282,14 @@ The command accepts the option :option:`--types typelist` where :samp:`typelist`
         critical("Can't search package", exc=e)
 
 
+# A project can be published. The publishing process transforms a project into a Zerynth :samp:`lib` package and makes it available for download in the :samp:`community` repository.
+
+# In order to publish a project some requirements must be met:
+
+# * the project must be remotely saved on the Zerynth backend. Check command :ref:`git_init <ztc-cmd-project-git_init>` for more info.
+# * at least a namespace must be owned by the publishing user
+
+
 @package.command(help="Publish a package. \n\n Arguments: \n\n PATH: project path. \n\n VERSION: version to be published.")
 @click.argument("path",type=click.Path())
 @click.argument("version")
@@ -292,8 +300,86 @@ def publish(path, version):
 Publishing a package
 --------------------
 
-Not documented yet.
+Zerynth projects can be published as library packages and publicly shared on different repositories (default is :samp:`community`). In order to convert a project into a publishable packages some requirements must be met:
 
+* The project must exist as a repository on the Zerynth backend (see :ref:`git_init <ztc-cmd-project-git_init>`)
+* The user must own at least a :ref:`namespace <ztc-cmd-namespace-create`
+* The project folder must contain a :file:`package.json` file with all relevant package information
+
+In particular, the :file:`package.json` must contain the following mandatory fields:
+
+* :samp:`title`: the title of the package
+* :samp:`description`: a longer description of the package
+* :samp:`keywords`: an array of keywords that will be used by the package search engine
+* :samp:`repo`: the name of the repository to publish to. Users can generally publish only to "community" unless permission is granted for a different repository
+* :samp:`fullname`: the unique name of the package obtained from its type (generally :samp:`lib`), a namespace owned or accessible by the user and the actual library name.
+* :samp:`whatsnew`: a string describing what has changed from the previous version of the package
+* :samp:`dependencies`: a dictionary containing the required packages that must be installed together with the package. A dictionary key is the fullnames of a required package whereas the value is the minimum required version of such package.
+
+An example of :file:`package.json`: ::
+
+    {
+        "fullname": "lib.foo.ds1307",
+        "title": "DS1307 Real Time Clock",
+        "description": "Foo's DS1307 RTC Driver ... ",
+        "keywords": [
+            "rtc",
+            "maxim",
+            "time"
+        ],
+        "repo": "community",
+        "whatsnew": "Fixed I2C bugs",
+        "dependencies": {
+            "core.zerynth.stdlib":"r2.0.0"
+        }
+        
+    }
+
+The previous file describes the package :samp:`lib.foo.ds1307`, published in the :samp:`community` repository under the namespace :samp:`foo`. It is a package for DS1307 RTC that requires the Zerynth standard library to be installed with a version greater or equal then :samp:`r2.0.0`.
+
+The command: ::
+
+    ztc package publish path version
+
+first checks for the validity of the :file:`package.json` at :samp:`path`, then modifies it adding the specified :samp:`version` and the remote git repository url. A git commit of the project is created and tagged with the :samp:`version` parameter; the commit is pushed to the Zerynth backend together with the just created tag. The backend is informed of the new package version and queues it for review. After the review process is finished, the package version will be available for installation.
+
+Package Documentation
+^^^^^^^^^^^^^^^^^^^^^
+
+Each published package can feature its own documentation that will be built and hosted on the Zerynth documentation website. The documentation files must be saved under a :file:`docs` folder in the project and formatted as reported :ref:`here <ztc-cmd-project-make_doc>`. It is strongly suggested to build the documentation locally and double check for typos or reStructuredText errors.
+
+
+Package Examples
+^^^^^^^^^^^^^^^^
+
+Packages be distributed with a set of examples stored under an :file:`examples` folder in the project. Each example must be contained in its own folder respecting the following requirements:
+
+* The example folder name will be converted into the example "title" (shown in the Zerynth Studio example panel) by replacing underscores ("_") with spaces
+* The example folder can contain any number of files, but only two are mandatory: :file:`main.py`, the entry point file and :file:`project.md`, a description of the example. Both files will be automatically included in the package documentation.
+
+Moreover, for the examples to be displayed in the Zerynth Studio example panel, a file :file:`order.txt` must be placed in the :file:`examples` folder. It contains information about the example positioning in the example tree: ::
+
+    ; order.txt of the lib.adafruit.neopixel package
+    ; comments starts with ";"
+    ; inner tree nodes labels start with a number of "#" corresponding to their level
+    ; leaves corresponds to the actual example folder name
+    #Adafruit
+        ##Neopixel
+           Neopixel_LED_Strips
+           Neopixel_Advanced
+
+    ; this files is translated to:
+    ; example root
+    ; |
+    ; |--- ...
+    ; |--- ...
+    ; |--- Adafruit
+    ; |        |--- ...
+    ; |        \--- Neopixel
+    ; |                |--- Neopixel LED Strips
+    ; |                \--- Neopixel Advanced
+    ; |--- ...
+    ; |--- ...
 
     """
     info("Checking...")
@@ -335,6 +421,18 @@ Not documented yet.
     pack_contents["version"]=version
     fs.set_json(pack_contents,packfile)
 
+    ### updating .zproject
+    if fs.exists(projfile):
+        proj_contents = fs.get_json(projfile)
+        proj_contents["git_url"] = pack_contents["git_pointer"]
+        proj_contents["package"] = {
+            "fullname":pack_contents["fullname"],
+            "version":pack_contents["version"],
+            "repo":pack_contents["repo"]
+        }
+        fs.set_json(proj_contents,projfile)
+
+
     # manage git repository for project
     if not pack_contents["git_pointer"].startswith("zerynth://"):
         try:
@@ -343,8 +441,8 @@ Not documented yet.
             if version not in status["tags"]:
                 git.git_commit(path,"Version "+version)
                 tag = git.git_tag(path,version)
-            git.git_push(path,"zerynth")
-            git.git_push(path,"zerynth",tag)
+                git.git_push(path,"zerynth")
+                git.git_push(path,"zerynth",tag)
         except Exception as e:
             fatal("Failed attempt at publishing:",e)
 
@@ -357,7 +455,7 @@ Not documented yet.
         if rj["status"] == "success":
             uid = rj["data"]["uid"]
             info("Package",pack_contents["fullname"],"created with uid:", uid)
-            pack_contents.update({"uid": uid})
+            #pack_contents.update({"uid": uid})
         else:
             fatal("Can't create package", rj["message"])
     except Exception as e:
@@ -378,16 +476,6 @@ Not documented yet.
     except Exception as e:
         fatal("Can't publish:", e)
 
-    ### updating .zproject
-    if fs.exists(projfile):
-        proj_contents = fs.get_json(projfile)
-        proj_contents["git_url"] = pack_contents["git_pointer"]
-        proj_contents["package"] = {
-            "fullname":pack_contents["fullname"],
-            "version":pack_contents["version"],
-            "repo":pack_contents["repo"]
-        }
-        fs.set_json(proj_contents,projfile)
     info("Ok")
 
 #TODO: improve
@@ -403,7 +491,7 @@ def download_callback(cursize,prevsize,totsize):
 
 
 @package.command(help="Update all installed packages.")
-@click.option("--db", flag_value=False, default=True, help="do not sync with online pacakge database")
+@click.option("--db", flag_value=False, default=True, help="do not sync with online package database")
 @click.option("--simulate", flag_value=True, default=False,help="print list of required packages without installing them")
 def update_all(db,simulate):
     """
@@ -478,7 +566,11 @@ def published(_from):
 Published packages
 ------------------
 
-Not documented yet
+The command: ::
+
+    ztc package published
+
+retrieves the list of packages published by the user.
 
     """
     try:
@@ -525,8 +617,8 @@ providing the :option:`--extended` prints additional information.
     else:
         log_json(installed_list,cls=ZpmEncoder)
 
-@package.command(help="List all updatable pacakges.")
-@click.option("--db", flag_value=False, default=True,help="do not sync with online pacakge database")
+@package.command(help="List all updatable packages.")
+@click.option("--db", flag_value=False, default=True,help="do not sync with online package database")
 def updated(db):
     """
 .. ztc-cmd_package-updated:
@@ -541,11 +633,44 @@ The list of packages with updated versions with respect to the current installat
     """
     if db: update_repos()
     installed_list = _zpm.get_installed_list()
-    pkgs = {p.fullname:v for p,v in _zpm.get_all_packages() if p.fullname in installed_list and installed_list[p.fullname]!=v}
+    pkgs = {}
+    for p,v in _zpm.get_all_packages():
+        if p.fullname in installed_list:
+            iv = ZpmVersion(installed_list[p.fullname])
+            cv = ZpmVersion(v)
+            if cv>iv:
+                pkgs[p.fullname]=v
+    #pkgs = {p.fullname:v for p,v in _zpm.get_all_packages() if p.fullname in installed_list and ZpmVersion(installed_list[p.fullname])>ZpmVersion(v)}
     if env.human:
         table = [[k,pkgs[k]] for k in sorted(pkgs)]
         log_table(table,headers=["fullname","version"])
     else:
         log_json(pkgs,cls=ZpmEncoder)
 
+
+@package.command(help="List all updatable packages.")
+@click.option("--db", flag_value=False, default=True,help="do not sync with online package database")
+def devices(db):
+    """
+.. ztc-cmd_package-devices:
+
+New Devices
+-----------
+
+The list of new supported devices with respect to the current installation can be retrieved with: ::
+    
+    ztc package devices
+
+    """
+    if db: update_repos()
+    installed_list = _zpm.get_installed_list()
+    pkgs = {}
+    for p,v in _zpm.get_all_packages():
+        if p.fullname not in installed_list and p.type=="board":
+            pkgs[p.fullname]=v
+    if env.human:
+        table = [[k,pkgs[k]] for k in sorted(pkgs)]
+        log_table(table,headers=["fullname","version"])
+    else:
+        log_json(pkgs,cls=ZpmEncoder)
 

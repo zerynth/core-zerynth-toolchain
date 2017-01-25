@@ -16,6 +16,7 @@ Virtual machines can be managed with the following commands:
 
     """
 from base import *
+from packages import *
 import click
 import datetime
 import json
@@ -203,13 +204,29 @@ For the device target, a list of possible virtual machine configurations is retu
         res = zget(url=env.api.vmlist+"/"+target)
         rj = res.json()
         if rj["status"]=="success":
+            vmt = {}
+            for k in rj["data"]:
+                ik = ZpmVersion(k)                                          # vm version
+                im = ZpmVersion(env.min_vm_dep)                             # minimum vm version compatible with current ztc
+                ic = ZpmVersion(rj["data"][k][0].get("core_dep","r2.0.0"))  # core_dep: minimum version of ztc compatible with vm
+                zv = ZpmVersion(env.var.version)                            # current ztc version
+                if ik<im:
+                    # skip versions lower than min_dep
+                    continue
+                if ic>zv:
+                    # skip versions higher than current ztc
+                    continue
+                if k not in vmt:
+                    vmt[k]=[]
+                for vm in rj["data"][k]:
+                    vmt[k].append(vm)
             if env.human:
-                for k in rj["data"]:
-                    for vm in rj["data"][k]:
+                for k in vmt:
+                    for vm in vmt[k]:
                        table.append([k,vm["title"],vm["description"],vm["rtos"],vm["features"],vm["pro"]])
                 log_table(table,headers=["Version","Title","Description","Rtos","Features","Pro"])
             else:
-                log_json(rj["data"])
+                log_json(vmt)
         else:
             fatal("Can't get vm list",rj["message"])
     except Exception as e:

@@ -18,6 +18,7 @@ Linter
    """
 
 from base import *
+from packages import *
 import click
 
 
@@ -79,23 +80,30 @@ It takes the following options (one at a time):
             __vms,chipid = __vms.split(":")
         else:
             chipid = None
-        vms = tools.get_vms(__vms,chipid)
-        vmdb = {
-        }
-        for uid,vmf in vms.items():
+        vms = tools.get_vms(__vms,chipid,full_info=True)
+        vmdb = {}
+        im = ZpmVersion(env.min_vm_dep)                             # minimum vm version compatible with current ztc
+               
+        for uid,vmc in vms.items():
+            vmf = vmc[0]
+            vv= vmc[1]
+            ik = ZpmVersion(vv)                                     # vm version
+            if ik<im:
+                # skip versions lower than min_dep
+                continue
+            # load vm
             vm = fs.get_json(vmf)
             target = vm["dev_type"]
             if target not in vmdb:
                 vmdb[target]={}
             if vm["on_chip_id"] not in vmdb[target]:
                 vmdb[target][vm["on_chip_id"]]=[]
-
             vmdb[target][vm["on_chip_id"]].append({
                 "file": vmf,
                 "target":target,
                 "uuid":uid,
                 "version":vm["version"],
-                "features": [x for x in vm["features"] if not x.startswith("RTOS=")],
+                "features": vm["features"],
                 "hash_features": vm["hash_features"],
                 "chipid":vm["on_chip_id"],
                 "name":vm["name"],

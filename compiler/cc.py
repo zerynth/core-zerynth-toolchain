@@ -184,6 +184,7 @@ class gcc():
             if dirname:
                 inc.append("-I"+dirname)
             inc.extend(self.incpaths)
+            #print(inc)
             nm = [fname]
             if o:
                 nm.append("-o")
