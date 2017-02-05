@@ -31,7 +31,7 @@ class Relocator():
             cobj = bytes()
 
         _textstart = _romstart+len(header)+len(pyobjs)
-        #logger.info("Relocation Info: memstart %x romstart %x",_memstart,_romstart)
+        #info("Relocation Info: memstart %x romstart %x",_memstart,_romstart)
         if _textstart%16!=0: #align to 16
             _textstart=_textstart+(16-(_textstart%16))
 
@@ -73,11 +73,22 @@ class Relocator():
                 header[20:24] = struct.pack("=I",vcobj.romdata[1])
             else:
                 header[20:24] = struct.pack("=I",0)
-            hsize = 0
+            hstart=0
+            hend = 0
             if vcobj.data[2]:
-                hsize+=vcobj.data[2]
+                hstart = vcobj.data[0]
+                hend = vcobj.data[1]
+                #hsize+=vcobj.data[2]
             if vcobj.bss[2]:
-                hsize+=vcobj.bss[2]
+                if hstart:
+                    hend = vcobj.bss[1]
+                else:
+                    hstart=vcobj.bss[0]
+                    hend=vcobj.bss[1]
+                #hsize+=vcobj.bss[2]
+            hsize = hend-hstart
+            #print("DATA:",hsize,hex(hend),hex(hstart))
+
             header[24:28] = struct.pack("=I",hsize)
             # updating native table
             hbg = zinfo["pyobjtable_end"]
@@ -108,4 +119,7 @@ class Relocator():
         # print("Romdata starts at:",hex(vcobj.romdata[0]))
         # print("Romdata size:",vcobj.romdata[2])
         # print("Romdata ends at:",hex(vcobj.romdata[1]))
+        # print("BSS starts at:",hex(vcobj.bss[0]))
+        # print("BSS size:",vcobj.bss[2])
+        # print("BSS ends at:",hex(vcobj.bss[1]))
         return thebin

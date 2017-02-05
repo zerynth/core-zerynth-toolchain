@@ -6,13 +6,14 @@ class LinuxUsb():
 	def __init__(self):
 		self.devstrings={
 				"ID_SERIAL":"serial",
-				"ID_SERIAL_SHORT":"sid",
 				"ID_VENDOR_ID":"vid",
 				"ID_MODEL_ID":"pid",
 				"SUBSYSTEM":"sys",
 				"DEVNAME":"dev"
 			}
 		self.devkeys = set(self.devstrings.keys())
+		self.devstrings.update({"ID_SERIAL_SHORT":"sid"})
+				
 		self.udev = pyudev.Context()
 	
 	def find_mount_point(self,block):
@@ -33,11 +34,11 @@ class LinuxUsb():
 			for device in self.udev.list_devices():
 				try:
 					if "SUBSYSTEM" in device and device["SUBSYSTEM"] in ("block","tty","usb"):
-						if self.devkeys.issubset(device):
+						if self.devkeys.issubset(device) and ("ID_SERIAL_SHORT" in device or "ID_PATH" in device):
 							dev={
 								"vid":device["ID_VENDOR_ID"].upper(),
 								"pid":device["ID_MODEL_ID"].upper(),
-								"sid":device["ID_SERIAL_SHORT"].upper(),
+								"sid": device["ID_SERIAL_SHORT"].upper() if "ID_SERIAL_SHORT" in device else device["ID_PATH"].upper(),
 								"port": device["DEVNAME"] if device["SUBSYSTEM"] == "tty" else None,
 								"block": device["DEVNAME"] if device["SUBSYSTEM"] == "block" else None,
 								"disk": self.find_mount_point(device["DEVNAME"]) if device["SUBSYSTEM"] == "block" else None,

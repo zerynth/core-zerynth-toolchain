@@ -276,6 +276,7 @@ class gcc():
                         for byte in bstr:
                             cobj.add_data(cursect,int(byte,16))
         cobj.finalize(table)
+        #cobj.info()
         return cobj                                                
     def info(self):
         print("GCC")
