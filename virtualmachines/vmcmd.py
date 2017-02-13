@@ -21,6 +21,7 @@ import click
 import datetime
 import json
 import sys
+import base64
 
 
 def download_vm(uid):
@@ -30,7 +31,8 @@ def download_vm(uid):
         vmd = rj["data"]
         vmpath = fs.path(env.vms, vmd["dev_type"],vmd["on_chip_id"])
         fs.makedirs(vmpath)
-        fs.set_json(vmd, fs.path(vmpath,uid+"_"+vmd["version"]+"_"+vmd["hash_features"]+"_"+vmd["rtos"]+".vm"))
+        vmname = uid+"_"+vmd["version"]+"_"+vmd["hash_features"]+"_"+vmd["rtos"]+".vm"
+        fs.set_json(vmd, fs.path(vmpath,vmname))
         info("Downloaded Virtual Machine in", vmpath,"with uid",uid)
     else:
         fatal("Can't download virtual machine:", rj["message"])
@@ -231,3 +233,35 @@ For the device target, a list of possible virtual machine configurations is retu
             fatal("Can't get vm list",rj["message"])
     except Exception as e:
         critical("Can't retrieve available virtual machines",exc=e)
+
+@vm.command("bin", help="")
+@click.argument("uid")
+@click.option("--path", default="",help="Path for bin file")
+def __bin(uid, path):
+    vm_file = None
+    vm_file = tools.get_vm_by_uid(uid)
+    #print(vm_file)
+    if not vm_file:
+        fatal("Virtual Machine doesn't exist; Create one with 'vm create' command")
+    try:
+        vmj = fs.get_json(fs.path(vm_file))
+        if path:
+            vmpath = path
+        else:
+            vmpath = fs.path(".")
+        info("Generating binary file of vm:", vmj["name"], "with rtos:", vmj["rtos"], "for dev:", vmj["dev_uid"])
+        if "bin" in vmj and isinstance(vmj["bin"], str):
+            fs.write_file(base64.standard_b64decode(vmj["bin"]), fs.path(vmpath, "vm.bin"))
+        elif "bin" in vmj and isinstance(vmj["bin"], list):
+            count = 0
+            for bb in vmj["bin"]:
+                count += 1
+                fs.write_file(base64.standard_b64decode(bb), fs.path(vmpath, "vm_part"+str(count)+".bin"))
+        info("Created vm binary file(s) in", vmpath)
+    except Exception as e:
+        fatal("Generic Error", e)
+
+
+
+
+
