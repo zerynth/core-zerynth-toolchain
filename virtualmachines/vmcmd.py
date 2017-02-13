@@ -13,6 +13,7 @@ Virtual machines can be managed with the following commands:
 * :ref:`create <ztc-cmd-vm-create>`
 * :ref:`list <ztc-cmd-vm-list>`
 * :ref:`available <ztc-cmd-vm-available>`
+* :ref:`bin <ztc-cmd-vm-bin>`
 
     """
 from base import *
@@ -238,6 +239,21 @@ For the device target, a list of possible virtual machine configurations is retu
 @click.argument("uid")
 @click.option("--path", default="",help="Path for bin file")
 def __bin(uid, path):
+    """ 
+.. _ztc-cmd-vm-bin:
+
+Virtual Machine Binary File
+---------------------------
+
+The binary file of an existing virtual machine can be obtained with the command: ::
+
+    ztc vm bin uid
+
+Additional option can be provided to specify the destination path of the binary file of the virtual:
+
+* :option:`--path path` to specify the destination path
+
+    """
     vm_file = None
     vm_file = tools.get_vm_by_uid(uid)
     #print(vm_file)
