@@ -5,6 +5,7 @@ from .fs import *
 import json
 import base64
 import os
+import uuid
 
 __all__=['env','Var','decode_base64']
 
@@ -85,6 +86,11 @@ class Environment():
             self._dbs.execute("CREATE UNIQUE INDEX IF NOT EXISTS aliases_idx ON aliases(alias)")
             self._dbs.execute("CREATE UNIQUE INDEX IF NOT EXISTS uid_idx ON aliases(uid)")
             self._dbs.execute("CREATE INDEX IF NOT EXISTS chip_idx ON aliases(chipid)")
+            self._dbs.execute("CREATE TABLE IF NOT EXISTS linked (alias TEXT PRIMARY KEY,uid TEXT,target TEXT, name TEXT, chipid TEXT, remote_id TEXT, classname TEXT)")
+            self._dbs.execute("CREATE UNIQUE INDEX IF NOT EXISTS linked_a_idx ON linked(alias)")
+            self._dbs.execute("CREATE INDEX IF NOT EXISTS linked_t_idx ON linked(target)")
+            self._dbs.execute("CREATE INDEX IF NOT EXISTS linked_c_idx ON linked(chipid)")
+            
         except Exception as e:
             self._dbs = None
 
@@ -107,16 +113,30 @@ class Environment():
             res[row[0]]=Var({"alias":row[0],"uid":row[1],"target":row[2],"name":row[3],"chipid":row[4],"remote_id":row[5],"classname":row[6]})
         return res
 
+    def get_linked_devs(self,target):
+        res = {}
+        for row in self._dbs.execute("select * from linked where target=?",(target,)):
+            res[row[0]]=Var({"alias":row[0],"uid":row[1],"target":row[2],"name":row[3],"chipid":row[4],"remote_id":row[5],"classname":row[6]})
+        return res
+
     def get_dev_by_alias(self,alias):
         res = []
         for row in self._dbs.execute("select * from aliases where alias like '"+alias+"%'"):
             res.append(Var({"alias":row[0],"uid":row[1],"target":row[2],"name":row[3],"chipid":row[4],"remote_id":row[5],"classname":row[6]}))
+        if not res: #if nothing in primary db, search linked db
+            for row in self._dbs.execute("select * from linked where alias like '"+alias+"%'"):
+                res.append(Var({"alias":row[0],"uid":row[1],"target":row[2],"name":row[3],"chipid":row[4],"remote_id":row[5],"classname":row[6]}))
         return res
 
-    def put_dev(self,dev):
+    def put_dev(self,dev,linked=False):
         if not isinstance(dev,Var):
             dev = Var(dev)
-        self._dbs.execute("insert or replace into aliases values(?,?,?,?,?,?,?)",(dev.alias,dev.uid,dev.target,dev.name,dev.chipid,dev.remote_id,dev.classname))
+        if not linked:
+            self._dbs.execute("insert or replace into aliases values(?,?,?,?,?,?,?)",(dev.alias,dev.uid,dev.target,dev.name,dev.chipid,dev.remote_id,dev.classname))
+        else:
+            dev.alias = str(dev.target)+":"+str(dev.chipid)
+            dev.name = dev.name+" ("+str(dev.remote_id)+")"
+            self._dbs.execute("insert or replace into linked values(?,?,?,?,?,?,?)",(dev.alias,str(uuid.uuid4()),dev.target,dev.name,dev.chipid,dev.remote_id,dev.classname))
         self._dbs.commit()
 
     def del_dev(self,dev):
@@ -227,9 +247,11 @@ def init_cfg():
     if int(os.environ.get("ZERYNTH_TESTMODE",0))==1:
         env.git_url = "http://localhost/git"
         env.backend="http://localhost/v1"
+        env.connector="http://localhost/v1"
     else:
         env.git_url ="https://backend.zerynth.com/git"
         env.backend="https://backend.zerynth.com/v1"
+        env.connector="https://api.zerynth.com/v1"
 
     # dist directories
     env.dist      = fs.path(env.home,"dist",version)
@@ -242,6 +264,7 @@ def init_cfg():
     env.docs      = fs.path(env.home,"dist",version,"docs")
     env.examples  = fs.path(env.home,"dist",version,"examples")
     env.devices    = fs.path(env.home,"dist",version,"devices")
+    env.things    = fs.path(env.home,"dist",version,"things")
     env.idb       = fs.path(env.home,"dist",version,"idb")
 
     env.dist_dir = lambda x: fs.path(env.home,"dist",x)
@@ -251,6 +274,7 @@ def init_cfg():
     env.studio_dir = lambda x: fs.path(x,"studio")
     env.vhal_dir = lambda x: fs.path(x,"vhal")
     env.devices_dir = lambda x: fs.path(x,"devices")
+    env.things_dir = lambda x: fs.path(x,"things")
     env.docs_dir = lambda x: fs.path(x,"docs")
     env.examples_dir = lambda x: fs.path(x,"examples")
     env.idb_dir = lambda x: fs.path(x,"idb")
@@ -277,6 +301,16 @@ def init_cfg():
         "search": env.backend+"/packages/search",
         "profile": env.backend+"/user/profile",
         "installation": env.backend+"/installations"
+    })
+
+    env.thing = Var({
+        "devices":env.connector+"/devices",
+        "groups":env.connector+"/groups",
+        "templates":env.connector+"/templates",
+        "template":env.connector+"/templates/%s",
+        "group":env.connector+"/groups/%s",
+        "calls":env.connector+"/devices/%s/call",
+        "config":env.connector+"/devices/%s/config"
     })
 
     env.user_agent = "ztc/"+version

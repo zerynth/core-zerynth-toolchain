@@ -5,6 +5,7 @@ import json
 import shutil
 import tarfile
 import hashlib
+import sys
 
 from .cfg import *
 import glob
@@ -89,6 +90,15 @@ class zfs():
     def copyfile(self,src,dst):
         shutil.copyfile(src,dst)
 
+    # Must be used in board support files only!
+    def copyfile2(self,src,dst):
+        if sys.platform.startswith("win"):
+            # some block devices don't work with shutil in some windows configurations (e.g. st_nucleo) -_-
+            # can't use proc.py with pipes...use os.system -_-
+            os.system("echo f | xcopy /f /y \"%s\" \"%s\""%(src,dst))
+        else:
+            shutil.copyfile(src,dst)
+
     def file_hash(self,dst):
         hh = hashlib.md5()
         with open(dst,"rb") as ff:
@@ -103,8 +113,26 @@ class zfs():
     def mergetree(self,src,dst):
         pass
 
+    def __tarfn(self,obj,original, archive):
+        obj.add(original,arcname=archive)
+
+
+    def __zipdir(self,path, zip, fn, rmpath):
+        for root, dirs, files in os.walk(path):
+            for file in files:
+                if "/." in root:
+                    continue
+                elif file.startswith("."):
+                    continue
+                #print(os.path.join(root, file),"=>",os.path.join(root.replace(rmpath,"").strip("/"),file))
+                fn(zip,os.path.join(root, file),os.path.join(root.replace(rmpath,"").strip("/"),file))
+
+
     def tarxz(self,src,dst):
-        pass
+        tar = tarfile.open(dst,"w:xz",preset=9)
+        self.__zipdir(src,tar,self.__tarfn,src)
+        tar.close()
+
 
     def unique_paths(self,pths):
         pths = list(pths)

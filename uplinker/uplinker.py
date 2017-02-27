@@ -176,6 +176,7 @@ def uplink(alias,bytecode,loop):
 
     dev = get_device(alias,loop)
     vm_chunk = dev.get("vm_chunk",4096)
+    vm_mini_chunk = dev.get("vm_mini_chunk",4096)
     vm_fragmented_upload = dev.get("vm_fragmented_upload",None)
 
     if not dev.port:
@@ -252,7 +253,8 @@ def uplink(alias,bytecode,loop):
         buf = thebin[wrt:wrt+tosend]
         adler = adler32(buf)
         #info("sending block %i of %i bytes with crc: %x",nblock,tosend,adler)
-        ch.write(buf)
+        for x in range(0,len(buf),vm_mini_chunk):
+            ch.write(buf[x:x+vm_mini_chunk])
         ch.write(struct.pack("<I",adler))
         #ser.flush()
         jattempt=0

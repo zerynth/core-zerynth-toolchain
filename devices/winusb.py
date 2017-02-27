@@ -65,7 +65,7 @@ class WinUsb():
 				dev = {
 					"vid":vid,
 					"pid":pid,
-					"sid":sid,
+					"sid":sid if "&" not in sid else "no_sid", # for no sid devices -_-
 					"port":None,
 					"desc":usbdev.Name,
 					"disk":None
@@ -115,6 +115,9 @@ class WinUsb():
 						iid = self._split_sid(sid)
 						if curpnp and vid==curvid and pid==curpid:
 							pnps[curpnp].add(iid)
+						elif not curpnp:
+							# device with no sid -_-
+							pnps[sid]=set()
 					else:
 						if curpnp!=sid:
 							pnps[sid]=set()

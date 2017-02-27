@@ -235,7 +235,7 @@ For the device target, a list of possible virtual machine configurations is retu
     except Exception as e:
         critical("Can't retrieve available virtual machines",exc=e)
 
-@vm.command("bin", help="")
+@vm.command("bin", help="Convert a VM to binary format")
 @click.argument("uid")
 @click.option("--path", default="",help="Path for bin file")
 def __bin(uid, path):
@@ -245,38 +245,76 @@ def __bin(uid, path):
 Virtual Machine Binary File
 ---------------------------
 
-The binary file of an existing virtual machine can be obtained with the command: ::
+The binary file(s) of an existing virtual machine can be obtained with the command: ::
 
     ztc vm bin uid
 
-Additional option can be provided to specify the destination path of the binary file of the virtual:
+where :samp:`uid` is the unique identifier of the virtual machine
 
-* :option:`--path path` to specify the destination path
+Additional options can be provided:
+
+* :option:`--path path` to specify the destination :samp:`path`
 
     """
     vm_file = None
     vm_file = tools.get_vm_by_uid(uid)
     #print(vm_file)
     if not vm_file:
-        fatal("Virtual Machine doesn't exist; Create one with 'vm create' command")
+        fatal("VM does not exist, create one first")
     try:
         vmj = fs.get_json(fs.path(vm_file))
         if path:
             vmpath = path
         else:
             vmpath = fs.path(".")
-        info("Generating binary file of vm:", vmj["name"], "with rtos:", vmj["rtos"], "for dev:", vmj["dev_uid"])
+        #info("Generating binary for vm:", vmj["name"], "with rtos:", vmj["rtos"], "for dev:", vmj["dev_uid"])
         if "bin" in vmj and isinstance(vmj["bin"], str):
-            fs.write_file(base64.standard_b64decode(vmj["bin"]), fs.path(vmpath, "vm.bin"))
+            fs.write_file(base64.standard_b64decode(vmj["bin"]), fs.path(vmpath, "vm_"+vmj["dev_type"]+".bin"))
         elif "bin" in vmj and isinstance(vmj["bin"], list):
-            count = 0
-            for bb in vmj["bin"]:
-                count += 1
-                fs.write_file(base64.standard_b64decode(bb), fs.path(vmpath, "vm_part"+str(count)+".bin"))
-        info("Created vm binary file(s) in", vmpath)
+            for count,bb in enumerate(vmj["bin"]):
+                fs.write_file(base64.standard_b64decode(bb), fs.path(vmpath, "vm_"+vmj["dev_type"]+"_part_"+str(count)+".bin"))
+        info("Created vm binary in", vmpath)
     except Exception as e:
         fatal("Generic Error", e)
 
+@vm.command("reg", help="Convert a registering bootloader to binary format")
+@click.argument("target")
+@click.option("--path", default="",help="Path for bin file")
+def __reg(target, path):
+    """ 
+.. _ztc-cmd-vm-reg:
+
+Registering Binary File
+-----------------------
+
+The binary file(s) of a a registering bootloader can be obtained with the command: ::
+
+    ztc vm reg target
+
+where :samp:`target` is the name of the device to register.
+
+Additional options can be provided:
+
+* :option:`--path path` to specify the destination :samp:`path`
+
+    """
+    reg_file = fs.path(env.devices,target,"register.vm")
+    if not reg_file:
+        fatal("No such target",target)
+    try:
+        vmj = fs.get_json(reg_file)
+        if path:
+            vmpath = path
+        else:
+            vmpath = fs.path(".")
+        info("Generating binary...")
+        if "bin" in vmj and isinstance(vmj["bin"], str):
+            fs.write_file(base64.standard_b64decode(vmj["bin"]), fs.path(vmpath, "reg_"+target+".bin"))
+        elif "bin" in vmj and isinstance(vmj["bin"], list):
+            for count,bb in enumerate(vmj["bin"]):
+                fs.write_file(base64.standard_b64decode(bb), fs.path(vmpath, "reg_"+target+"_part_"+str(count)+".bin"))
+    except Exception as e:
+        fatal("Generic Error", e)
 
 
 

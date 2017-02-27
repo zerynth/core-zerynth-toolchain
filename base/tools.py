@@ -71,19 +71,10 @@ class Tools():
             for chid in fs.dirs(fs.path(env.vms,target)):
                 for ff in fs.files(fs.path(env.vms,target,chid)):
                     path_splitted = ff.split('/')
-                    ff_parts = path_splitted[-1].split('_')
-                    if vmuid == ff_parts[0]:
+                    ff_ = fs.basename(ff)
+                    if ff_.startswith(vmuid+"_"):
                         return fs.path(ff)
         return None
-
-        vmpath = fs.path(env.vms,target,chipid)
-        vmfs = fs.glob(vmpath,"*.vm")
-        vm = None
-        for vmf in vmfs:
-            vmm = fs.basename(vmf)
-            if vmm.startswith(vmuid+"_"+version+"_"):
-                vm=vmf
-        return vm
 
     def get_vms(self,target,chipid=None,full_info=False):
         vms = {}

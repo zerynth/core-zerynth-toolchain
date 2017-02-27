@@ -186,8 +186,7 @@ Aliases can be also removed from the known device list with the command: ::
             "classname":classname
         }
         env.put_dev(deventry) 
-        #TODO open devdb, get/set uid+unique_alias+name+shortname(this disambiguate a device)
-
+        
 
 @alias.command("del", help="Delete a device from the known device list. \n\n Arguments: \n\n ALIAS: The alias of the device to remove.")
 @click.argument("alias")
@@ -249,7 +248,7 @@ The result of a correct registration is a device with the registration firmware 
         res,out = tgt.burn([ base64.standard_b64decode(x) for x in reg["bin"]],info)
     
     if not res:
-        fatal("Can't burn bootloader!")
+        fatal("Can't burn bootloader! -->",out)
 
     alter_ego = None
     if tgt.has_alter_ego:
@@ -276,17 +275,19 @@ The result of a correct registration is a device with the registration firmware 
     except:
         fatal("Can't open serial port!")
     lines = []
-    for x in range(10):
+    for x in range(20):
         line=ch.readline()
         lines.append(line.strip("\n"))
     ch.close()
     cnt = [lines.count(x) for x in lines]
     pos = cnt.index(max(cnt))
+    
     if pos>=0 and cnt[pos]>3 and len(lines[pos])>=8:
         info("Found chipid:",lines[pos])
     else:
         fatal("Can't find chipid")
     chipid=lines[pos]
+
     # call api to register device
     dinfo = {
         "name": tgt.custom_name or tgt.name,
@@ -306,7 +307,7 @@ The result of a correct registration is a device with the registration firmware 
     tgt = tgt.to_dict()
     tgt["chipid"]=chipid
     tgt["remote_id"]=rj["data"]["uid"]
-    env.put_dev(tgt)
+    env.put_dev(tgt,linked=tgt["sid"]=="no_sid")
     if alter_ego:
         alter_ego = alter_ego.to_dict()
         alter_ego["chipid"]=chipid

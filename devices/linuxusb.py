@@ -34,11 +34,11 @@ class LinuxUsb():
 			for device in self.udev.list_devices():
 				try:
 					if "SUBSYSTEM" in device and device["SUBSYSTEM"] in ("block","tty","usb"):
-						if self.devkeys.issubset(device) and ("ID_SERIAL_SHORT" in device or "ID_PATH" in device):
+						if self.devkeys.issubset(device):
 							dev={
 								"vid":device["ID_VENDOR_ID"].upper(),
 								"pid":device["ID_MODEL_ID"].upper(),
-								"sid": device["ID_SERIAL_SHORT"].upper() if "ID_SERIAL_SHORT" in device else device["ID_PATH"].upper(),
+								"sid": device["ID_SERIAL_SHORT"].upper() if "ID_SERIAL_SHORT" in device else "no_sid",
 								"port": device["DEVNAME"] if device["SUBSYSTEM"] == "tty" else None,
 								"block": device["DEVNAME"] if device["SUBSYSTEM"] == "block" else None,
 								"disk": self.find_mount_point(device["DEVNAME"]) if device["SUBSYSTEM"] == "block" else None,

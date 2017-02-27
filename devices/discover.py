@@ -118,7 +118,7 @@ class Discover():
                 dd = v.to_dict()
                 dd["hash"]=k
                 if env.human:
-                    table.append([v["name"],v["alias"],v["taeget"],v["uid"],v["chipid"],v["remote_id"],v["classname"],v["port"],v["disk"]])
+                    table.append([v["name"],v["alias"],v["target"],v["uid"],v["chipid"],v["remote_id"],v["classname"],v["port"],v["disk"]])
                 else:
                     log_json(dd)
             if env.human:
@@ -171,6 +171,12 @@ class Discover():
                 elif cls.match(dev):
                     obj = cls(dinfo,dev)
                     ndb[obj.hash()]=obj
+        # augment no_sid/linked devices -_-
+        for h,obj in ndb.items():
+            if obj.sid == "no_sid" or obj.has_linked_devs:
+                # get all registered linked devices
+                devs = env.get_linked_devs(obj.target)
+                obj.set("linked_devs",[d.to_dict() for d in devs])
         return ndb
 
     def matching_uids(self,devs,a_uid):

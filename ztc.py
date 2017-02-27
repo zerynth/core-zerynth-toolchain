@@ -102,6 +102,7 @@ import virtualmachines
 import user
 import linter
 import misc
+import things
 
 
 if __name__=="__main__":

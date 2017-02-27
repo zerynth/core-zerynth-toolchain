@@ -40,6 +40,9 @@ class Device():
         if x is None: return default
         return x
 
+    def set(self,attr,value):
+        self._dev[attr]=value
+
     def virtualize(self,bin):
         pass
 
