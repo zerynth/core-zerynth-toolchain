@@ -176,7 +176,7 @@ class Discover():
             if obj.sid == "no_sid" or obj.has_linked_devs:
                 # get all registered linked devices
                 devs = env.get_linked_devs(obj.target)
-                obj.set("linked_devs",[d.to_dict() for d in devs])
+                obj.set("linked_devs",{k:d.to_dict() for k,d in devs.items()})
         return ndb
 
     def matching_uids(self,devs,a_uid):
