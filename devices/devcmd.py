@@ -205,7 +205,8 @@ def _target_exists(target):
 
 @device.command(help="Register a new device. \n\n Arguments: \n\n ALIAS: device alias")
 @click.argument("alias")
-def register(alias):
+@click.option("--skip_burn",flag_value=True, default=False,help="bootloader is not flashed on the device (must be flashed manually!)")
+def register(alias,skip_burn):
     """ 
 .. _ztc-cmd-device-register:
 
@@ -240,15 +241,19 @@ The result of a correct registration is a device with the registration firmware 
     # open register.vm
     reg = fs.get_json(fs.path(tgt.path,"register.vm"))
 
-    # burn register.vm
     info("Starting device registration")
-    if isinstance(reg["bin"],str):
-        res,out = tgt.burn(bytearray(base64.standard_b64decode(reg["bin"])),info)
+    # burn register.vm
+    if not skip_burn:
+        info("Burning bootloader...")
+        if isinstance(reg["bin"],str):
+            res,out = tgt.burn(bytearray(base64.standard_b64decode(reg["bin"])),info)
+        else:
+            res,out = tgt.burn([ base64.standard_b64decode(x) for x in reg["bin"]],info)
+        
+        if not res:
+            fatal("Can't burn bootloader! -->",out)
     else:
-        res,out = tgt.burn([ base64.standard_b64decode(x) for x in reg["bin"]],info)
-    
-    if not res:
-        fatal("Can't burn bootloader! -->",out)
+        info("Skipping booloader burning...")
 
     alter_ego = None
     if tgt.has_alter_ego:

@@ -324,6 +324,6 @@ def init_cfg():
             warning("Bad json in",env.proxyfile)
 
     #set minimum compatible vm version
-    env.min_vm_dep="r2.0.4"
+    env.min_vm_dep="r2.0.5"
 
 add_init(init_cfg,prio=0)

@@ -194,7 +194,7 @@ def uplink(alias,bytecode,loop):
         version,vmuid,chuid,target = probing(ch,dev.target, True if not dev.fixed_timeouts else False)
     except Exception as e:
         if dev.uplink_reset:
-            fatal("Something wrong during the probing phase: too late reset?")
+            fatal("Something wrong during the probing phase: too late reset or serial port already open?")
         else:
             fatal("Something wrong during the probing phase:",e)
 

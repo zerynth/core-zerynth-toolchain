@@ -12,6 +12,7 @@ Virtual machines can be managed with the following commands:
 * :ref:`create <ztc-cmd-vm-create>`
 * :ref:`list <ztc-cmd-vm-list>`
 * :ref:`available <ztc-cmd-vm-available>`
+* :ref:`bin <ztc-cmd-vm-bin>`
 
     
 .. _ztc-cmd-vm-create:
@@ -64,5 +65,37 @@ For the device target, a list of possible virtual machine configurations is retu
 * RTOS
 * additional features
 * free/pro only
+
+    
+.. _ztc-cmd-vm-bin:
+
+Virtual Machine Binary File
+---------------------------
+
+The binary file(s) of an existing virtual machine can be obtained with the command: ::
+
+    ztc vm bin uid
+
+where :samp:`uid` is the unique identifier of the virtual machine
+
+Additional options can be provided:
+
+* :option:`--path path` to specify the destination :samp:`path`
+
+    
+.. _ztc-cmd-vm-reg:
+
+Registering Binary File
+-----------------------
+
+The binary file(s) of a a registering bootloader can be obtained with the command: ::
+
+    ztc vm reg target
+
+where :samp:`target` is the name of the device to register.
+
+Additional options can be provided:
+
+* :option:`--path path` to specify the destination :samp:`path`
 
     

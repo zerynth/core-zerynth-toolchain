@@ -1,6 +1,6 @@
 {
     "dependencies": {
-        "core.zerynth.stdlib": "r2.0.4",
+        "core.zerynth.stdlib": "r2.0.5",
         "sys.zerynth.runtime": "r2.0.4"
     },
     "description": "",
@@ -9,6 +9,6 @@
     "keywords": [],
     "repo": "official",
     "title": "Zerynth Toolchain",
-    "version": "r2.0.4",
-    "whatsnew": "Project Git and Publishing"
+    "version": "r2.0.5",
+    "whatsnew": "Fixes and connected devices"
 }

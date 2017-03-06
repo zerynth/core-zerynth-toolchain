@@ -98,8 +98,86 @@ The command accepts the option :option:`--types typelist` where :samp:`typelist`
 Publishing a package
 --------------------
 
-Not documented yet.
+Zerynth projects can be published as library packages and publicly shared on different repositories (default is :samp:`community`). In order to convert a project into a publishable packages some requirements must be met:
 
+* The project must exist as a repository on the Zerynth backend (see :ref:`git_init <ztc-cmd-project-git_init>`)
+* The user must own at least a :ref:`namespace <ztc-cmd-namespace-create`
+* The project folder must contain a :file:`package.json` file with all relevant package information
+
+In particular, the :file:`package.json` must contain the following mandatory fields:
+
+* :samp:`title`: the title of the package
+* :samp:`description`: a longer description of the package
+* :samp:`keywords`: an array of keywords that will be used by the package search engine
+* :samp:`repo`: the name of the repository to publish to. Users can generally publish only to "community" unless permission is granted for a different repository
+* :samp:`fullname`: the unique name of the package obtained from its type (generally :samp:`lib`), a namespace owned or accessible by the user and the actual library name.
+* :samp:`whatsnew`: a string describing what has changed from the previous version of the package
+* :samp:`dependencies`: a dictionary containing the required packages that must be installed together with the package. A dictionary key is the fullnames of a required package whereas the value is the minimum required version of such package.
+
+An example of :file:`package.json`: ::
+
+    {
+        "fullname": "lib.foo.ds1307",
+        "title": "DS1307 Real Time Clock",
+        "description": "Foo's DS1307 RTC Driver ... ",
+        "keywords": [
+            "rtc",
+            "maxim",
+            "time"
+        ],
+        "repo": "community",
+        "whatsnew": "Fixed I2C bugs",
+        "dependencies": {
+            "core.zerynth.stdlib":"r2.0.0"
+        }
+        
+    }
+
+The previous file describes the package :samp:`lib.foo.ds1307`, published in the :samp:`community` repository under the namespace :samp:`foo`. It is a package for DS1307 RTC that requires the Zerynth standard library to be installed with a version greater or equal then :samp:`r2.0.0`.
+
+The command: ::
+
+    ztc package publish path version
+
+first checks for the validity of the :file:`package.json` at :samp:`path`, then modifies it adding the specified :samp:`version` and the remote git repository url. A git commit of the project is created and tagged with the :samp:`version` parameter; the commit is pushed to the Zerynth backend together with the just created tag. The backend is informed of the new package version and queues it for review. After the review process is finished, the package version will be available for installation.
+
+Package Documentation
+^^^^^^^^^^^^^^^^^^^^^
+
+Each published package can feature its own documentation that will be built and hosted on the Zerynth documentation website. The documentation files must be saved under a :file:`docs` folder in the project and formatted as reported :ref:`here <ztc-cmd-project-make_doc>`. It is strongly suggested to build the documentation locally and double check for typos or reStructuredText errors.
+
+
+Package Examples
+^^^^^^^^^^^^^^^^
+
+Packages be distributed with a set of examples stored under an :file:`examples` folder in the project. Each example must be contained in its own folder respecting the following requirements:
+
+* The example folder name will be converted into the example "title" (shown in the Zerynth Studio example panel) by replacing underscores ("_") with spaces
+* The example folder can contain any number of files, but only two are mandatory: :file:`main.py`, the entry point file and :file:`project.md`, a description of the example. Both files will be automatically included in the package documentation.
+
+Moreover, for the examples to be displayed in the Zerynth Studio example panel, a file :file:`order.txt` must be placed in the :file:`examples` folder. It contains information about the example positioning in the example tree: ::
+
+    ; order.txt of the lib.adafruit.neopixel package
+    ; comments starts with ";"
+    ; inner tree nodes labels start with a number of "#" corresponding to their level
+    ; leaves corresponds to the actual example folder name
+    #Adafruit
+        ##Neopixel
+           Neopixel_LED_Strips
+           Neopixel_Advanced
+
+    ; this files is translated to:
+    ; example root
+    ; |
+    ; |--- ...
+    ; |--- ...
+    ; |--- Adafruit
+    ; |        |--- ...
+    ; |        \--- Neopixel
+    ; |                |--- Neopixel LED Strips
+    ; |                \--- Neopixel Advanced
+    ; |--- ...
+    ; |--- ...
 
     
 .. _ztc-cmd-packages-update_all:
@@ -133,7 +211,11 @@ Most package commands automatically sync package database before executing. Such
 Published packages
 ------------------
 
-Not documented yet
+The command: ::
+
+    ztc package published
+
+retrieves the list of packages published by the user.
 
     
 .. _ztc-cmd-package-installed:
@@ -156,5 +238,15 @@ Updated packages
 The list of packages with updated versions with respect to the current installation can be retrieved with: ::
     
     ztc package updated
+
+    
+.. ztc-cmd_package-devices:
+
+New Devices
+-----------
+
+The list of new supported devices with respect to the current installation can be retrieved with: ::
+    
+    ztc package devices
 
     

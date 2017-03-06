@@ -13,5 +13,6 @@
        docs_virtualmachines_vmcmd
        docs_packages_nscmd
        docs_packages_packagecmd
+       docs_things_thingcmd
        docs_misc_misccmd
 
