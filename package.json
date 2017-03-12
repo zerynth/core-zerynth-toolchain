@@ -9,6 +9,6 @@
     "keywords": [],
     "repo": "official",
     "title": "Zerynth Toolchain",
-    "version": "r2.0.5",
-    "whatsnew": "Fixes and connected devices"
+    "version": "r2.0.6",
+    "whatsnew": "Fixes to mac discovery"
 }

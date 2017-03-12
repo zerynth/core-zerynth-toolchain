@@ -48,7 +48,7 @@ class MacUsb():
 		return self.usb_plane
 
 	def get_node_info(self,usbid):
-		code,txt,_ = proc.run("/usr/sbin/ioreg","-n",'"'+usbid+'"',"-r","-l","-x")
+		code,txt,_ = proc.run("/usr/sbin/ioreg","-n",usbid,"-r","-l","-x")
 		lines = txt.split("\n")
 		res = self.re_node 
 		node = {}
