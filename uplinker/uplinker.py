@@ -37,6 +37,7 @@ import devices
 import time
 import re
 import struct
+import base64
 
 def get_device(alias,loop):
     _dsc = devices.Discover()
@@ -285,6 +286,73 @@ def uplink(alias,bytecode,loop):
         ch.close()
         info("Uplink done")
 
+
+@cli.command(help="Generate bytecode runnable on a specific VM. \n\n Arguments: \n\n VMUID: VM identifier. \n\n BYTECODE: path to a bytecode file.")
+@click.argument("vmuid")
+@click.argument("bytecode",type=click.Path())
+@click.option("--include_vm",default=False, flag_value=True,help="Generate a binary with VM included (not compatible with OTA!)")
+@click.option("--vm_ota",default=0, type=int,help="Select OTA VM index")
+@click.option("--bc_ota",default=0, type=int,help="Select OTA VM Bytecode index")
+@click.option("--file",default="", type=str,help="Save binary to specified file")
+def link(vmuid,bytecode,include_vm,vm_ota,bc_ota,file):
+    vms = tools.get_vm_by_uid(vmuid)
+    if not vms:
+        fatal("No such vm with uid",vmuid)
+    vm = fs.get_json(vms)
+
+    try:
+        bf = fs.get_json(bytecode)
+    except:
+        fatal("Can't open file",bytecode)
+
+    if vm_ota:
+        if "ota" not in vm:
+            fatal("This VM does not support OTA!")
+        else:
+            vm = vm["ota"]
+    symbols = vm["map"]["sym"]
+    _memstart = int(vm["map"]["memstart"],16)+vm["map"]["memdelta"]
+    _romstart = int(vm["map"]["bc"][bc_ota],16)
+
+    relocator = Relocator(bf,vm,Var({"relocator":vm["relocator"],"cc":vm["cc"]}))
+    thebin = relocator.relocate(symbols,_memstart,_romstart)
+
+
+    if include_vm:
+        if vm_ota or bc_ota:
+            fatal("Can't include OTA VM together with bytecode")
+        if isinstance(vm["bin"],list):
+            fatal("Fragmented VM not supported!")
+        vmbin = bytearray(base64.standard_b64decode(vm["bin"]))
+        _vmstart = int(vm["map"]["vm"][vm_ota],16)
+        vmsize = len(vmbin)
+        gapzone = _romstart-_vmstart+vmsize
+        vmbin.extend(b'\xff'*gapzone)
+        vmbin.extend(thebin)
+        thebin = vmbin
+
+
+    if not env.human:
+        res = {
+            "bin":base64.b64encode(thebin).decode("utf-8"),
+            "bc_idx": bc_ota,
+            "bc":vm["map"]["bc"][bc_ota],
+            "vm_idx": vm_ota,
+            "vm": vm["map"]["vm"][vm_ota],
+            "has_vm": include_vm
+        }
+        if file:
+            fs.set_json(res,file)
+        else:
+            log_json(res)
+    else:
+        if file:
+            fs.write_file(thebin,file)
+            info("File",file,"saved")
+
+
+
+
 def adler32(buf):
     a = 1
     b = 0
@@ -292,3 +360,5 @@ def adler32(buf):
         a = (a+x)%65521
         b = (b+a)%65521
     return (b<<16)|a
+
+
