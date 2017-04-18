@@ -379,7 +379,8 @@ The virtualization process is automated, no user interaction is required.
 @device.command(help="Open device serial. \n\n Arguments: \n\n ALIAS: device alias.")
 @click.argument("alias")
 @click.option("--echo","__echo",flag_value=True, default=False,help="print typed characters to stdin")
-def open(alias,__echo):
+@click.option("--baud","__baud", default=0,type=int,help="open with a specific baudrate")
+def open(alias,__echo,__baud):
     """ 
 .. _ztc-cmd-device-open:
 
@@ -402,6 +403,8 @@ tries to open the default serial port with the correct parameters for the device
         fatal("Ambiguous alias",[x.alias for x in tgt])
 
     conn = ConnectionInfo()
+    if __baud:
+        tgt.connection["baudrate"]=__baud
     conn.set_serial(tgt.port,**tgt.connection)
     ch = Channel(conn,__echo)
     ch.open()

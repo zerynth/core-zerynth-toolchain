@@ -642,7 +642,10 @@ class ByteCode():
             sts = max(vals) if vals else 0#vals[0]
             if any(x!=sts for x in vals):
                 print("WARNING: conflicting stack size!")
-                print(i,"==",st)
+                #print(i,"==",st)
+                #print(vals)
+                #print(sts)
+                #print(self)
                 #raise Exception("Unknown Stack Size!!")
             self.stacksize.append(sts)
             mx = max(sts,mx)

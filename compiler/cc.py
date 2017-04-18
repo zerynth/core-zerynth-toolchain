@@ -194,6 +194,7 @@ class gcc():
                     nm.append(fs.path(o,fs.basename(fname).replace(".c",".o")))
                     
             ret, output = self.run_command(self.gcc,self.gccopts+inc+nm+self.defines)
+            print(output)
             lines = output.split("\n")
             catcher = re.compile("([^:]+):([0-9]+):([0-9]+):[^:]*(warning|error)(.*)")
             for line in lines:

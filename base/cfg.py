@@ -244,14 +244,23 @@ def init_cfg():
     #env.load_zpack_db(env.zdb,"packages.db")
     #env.load_ipack_db(env.idb,"packages.db")
     version = env.var.version
-    if int(os.environ.get("ZERYNTH_TESTMODE",0))==1:
-        env.git_url = "http://localhost/git"
-        env.backend="http://localhost/v1"
-        env.connector="http://localhost/v1"
+    testmode = int(os.environ.get("ZERYNTH_TESTMODE",0))
+    if testmode==1:
+        # local
+        env.git_url   = os.environ.get("ZERYNTH_GIT_URL","http://localhost/git")
+        env.backend   = os.environ.get("ZERYNTH_BACKEND_URL","http://localhost/v1")
+        env.connector = os.environ.get("ZERYNTH_ADM_URL","http://localhost/v1")
+    elif testmode==2:
+        # CI
+        env.git_url   = os.environ.get("ZERYNTH_GIT_URL")
+        env.backend   = os.environ.get("ZERYNTH_BACKEND_URL")
+        env.connector = os.environ.get("ZERYNTH_ADM_URL")
     else:
+        # remote
         env.git_url ="https://backend.zerynth.com/git"
         env.backend="https://backend.zerynth.com/v1"
-        env.connector="https://api.zerynth.com/v1"
+        env.connector="http://localhost:7700" 
+        #env.connector="https://api.zerynth.com/v1"
 
     # dist directories
     env.dist      = fs.path(env.home,"dist",version)
@@ -310,7 +319,8 @@ def init_cfg():
         "template":env.connector+"/templates/%s",
         "group":env.connector+"/groups/%s",
         "calls":env.connector+"/devices/%s/call",
-        "config":env.connector+"/devices/%s/config"
+        "config":env.connector+"/devices/%s/config",
+        "ota":env.connector+"/devices/%s/ota"
     })
 
     env.user_agent = "ztc/"+version

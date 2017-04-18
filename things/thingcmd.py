@@ -492,3 +492,90 @@ retrieves all the created templates. The option :option:`--from n` skips the fir
             critical("Can't get templates list",rj["message"])
     except Exception as e:
         critical("Can't get templates list",exc=e)
+
+
+
+@cli.group(help="Manage OTA updates")
+def ota():
+    pass
+
+@ota.command()
+@click.argument("device",type=str)
+@click.argument("pack",type=click.Path())
+def prepare(device,pack):
+    otaj = fs.get_json(pack)
+    data = {
+        "bcbin":otaj.get("bcbin",""),
+        "vmbin":otaj.get("vmbin",""),
+        "vmslot": otaj.get("vm_idx") if otaj.get("vmbin","") else 0,
+        "bcslot": otaj.get("bc_idx") if otaj.get("bcbin","") else 0,
+        "vmuid": otaj["vmuid"]
+    }
+    try:
+        res = zpost(url=env.thing.ota%device, data=data,timeout=20)
+        rj = res.json()
+        if rj["status"] == "success":
+            info("Ok")
+        else:
+            critical("Error:", rj["message"])
+    except TimeoutException as e:
+        critical("No answer yet")
+    except Exception as e:
+        critical("Can't prepare OTA request", exc=e)
+
+
+
+@ota.command()
+@click.argument("device",type=str)
+def start(device):
+    try:
+        res = zput(url=env.thing.ota%device,data={},timeout=20)
+        rj = res.json()
+        if rj["status"] == "success":
+            info("Ok")
+        else:
+            critical("Error:", rj["message"])
+    except TimeoutException as e:
+        critical("No answer yet")
+    except Exception as e:
+        critical("Can't prepare OTA request", exc=e)
+
+@ota.command()
+@click.argument("device",type=str)
+def stop(device):
+    try:
+        res = zdelete(url=env.thing.ota%device,timeout=20)
+        rj = res.json()
+        if rj["status"] == "success":
+            info("Ok")
+        else:
+            critical("Error:", rj["message"])
+    except TimeoutException as e:
+        critical("No answer yet")
+    except Exception as e:
+        critical("Can't prepare OTA request", exc=e)
+
+@ota.command()
+@click.argument("device")
+def check(device):
+    try:
+        res = zget(url=env.thing.ota%device)
+        rj = res.json()
+        if rj["status"]=="success":
+            data = rj["data"]
+            if env.human:
+                table=[]
+                if data["ota_support"]:
+                    #has ota info
+                    pass
+                else:
+                    pass
+                table.append([data])
+                log_table(table,headers=[])
+            else:
+                log_json(data)
+        else:
+            critical("Can't check device status:",rj["message"])
+    except Exception as e:
+        critical("Can't check device status:",exc=e)
+

@@ -278,7 +278,7 @@ def uplink(alias,bytecode,loop):
             continue
         else:
             #logger.error("Failed")
-            raise UplinkException("Failed while sending bytecode")
+            fatal("Failed while sending bytecode",line)
     if nattempt!=0:
         ch.close()
         fatal("Too many attempts")
@@ -291,10 +291,11 @@ def uplink(alias,bytecode,loop):
 @click.argument("vmuid")
 @click.argument("bytecode",type=click.Path())
 @click.option("--include_vm",default=False, flag_value=True,help="Generate a binary with VM included (not compatible with OTA!)")
-@click.option("--vm_ota",default=0, type=int,help="Select OTA VM index")
-@click.option("--bc_ota",default=0, type=int,help="Select OTA VM Bytecode index")
+@click.option("--otavm",default=False, flag_value=True,help="Generate a binary with VM included (not compatible with OTA!)")
+@click.option("--vm","vm_ota",default=0, type=int,help="Select OTA VM index")
+@click.option("--bc","bc_ota",default=0, type=int,help="Select OTA VM Bytecode index")
 @click.option("--file",default="", type=str,help="Save binary to specified file")
-def link(vmuid,bytecode,include_vm,vm_ota,bc_ota,file):
+def link(vmuid,bytecode,include_vm,vm_ota,bc_ota,file,otavm):
     vms = tools.get_vm_by_uid(vmuid)
     if not vms:
         fatal("No such vm with uid",vmuid)
@@ -312,10 +313,12 @@ def link(vmuid,bytecode,include_vm,vm_ota,bc_ota,file):
             vm = vm["ota"]
     symbols = vm["map"]["sym"]
     _memstart = int(vm["map"]["memstart"],16)+vm["map"]["memdelta"]
-    _romstart = int(vm["map"]["bc"][bc_ota],16)
+    _romstart = int(vm["map"]["bc"][bc_ota],16)+int(vm["map"]["bcdelta"],16)
 
     relocator = Relocator(bf,vm,Var({"relocator":vm["relocator"],"cc":vm["cc"]}))
-    thebin = relocator.relocate(symbols,_memstart,_romstart)
+    addresses = [int(symbols[x],16) for x in relocator.vmsym]
+    thebin = relocator.relocate(addresses,_memstart,_romstart)
+    bcbin = thebin
 
 
     if include_vm:
@@ -334,12 +337,14 @@ def link(vmuid,bytecode,include_vm,vm_ota,bc_ota,file):
 
     if not env.human:
         res = {
-            "bin":base64.b64encode(thebin).decode("utf-8"),
+            "bcbin":base64.b64encode(bcbin).decode("utf-8"),
+            "vmbin":"" if not otavm else vm["bin"],
             "bc_idx": bc_ota,
             "bc":vm["map"]["bc"][bc_ota],
             "vm_idx": vm_ota,
             "vm": vm["map"]["vm"][vm_ota],
-            "has_vm": include_vm
+            "has_vm": include_vm,
+            "vmuid":vmuid
         }
         if file:
             fs.set_json(res,file)

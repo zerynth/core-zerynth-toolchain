@@ -96,6 +96,7 @@ class Relocator():
             rlct = self.device.relocator
             for nn in cnatives:
                 addr = vcobj.symbols[nn]
+                #print(nn,hex(addr))
                 #logger.info("%s => %s",tohex(addr), nn)
                 # WARNING!!! +1 because it's thumb instructions! (maybe we should add thumb in arch)
                 if rlct=="cortex-m":
