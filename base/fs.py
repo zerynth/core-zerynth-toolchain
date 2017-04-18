@@ -20,6 +20,8 @@ class zfs():
         self.tmpdir = self.apath(tmpdir)
         self.tempfiles=set()
         self.sep = os.sep
+        # fix misnaming -_-
+        self.read_file = self.readfile
 
     # Temporary files
     def set_temp(self,tmpdir):
