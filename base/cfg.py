@@ -227,8 +227,14 @@ def init_cfg():
     env.is_mac = lambda : env.platform.startswith("mac")
     env.is_linux = lambda : env.is_unix() and not env.is_mac()
 
+    testmode = int(os.environ.get("ZERYNTH_TESTMODE",0))
+    
     # main directories TODO: change zdir to official zdir
-    zdir = "zerynth2" if env.is_windows() else ".zerynth2"
+    if testmode == 2:
+        # special testing mode
+        zdir = "zerynth2_test" if env.is_windows() else ".zerynth2_test"
+    else:
+        zdir = "zerynth2" if env.is_windows() else ".zerynth2"
     env.home      = fs.path(fs.homedir(),zdir)
     env.cfg       = fs.path(env.home,"cfg")
     env.tmp       = fs.path(env.home,"tmp")
@@ -244,7 +250,6 @@ def init_cfg():
     #env.load_zpack_db(env.zdb,"packages.db")
     #env.load_ipack_db(env.idb,"packages.db")
     version = env.var.version
-    testmode = int(os.environ.get("ZERYNTH_TESTMODE",0))
     if testmode==1:
         # local
         env.git_url   = os.environ.get("ZERYNTH_GIT_URL","http://localhost/git")
@@ -252,9 +257,9 @@ def init_cfg():
         env.connector = os.environ.get("ZERYNTH_ADM_URL","http://localhost/v1")
     elif testmode==2:
         # CI
-        env.git_url   = os.environ.get("ZERYNTH_GIT_URL")
-        env.backend   = os.environ.get("ZERYNTH_BACKEND_URL")
-        env.connector = os.environ.get("ZERYNTH_ADM_URL")
+        env.git_url   = os.environ.get("ZERYNTH_GIT_URL","https://test.zerynth.com/git")
+        env.backend   = os.environ.get("ZERYNTH_BACKEND_URL","https://test.zerynth.com/v1")
+        env.connector = os.environ.get("ZERYNTH_ADM_URL","http://localhost:7700" )
     else:
         # remote
         env.git_url ="https://backend.zerynth.com/git"
@@ -309,7 +314,8 @@ def init_cfg():
         "db":env.backend+"/repository",
         "search": env.backend+"/packages/search",
         "profile": env.backend+"/user/profile",
-        "installation": env.backend+"/installations"
+        "installation": env.backend+"/installations",
+        "user": env.backend+"/user"
     })
 
     env.thing = Var({

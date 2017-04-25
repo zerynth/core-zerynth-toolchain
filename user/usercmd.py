@@ -19,6 +19,7 @@ import click
 import time
 import webbrowser
 import json
+import base64
 
 
 
@@ -47,7 +48,9 @@ def check_installation():
 
 @cli.command("login",help="Obtain an authentication token")
 @click.option("--token",default=None,help="set the token in non interactive mode")
-def __login(token):
+@click.option("--user",default=None,help="username for manual login")
+@click.option("--passwd",default=None,help="password for manual login")
+def __login(token,user,passwd):
     """
 .. _ztc-cmd-user-login:
 
@@ -81,7 +84,7 @@ The :samp:`authentication_token` can be obtained by manually opening the login/r
 .. warning:: For manual registrations, email address confirmation is needed. An email will be sent at the provided address with instructions.
 
     """
-    if not token:
+    if not token and not user and not passwd:
         log("Hello!")
         log("In a few seconds a browser will open to the login page")
         log("Once logged, copy the authorization token and paste it here")
@@ -91,8 +94,25 @@ The :samp:`authentication_token` can be obtained by manually opening the login/r
     if token:
         env.set_token(token)
         check_installation()
+    elif user and passwd:
+        try:
+            head = {"Authorization":"Basic "+base64.standard_b64encode(bytes(user+":"+passwd,"utf-8")).decode("utf-8")}
+            res = zget(env.api.user,head,auth=False)
+            print(head)
+            if res.status_code==200:
+                rj = res.json()
+                print(rj)
+                if rj["status"]=="success":
+                    env.set_token(rj["data"]["token"])
+                    info("Ok")
+                else:
+                    fatal(rj["message"])
+            else:
+                fatal(res.status_code,"while logging user")
+        except Exception as e:
+            fatal("Error!",e)
     else:
-        error("Token needed!")
+        fatal("Token needed!")
 
 
 @cli.command(help="Password reset. \n\n Arguments: \n\n EMAIL: email linked to the user account")
@@ -262,3 +282,22 @@ where :samp:`options` is a list of one or more of the following options:
             critical("Can't get profile",e)
 
 
+@cli.command("register",help="Obtain an authentication token")
+@click.argument("email")
+@click.argument("passwd")
+@click.argument("name")
+def __register(email,passwd,name):
+    try:
+        res = zpost(env.api.user,{"username":email,"password":passwd, "display_name":name},auth=False)
+        if res.status_code==200:
+            rj = res.json()
+            if rj["status"]=="success":
+                info("Ok")
+                info(rj["data"])
+                env.set_token(rj["data"]["token"])
+            else:
+                fatal(rj["message"])
+        else:
+            fatal(res.status_code,"while registering user")
+    except Exception as e:
+        fatal("Exception while registering user",e)

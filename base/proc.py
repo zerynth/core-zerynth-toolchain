@@ -3,18 +3,19 @@ from .cfg import *
 from .tools import *
 import subprocess
 import shlex
+import sys
 
 __all__=['proc']
 
 
 class prc():
     def __init__(self):
-        pass
+        self.init()
 
     def init(self):
         #hack to avoid annoying windows consoles
         self.startupnfo = None
-        if env.is_windows():
+        if sys.platform.startswith("win"):
             self.startupnfo = subprocess.STARTUPINFO()
             self.startupnfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
             self.startupnfo.wShowWindow = subprocess.SW_HIDE
@@ -61,5 +62,5 @@ class prc():
 
 proc = prc()
 
-add_init(proc.init)
+#add_init(proc.init)
 
