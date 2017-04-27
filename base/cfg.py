@@ -264,8 +264,8 @@ def init_cfg():
         # remote
         env.git_url ="https://backend.zerynth.com/git"
         env.backend="https://backend.zerynth.com/v1"
-        env.connector="http://localhost:7700" 
-        #env.connector="https://api.zerynth.com/v1"
+        #env.connector="http://localhost:7700" 
+        env.connector="https://api.zerynth.com/v1"
 
     # dist directories
     env.dist      = fs.path(env.home,"dist",version)
