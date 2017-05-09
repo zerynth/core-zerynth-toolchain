@@ -394,7 +394,7 @@ Moreover, for the examples to be displayed in the Zerynth Studio example panel, 
         fatal("missing package.json")
 
     needed_fields = set(["title","description","fullname","keywords","whatsnew","dependencies","repo"])
-    valid_fields = set(["exclude","dont-pack","sys","examples","platform","targetdir","tool","git_pointer","sha1"])
+    valid_fields = set(["exclude","dont-pack","sys","examples","platform","targetdir","tool","git_pointer","sha1","info"])
     given_fields = set(pack_contents.keys())
     if not (needed_fields <= given_fields):
         fatal("missing some needed fields in package.json:",needed_fields-given_fields)

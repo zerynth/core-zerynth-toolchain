@@ -162,8 +162,10 @@ The information retrieved consists in:
 @click.option("--lat",default=0.0, type=float)
 @click.option("--lon",default=0.0, type=float)
 @click.option("--template",default=None, type=str)
+@click.option("--notifications",default=None, type=str)
+@click.option("--fullscreen",default=None, type=str)
 @click.option("--token",default=False,flag_value=True)
-def __config(uid,name,location,description,lat,lon,template,token):
+def __config(uid,name,location,description,lat,lon,template,token,notifications,fullscreen):
     """
 
 .. _ztc-cmd-thing-config:
@@ -198,6 +200,10 @@ The properties are specified with the following options:
         data["geo"]=[lat,lon]
     if template is not None:
         data["template"] = template
+    if notifications is not None:
+        data["notifications"] = True if int(notifications)!=0 else False
+    if fullscreen is not None:
+        data["fullscreen"] = True if int(fullscreen)!=0 else False
     if token:
         data["token"] = True
     try:
@@ -446,7 +452,7 @@ that can be uploaded. If the upload is successfull, the files previously associa
         "archive":base64.standard_b64encode(content).decode("utf8")
     } 
     try:
-        res = zput(url=env.thing.template%uid, data=data,timeout=20)
+        res = zput(url=env.thing.template%uid, data=data,timeout=60)
         rj = res.json()
         if rj["status"] == "success":
             info("Ok")
@@ -455,7 +461,7 @@ that can be uploaded. If the upload is successfull, the files previously associa
     except TimeoutException as e:
         critical("No answer yet")
     except Exception as e:
-        critical("Can't update group", exc=e)
+        critical("Can't update template", exc=e)
 
 
 @template.command("list",help="")
