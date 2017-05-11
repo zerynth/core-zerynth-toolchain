@@ -228,7 +228,6 @@ def init_cfg():
     env.is_linux = lambda : env.is_unix() and not env.is_mac()
 
     testmode = int(os.environ.get("ZERYNTH_TESTMODE",0))
-    
     # main directories TODO: change zdir to official zdir
     if testmode == 2:
         # special testing mode
