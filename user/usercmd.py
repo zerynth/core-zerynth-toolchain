@@ -263,15 +263,30 @@ where :samp:`options` is a list of one or more of the following options:
 
                     table = []
                     freeassets = rj["data"]["assets"].get("free",[])
-                    vmassets = rj["data"]["assets"].get("vm",[])
                     for asset in freeassets:
                         table.append([asset["target"],asset["current"],asset["limit"]])
+                    log()
+                    info("Free Asset")
+                    log_table(table,headers=["target","used","max"])
+
+                    table = []
+                    vmassets = rj["data"]["assets"].get("vm",[])
                     for asset in vmassets:
-                        table.append([asset["target"],asset["current"],asset["limit"]])
-                    
+                        targets = {}
+                        for target in asset["targets"]:
+                            targets.update({target["target"]:target["current"]})
+                        table.append([asset["rtos"],asset["current"],asset["limit"],targets])
                     log()
                     info("Assets")
-                    log_table(table,headers=["target","used","max"])
+                    log_table(table,headers=["rtos","used","max","targets"])
+
+                    table = []
+                    history = rj["data"].get("history",[])
+                    for purchase in history:
+                        table.append([purchase["item"],purchase["date"],"%0.2f $" % purchase["price"],purchase["order"]])
+                    log()
+                    info("Purchase History")
+                    log_table(table,headers=["Item","Date","Price","Order"])
                 else:
                     log_json(rj["data"])
             elif rj["code"]==403:
