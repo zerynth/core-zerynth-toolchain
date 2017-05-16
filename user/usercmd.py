@@ -189,7 +189,7 @@ the user profile is retrieved and displayed. The user profile consists of the fo
     * List of roles
     * List of active repositories
 
-* Asset list 
+* Asset and Purchase History list 
 
     * List of account linked assets
     * List of bought virtual machine packs
