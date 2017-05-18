@@ -264,7 +264,7 @@ where :samp:`options` is a list of one or more of the following options:
                     table = []
                     freeassets = rj["data"]["assets"].get("free",[])
                     for asset in freeassets:
-                        table.append([asset["target"],asset["current"],asset["limit"]])
+                        table.append([asset["target"],asset["current"],rj["data"]["free_limit"]])
                     log()
                     info("Free Asset")
                     log_table(table,headers=["target","used","max"])
