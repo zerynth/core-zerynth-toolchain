@@ -1,6 +1,6 @@
 {
     "dependencies": {
-        "core.zerynth.stdlib": "r2.0.5",
+        "core.zerynth.stdlib": "r2.0.7",
         "sys.zerynth.runtime": "r2.0.4"
     },
     "description": "",
@@ -9,6 +9,6 @@
     "keywords": [],
     "repo": "official",
     "title": "Zerynth Toolchain",
-    "version": "r2.0.6",
-    "whatsnew": "Fixes to mac discovery"
+    "version": "r2.0.7",
+    "whatsnew": "Fixes"
 }
