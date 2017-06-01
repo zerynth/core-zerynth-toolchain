@@ -74,6 +74,9 @@ class WinUsb():
 				mth = self.matchcom.match(usbdev.Name)
 				if mth:
 					dev["port"]=mth.group(1)
+				ddisk = self._get_drive_letter_from_id(sid)
+				if ddisk:
+					dev["disk"]=ddisk
 				devs.append(dev)
 		self.pnps = pnps
 		self.devs = devs
@@ -133,11 +136,14 @@ class WinUsb():
 			#unescaped = bytes(usb.PNPDeviceID,"utf-8").decode('unicode_escape')
 			vid,pid,sid = self._get_win_device_id(usb.PNPDeviceID)
 			if sid in sids and sid not in nouids:
-				#print("HW==>",uid)
-				if curpnp!=sid:
+				if sid not in pnps:
 					pnps[sid]=usb
-					curpnp=sid
+				else:
+					mth = self.matchcom.match(usb.Name)
+					if mth:
+						pnps[sid]=usb
 		return pnps
+		
 	def _get_drive_letter_from_id(self,sid):
 		for physical_disk in self.wmi.Win32_DiskDrive (InterfaceType="USB"):
 			for partition in physical_disk.associators ("Win32_DiskDriveToDiskPartition"):
