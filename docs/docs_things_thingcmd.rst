@@ -8,7 +8,7 @@ The Zerynth Advanced Device Manager (ADM) allows connections between the devices
 The ADM adds to each connected device the following functionalities:
 
     * executing functions triggered by a remote request (remote procedure call)
-    * performing over the air (OTA) firmware update
+    * performing over the air firmware update (FOTA)
     * displaying and interacting with a graphical user interface both on a mobile app or desktop browser
 
 Such functionalities can be configured and controlled through the following ZTC commands:
@@ -27,7 +27,14 @@ Such functionalities can be configured and controlled through the following ZTC 
 * :ref:`List all graphical templates <ztc-cmd-thing-template-list>`
 
 
-Details about the ADM can be found here. Info on how to write a Zerynth script for the ADM can be found here.
+* :ref:`Prepare for a FOTA update <ztc-cmd-ota-prepare>`
+* :ref:`Check for FOTA status <ztc-cmd-ota-check>`
+* :ref:`Start a FOTA update <ztc-cmd-ota-start>`
+* :ref:`Stop a FOTA update <ztc-cmd-ota-stop>`
+
+
+Details about the ADM can be found :ref:`here <zadm>. Info on how to write a Zerynth script for the ADM can be found :ref:`here <lib.zerynth.zadm>`.
+
 
     
 .. _ztc-cmd-thing-add:
@@ -68,7 +75,7 @@ The command: ::
 
 retrieves information about the connected device with unique identifier :samp:`uid`.
 
-The information retrieved consists in:
+The information retrieved consists of:
 
 * :samp:`token`, the security token for the device
 * :samp:`name`, the device name
@@ -200,4 +207,66 @@ The command: ::
 
 retrieves all the created templates. The option :option:`--from n` skips the first :samp:`n` templates.
     
+    
+.. _ztc-cmd-ota-prepare:
+
+Prepare a FOTA update
+---------------------
+
+The command: ::
+
+    ztc ota prepare device firmware
+
+uploads to the ADM instance the correctly compiled and linked firmware update contained in the :samp:`firmware` file for devoce with uid :samp:`device`.
+To correctly prepare a FOTA update refer to the :ref:`link <ztc-cmd-link> command`.
+
+    
+.. _ztc-cmd-ota-start:
+
+Start a FOTA update
+-------------------
+
+The command: ::
+
+    ztc ota start device
+
+signals the ADM to start the previously prepared FOTA update for device :samp:`device`.
+
+    
+    
+.. _ztc-cmd-ota-stop:
+
+Stop a FOTA update
+------------------
+
+The command: ::
+
+    ztc ota stop device
+
+signals the ADM to stop the previously prepared or started FOTA update for device :samp:`device`.
+
+    
+    
+.. _ztc-cmd-ota-check:
+
+Check a FOTA update
+-------------------
+
+The command: ::
+
+    ztc ota check device
+
+display the status of the FOTA process for :samp:`device`.
+The displayed information is:
+
+    * :samp:`ota_support`, ``True`` if the connected device runs a FOTA enabled VM
+    * :samp:`bcslot`, the index of the slot the current bytecode is running on
+    * :samp:`vmslot`, the index of the slot the current VM is running on
+    * :samp:`vmuid`, the unique identifier of the running VM
+    * :samp:`ota_request`, a unique identifier specifying the ongoing FOTA update, empty if FOTA is not ongoing
+    * :samp:`ota_next_request`, a unique identifier specifying the FOTA update that will be started by the :ref:`start command <ztc-cmd-ota-start>`, empty if no FOTA has been :ref:`prepared <ztc-cmd-ota-prepare>`
+    * :samp:`ota_fail`, a message specifying the last failed FOTA update error message, empty if ok
+    * :samp:`last_ota`, the timestamp of last successful FOTA update
+
+
     

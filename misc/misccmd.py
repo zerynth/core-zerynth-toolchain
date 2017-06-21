@@ -147,9 +147,36 @@ It takes the following options (one at a time):
             log_json(mods)
 
 
-@cli.command("hex2bin")
-@click.argument("hexfile",type=click.Path())
-@click.option("--output","-o",default=False,help="output file path")
-@click.option("--padto","-p",default=0,help="pad with zeroes up to size")
-def __hex2bin(hexfile,output,padto):
-    hex2bin(hexfile,output,padto)
+# @cli.command("hex2bin")
+# @click.argument("hexfile",type=click.Path())
+# @click.option("--output","-o",default=False,help="output file path")
+# @click.option("--padto","-p",default=0,help="pad with zeroes up to size")
+# def __hex2bin(hexfile,output,padto):
+#     hex2bin(hexfile,output,padto)
+
+
+
+@cli.command("clean",help="Clean up old installations and temp files")
+@click.option("--tmp",default=False,flag_value =True,help="clear temporary folder")
+@click.option("--inst",multiple=True,type=str,help="delete previous installed version (can be repeated multiple times)")
+def __clean(tmp,inst):
+    """ 
+Clean
+----_
+
+The :command:`clean` command behave differently based on the following options:
+
+    * :option:`--tmp`, if given clears the temporary folder.
+    * :option:`--inst version`, can be repeated multiple times and removes a previous installed :samp:`version` of Zerynth
+
+    """
+    if tmp:
+        info("Cleaning temp folder...")
+        fs.rmtree(env.tmp)
+        fs.makedirs(env.tmp)
+        info("Ok")
+    for ii in inst:
+        if fs.exists(env.dist_dir(ii)):
+            info("Removing installation",ii)
+            fs.rmtree(env.dist_dir(ii))
+            info("Ok")

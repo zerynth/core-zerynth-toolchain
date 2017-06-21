@@ -321,7 +321,13 @@ class Compiler():
         mods_at_0 = len(self.modules)
 
 
+        # map, attributes, modules, builtins, locals = self.optimizeNames()
 
+        # print(map)
+        # print(attributes)
+        # print(modules)
+        # print(builtins)
+        # print(locals)
 
         #print(self.bltinfo)
 
@@ -530,6 +536,7 @@ class Compiler():
         # Generate Code Image
         objbuf = []        
         buf = bytearray()
+        lmap = {}
         for co in self.codeobjs:
             bcf = co.toBytes()
             objbuf.append(bcf)
@@ -647,7 +654,64 @@ class Compiler():
         bin["stats"]["cfiles"]=list(self.cfiles)
         bin["stats"]["target"]=self.board.target
 
+        bin["lmap"]=lmap
+
         return (bin, codereprs)#, self.codeobjs)
+
+
+    #TODO: experimental code, do not run in production
+    def optimizeNames(self):
+        self.env.buildExceptionTable()
+        lmap={}
+        for co in self.codeobjs:
+            co.resolveExceptions(self.env)
+            if co.fullname not in lmap:
+                lmap[co.fullname]={
+                    "co":co.fullname,
+                    "idx":co.idx,
+                    "names":co.getUsedNames(),
+                    "types":co.getNameTypes()
+                }
+        attributes = set()
+        builtins = set()
+        modules = set()
+        locals = set()
+        nodes = ["__main__"]
+        seen = set()
+        map = {}
+        while nodes:
+            node = nodes.pop()
+            seen.add(node)
+            co = self.codeobjs[lmap[node]["idx"]]
+            lco = lmap[node]
+            print(co.fullname)
+            if co.fullname not in map:
+                map[co.fullname]={
+                    "locals":set(),
+                    "modules":set(),
+                    "builtins":set(),
+                    "attrs":set()
+                }
+            #add used modules
+            for x in lco["names"]["IMPORT_NAME"]:
+                if x not in seen:
+                    nodes.append(x)
+                modules.add(x)
+                map[co.fullname]["modules"].add(x)
+            for x in lco["names"]["LOAD_FAST"]:
+                locals.add(x)
+                map[co.fullname]["locals"].add(x)
+                xx = co.getLocalObjectName(x)
+                if xx in lmap and xx not in seen:
+                    nodes.append(xx)
+            for x in lco["names"]["LOAD_ATTR"]:
+                attributes.add(x)
+                map[co.fullname]["attrs"].add(x)
+            for x in lco["names"]["LOOKUP_BUILTIN"]:
+                builtins.add(x)
+                map[co.fullname]["builtins"].add(x)
+        return map,attributes,builtins,modules,locals
+
 
 
     def parseNatives(self):

@@ -112,6 +112,11 @@ def get_token(continue_if_none=False):
         fn("No authorization token! Please run 'ztc login' to get one")
     return token
 
+def get_token_headers(continue_if_none=False):
+    hh = {"Content-Type": "application/json","User-agent":env.user_agent}
+    token = get_token(continue_if_none)
+    hh.update({"Authorization": "Bearer "+token})
+    return hh
 
 def get_token_data():
     token = get_token(True)

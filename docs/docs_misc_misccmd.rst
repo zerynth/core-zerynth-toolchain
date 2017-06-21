@@ -29,3 +29,12 @@ It takes the following options (one at a time):
 * :option:`--vms target` display the list of virtual machines in the current installation for the specified :samp:`target`
 
     
+Clean
+----_
+
+The :command:`clean` command behave differently based on the following options:
+
+    * :option:`--tmp`, if given clears the temporary folder.
+    * :option:`--inst version`, can be repeated multiple times and removes a previous installed :samp:`version` of Zerynth
+
+    

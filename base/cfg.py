@@ -264,8 +264,8 @@ def init_cfg():
         # remote
         env.git_url ="https://backend.zerynth.com/git"
         env.backend="https://backend.zerynth.com/v1"
-        #env.connector="http://localhost:7700" 
-        env.connector="https://api.zerynth.com/v1"
+        env.connector="http://localhost:7700" 
+        #env.connector="https://api.zerynth.com/v1"
 
     # dist directories
     env.dist      = fs.path(env.home,"dist",version)
@@ -326,7 +326,8 @@ def init_cfg():
         "group":env.connector+"/groups/%s",
         "calls":env.connector+"/devices/%s/call",
         "config":env.connector+"/devices/%s/config",
-        "ota":env.connector+"/devices/%s/ota"
+        "ota":env.connector+"/devices/%s/ota",
+        "monitor":env.connector.replace("https://","wss://",1).replace("http://","ws://",1)+"/monitor"
     })
 
     env.user_agent = "ztc/"+version

@@ -9,7 +9,7 @@ The Zerynth Advanced Device Manager (ADM) allows connections between the devices
 The ADM adds to each connected device the following functionalities:
 
     * executing functions triggered by a remote request (remote procedure call)
-    * performing over the air (OTA) firmware update
+    * performing over the air firmware update (FOTA)
     * displaying and interacting with a graphical user interface both on a mobile app or desktop browser
 
 Such functionalities can be configured and controlled through the following ZTC commands:
@@ -28,7 +28,14 @@ Such functionalities can be configured and controlled through the following ZTC 
 * :ref:`List all graphical templates <ztc-cmd-thing-template-list>`
 
 
-Details about the ADM can be found here. Info on how to write a Zerynth script for the ADM can be found here.
+* :ref:`Prepare for a FOTA update <ztc-cmd-ota-prepare>`
+* :ref:`Check for FOTA status <ztc-cmd-ota-check>`
+* :ref:`Start a FOTA update <ztc-cmd-ota-start>`
+* :ref:`Stop a FOTA update <ztc-cmd-ota-stop>`
+
+
+Details about the ADM can be found :ref:`here <zadm>. Info on how to write a Zerynth script for the ADM can be found :ref:`here <lib.zerynth.zadm>`.
+
 
     """
 
@@ -120,7 +127,7 @@ The command: ::
 
 retrieves information about the connected device with unique identifier :samp:`uid`.
 
-The information retrieved consists in:
+The information retrieved consists of:
 
 * :samp:`token`, the security token for the device
 * :samp:`name`, the device name
@@ -509,6 +516,22 @@ def ota():
 @click.argument("device",type=str)
 @click.argument("pack",type=click.Path())
 def prepare(device,pack):
+    """
+
+.. _ztc-cmd-ota-prepare:
+
+Prepare a FOTA update
+---------------------
+
+The command: ::
+
+    ztc ota prepare device firmware
+
+uploads to the ADM instance the correctly compiled and linked firmware update contained in the :samp:`firmware` file for devoce with uid :samp:`device`.
+To correctly prepare a FOTA update refer to the :ref:`link <ztc-cmd-link> command`.
+
+    """
+
     otaj = fs.get_json(pack)
     data = {
         "bcbin":otaj.get("bcbin",""),
@@ -521,7 +544,7 @@ def prepare(device,pack):
         res = zpost(url=env.thing.ota%device, data=data,timeout=20)
         rj = res.json()
         if rj["status"] == "success":
-            info("Ok")
+            info("FOTA request prepared with uid:",rj["data"]["uid"])
         else:
             critical("Error:", rj["message"])
     except TimeoutException as e:
@@ -534,6 +557,20 @@ def prepare(device,pack):
 @ota.command()
 @click.argument("device",type=str)
 def start(device):
+    """
+
+.. _ztc-cmd-ota-start:
+
+Start a FOTA update
+-------------------
+
+The command: ::
+
+    ztc ota start device
+
+signals the ADM to start the previously prepared FOTA update for device :samp:`device`.
+
+    """
     try:
         res = zput(url=env.thing.ota%device,data={},timeout=20)
         rj = res.json()
@@ -549,6 +586,20 @@ def start(device):
 @ota.command()
 @click.argument("device",type=str)
 def stop(device):
+    """
+    
+.. _ztc-cmd-ota-stop:
+
+Stop a FOTA update
+------------------
+
+The command: ::
+
+    ztc ota stop device
+
+signals the ADM to stop the previously prepared or started FOTA update for device :samp:`device`.
+
+    """
     try:
         res = zdelete(url=env.thing.ota%device,timeout=20)
         rj = res.json()
@@ -564,6 +615,31 @@ def stop(device):
 @ota.command()
 @click.argument("device")
 def check(device):
+    """
+    
+.. _ztc-cmd-ota-check:
+
+Check a FOTA update
+-------------------
+
+The command: ::
+
+    ztc ota check device
+
+display the status of the FOTA process for :samp:`device`.
+The displayed information is:
+
+    * :samp:`ota_support`, ``True`` if the connected device runs a FOTA enabled VM
+    * :samp:`bcslot`, the index of the slot the current bytecode is running on
+    * :samp:`vmslot`, the index of the slot the current VM is running on
+    * :samp:`vmuid`, the unique identifier of the running VM
+    * :samp:`ota_request`, a unique identifier specifying the ongoing FOTA update, empty if FOTA is not ongoing
+    * :samp:`ota_next_request`, a unique identifier specifying the FOTA update that will be started by the :ref:`start command <ztc-cmd-ota-start>`, empty if no FOTA has been :ref:`prepared <ztc-cmd-ota-prepare>`
+    * :samp:`ota_fail`, a message specifying the last failed FOTA update error message, empty if ok
+    * :samp:`last_ota`, the timestamp of last successful FOTA update
+
+
+    """
     try:
         res = zget(url=env.thing.ota%device)
         rj = res.json()
@@ -585,3 +661,23 @@ def check(device):
     except Exception as e:
         critical("Can't check device status:",exc=e)
 
+
+def _monitor_open(wss):
+    pass
+
+def _monitor_message(wss,msg):
+    log(msg)
+
+def _monitor_error(wss,error):
+    #info("ERROR",error)
+    pass
+
+def _monitor_close(wss):
+    pass
+
+@ota.command()
+def monitor():
+    hh = get_token_headers()
+    wss = ws.WebSocketApp(env.thing.monitor,header=hh,on_open = _monitor_open, on_message = _monitor_message, on_close = _monitor_close, on_error = _monitor_error)
+    wss.run_forever(ping_interval=30)
+    log("byebye")

@@ -4,8 +4,9 @@ import traceback
 import time
 import json
 from . import tabulate
+from . import websocket as ws
 
-__all__ =['Critical','Error','Warning','Info','echo','cli','error','warning','info','log','log_json','log_table','critical','fatal','add_init','init_all','sleep','set_output_filter']
+__all__ =['Critical','Error','Warning','Info','echo','cli','error','warning','debug','info','log','log_json','log_table','critical','fatal','add_init','init_all','sleep','set_output_filter','ws']
 
 
 ## GLOBAL OPTIONS
@@ -107,6 +108,11 @@ def info(*args,**kwargs):
 def log(*args,**kwargs):
     if not output_filter: return
     echo(*args,**kwargs)
+
+def debug(*args,**kwargs):
+    if not output_filter or not _options["verbose"]: return
+    echo(Info("[debug]>"),*args,**kwargs)
+
 
 def log_json(js,*args,**kwargs):
     if not output_filter: return

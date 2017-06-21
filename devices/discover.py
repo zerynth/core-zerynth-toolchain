@@ -159,6 +159,7 @@ class Discover():
                 dev["alias"]=None
                 pdevs.append(dev)
         
+        #print(tuid)
         # perform device - known device matching
         for dkey,dinfo in self.device_cls.items():
             cls = dinfo["cls"]

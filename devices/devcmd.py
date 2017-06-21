@@ -253,7 +253,7 @@ The result of a correct registration is a device with the registration firmware 
         if not res:
             fatal("Can't burn bootloader! -->",out)
     else:
-        info("Skipping booloader burning...")
+        info("Skipping bootloader burning...")
 
     alter_ego = None
     if tgt.has_alter_ego:
@@ -271,6 +271,9 @@ The result of a correct registration is a device with the registration firmware 
         tgt = _dsc.find_again(tgt)
         if not tgt:
             fatal("Can't find device",alias)
+
+    if tgt.reset_after_register:
+        info("Please reset the device!")
 
     conn = ConnectionInfo()
     conn.set_serial(tgt.port,**tgt.connection)

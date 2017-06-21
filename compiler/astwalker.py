@@ -57,6 +57,16 @@ class AstWalker(ast.NodeVisitor):
             self.hooks.putModuleCode(name, e)
         return self.code
 
+    def addNameType(self,name,type):
+        pass
+        # if self.code:
+        #     self.code.addNameType(name,type)
+
+    def addUsedName(self,name):
+        pass
+        # if self.code:
+        #     self.code.addUsedName(name)
+
     def popCodeObj(self):
         self.codes.pop()
         try:
@@ -88,6 +98,7 @@ class AstWalker(ast.NodeVisitor):
         self.env.pushScope(self.modulename)
         self.atendmodule = False
         self.pushCodeObj(self.modulename, "module", 0, 0, 0)
+        self.addNameType(self.modulename,"module")
         for stmt in node.body:
             self.code.addCode(self.visit(stmt))
         self.code.addCode(OpCode.STOP())
@@ -120,10 +131,12 @@ class AstWalker(ast.NodeVisitor):
                 return code
             if alias.asname == None:
                 self.env.putName(alias.name)
+                self.addNameType(alias.name,"module")
                 code.addCode(OpCode.IMPORT_NAME(mod.idx, alias.name))
                 code.addCode(OpCode.STORE(alias.name, self.hooks.getBuiltinCoding))
             else:
                 self.env.putName(alias.asname)
+                self.addNameType(alias.asname,"module")
                 code.addCode(OpCode.IMPORT_NAME(mod.idx, alias.asname))
                 code.addCode(OpCode.STORE(alias.asname, self.hooks.getBuiltinCoding))
         return code
@@ -145,6 +158,7 @@ class AstWalker(ast.NodeVisitor):
                 alias.asname = alias.name
             #else:
             self.env.putName(alias.asname)
+            self.addNameType(alias.asname,"module")
             code.addCode(OpCode.IMPORT_NAME(mod.idx, alias.asname))
             code.addCode(OpCode.STORE(alias.asname, self.hooks.getBuiltinCoding))
         return code
@@ -328,6 +342,7 @@ class AstWalker(ast.NodeVisitor):
                 #name = self.loadName(node)
                 bcode = ByteCode().addCode(
                     OpCode.LOAD(name, self.hooks.getBuiltinCoding))
+                self.addUsedName(name)
                 return bcode
             elif isinstance(node.ctx, ast.Store):
                 if node.id in self.special_names:
@@ -366,6 +381,8 @@ class AstWalker(ast.NodeVisitor):
         code = ByteCode()
         valuecode = self.visit(node.value)
         self.env.addNameCode(node.attr)
+        self.addUsedName(node.attr)
+        
         code.addCode(valuecode)
         if isinstance(node.ctx, ast.Load):
             code.addCode(OpCode.LOAD_ATTR(node.attr))
@@ -699,11 +716,13 @@ class AstWalker(ast.NodeVisitor):
                 if self.env.getName(b.id)==None:
                     raise CNameError(node.lineno,node.col_offset,self.filename,b.id)
                 code.addCode(OpCode.LOAD(b.id,self.hooks.getBuiltinCoding))
+                self.addUsedName(b.id)
             elif isinstance(b,ast.Attribute):
                 code.addCode(self.visit_Attribute(b))
         
         self.env.putName(node.name)
         self.env.addNameCode(node.name)
+        self.addNameType(node.name,"class")
         
         code.addCode(OpCode.LOOKUP_NAME(self.env.getNameCode(node.name),node.name))
 
@@ -750,6 +769,7 @@ class AstWalker(ast.NodeVisitor):
         for i, dd in enumerate(kwdd):
             if dd != None:
                 self.env.addNameCode(kwargs[i].arg)
+                self.addNameType(kwargs[i].arg,"kwarg")
                 code.addCode(
                     OpCode.LOOKUP_NAME(self.env.getNameCode(kwargs[i].arg), kwargs[i].arg))
                 code.addCode(self.visit(dd))
@@ -757,6 +777,7 @@ class AstWalker(ast.NodeVisitor):
 
         # add function name to env
         self.env.putName(node.name)
+        self.addNameType(node.name,"function")
 
         
         #ncodeargs = (len(kwargs)<<8)+len(args)
@@ -907,6 +928,7 @@ class AstWalker(ast.NodeVisitor):
             else:
                 self.env.addException(node.args[1].id,node.args[1].id)
         ename = self.env.addNameCode(node.args[0].id)
+        self.addNameType(node.args[0].id,"exception")
         #pname = self.env.getNameCode(node.args[1].id)
         self.env.addException(node.args[0].id,node.args[1].id,excmsg)
         code.addCode(OpCode.BUILD_EXCEPTION(ename))

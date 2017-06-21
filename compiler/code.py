@@ -58,6 +58,11 @@ class CodeObj():
         self.lastline=0
         self.firstline=0
         self.prglines = {}
+        self.nametypes = {}
+        self.usednames = set()
+        self.usedglobals = set()
+        self.usedattrs = set()
+        self.usedbuiltins = set()
         self.fullname = (self.module+"." if self.module!=None else "")+(self.cls+"." if self.cls!=None else "")+self.name
 
     def pushBlock(self):
@@ -114,6 +119,38 @@ class CodeObj():
         }
         return jc
 
+    def getUsedNames(self):
+        res = {
+            "LOOKUP_NAME":set(),
+            "LOOKUP_BUILTIN":set(),
+            "IMPORT_NAME":set(),
+            "LOAD_ATTR":set(),
+            "LOAD_FAST":set()
+        }
+        for op in self.bytecode.opcodes:
+            if op.name in res:
+                res[op.name].add(op.aname)
+        for k,v in res.items():
+            res[k] = list(res[k])
+        return res
+
+    def addUsedName(self,name):
+        self.usednames.add(name)
+
+    def getNameTypes(self):
+        res = {}
+        for k,v in self.nametypes.items():
+            res[k] = list(v)
+        return res
+
+    def getLocalObjectName(self,name):
+        return self.fullname+"."+name
+
+    def addNameType(self,name,type):
+        pass
+        # if name not in self.nametypes:
+        #     self.nametypes[name] = set()
+        # self.nametypes[name].add(type)
 
     def isJustStop(self):
         return len(self.bytecode.opcodes)==1 and self.bytecode.opcodes[-1].name=="STOP"
@@ -208,6 +245,8 @@ class CodeObj():
                             self.sigpos[self.kwargnames.index(name)] = nfo.idx
                     elif nfo.isGlobal():
                         op.toGlobalName(nfo.idx)
+                        self.usedglobals.add(name)
+                        self.usednames.discard(name)
                     elif nfo.isDeref():
                         op.toDerefName(nfo.idx)
                         #print("DEREF for",self.name,"of",name,"@",nfo.idx,name in self.argnames,name in self.kwargnames)
@@ -222,6 +261,8 @@ class CodeObj():
                         op.toLookupBuiltin()
                         self.refbuiltins.add(op.aname)
                         self.bytecode.refactorSize(curpos,op.size()-psz)
+                        self.usedbuiltins.add(op.aname)
+                        self.usednames.discard(op.aname)
                     elif nfo.isNative():
                         psz = op.size();
                         op.toLookupNative(nfo.idx)
@@ -232,6 +273,8 @@ class CodeObj():
                 elif op.isAttrOp():
                     name = op.getRefName()
                     op.toAttrName(env.getNameCode(name))
+                    self.usedattrs.add(name)
+                    self.usednames.discard(name)
                 elif op.isLookupCode():
                     self.refcodes.append(op.getRefName())
                 elif op.isImport():
@@ -306,8 +349,10 @@ class CodeObj():
                     cpos = 0
                     for sz in sorted(self.pconst.keys()):
                         cnst = self.pconst[sz]
-                        if cn in cnst:
-                            cpos += cnst.index(cn) * sz
+                        #if cn in cnst:
+                        ss = [(i,x) for i,x in enumerate(self.consts) if x==cn and type(x)==type(cn)]
+                        if ss:
+                            cpos += ss[0][0]*sz#cnst.index(cn) * sz
                             if isinstance(cn,str) or isinstance(cn,bytes):
                                 if cpos not in self.pconstheader:
                                     op.resolveConst(len(self.pconstheader))
@@ -322,8 +367,9 @@ class CodeObj():
 
 
     def addConst(self, cnst):
-        if cnst in self.consts:
-            return self.consts.index(cnst)
+        ss = [(i,x) for i,x in enumerate(self.consts) if x==cnst and type(x)==type(cnst)]
+        if ss:
+            return ss[0][0]
         self.consts.append(cnst)
         return len(self.consts) - 1
 
@@ -445,6 +491,12 @@ class CodeObj():
         pad = len(buf)%4
         for nop in range(0,4-pad,1):
             buf+=(struct.pack("=B", 0)) #zero pad
+                                        #
+        # print(self.fullname)
+        # print("L:",self.usednames)
+        # print("G:",self.usedglobals)
+        # print("A:",self.usedattrs)
+        # print("B:",self.usedbuiltins)
         return buf
 
 
