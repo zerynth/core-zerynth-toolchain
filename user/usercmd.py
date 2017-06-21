@@ -287,6 +287,14 @@ where :samp:`options` is a list of one or more of the following options:
                     log()
                     info("Purchase History")
                     log_table(table,headers=["Item","Date","Price","Order"])
+
+                    # table = []
+                    # badges = rj["data"].get("badges",[])
+                    # for bb in badges:
+                    #     table.append([bb["name"],bb["description"]])
+                    # log()
+                    # info("Earned Badges")
+                    # log_table(table,headers=["Badges","Description"])
                 else:
                     log_json(rj["data"])
             elif rj["code"]==403:

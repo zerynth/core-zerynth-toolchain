@@ -87,6 +87,7 @@ If virtual machine creation ends succesfully, the virtual machine binary is also
         "features": feat
         }
     info("Creating vm for device",dev.alias)
+    info(vminfo)
     try:
         res = zpost(url=env.api.vm, data=vminfo,timeout=20)
         rj = res.json()

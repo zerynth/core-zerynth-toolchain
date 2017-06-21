@@ -231,7 +231,7 @@ def init_cfg():
     # main directories TODO: change zdir to official zdir
     if testmode == 2:
         # special testing mode
-        zdir = "zerynth2_test" if env.is_windows() else ".zerynth2_test"
+        zdir = "zerynth2_test" if env.is_windows() else ".zerynth2"
     else:
         zdir = "zerynth2" if env.is_windows() else ".zerynth2"
     env.home      = fs.path(fs.homedir(),zdir)
