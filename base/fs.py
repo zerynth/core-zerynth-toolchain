@@ -65,10 +65,10 @@ class zfs():
         return os.path.isdir(src)
 
     def check_path(self,path):
-        if isinstance(path,str):
-            path = [path]
-        for pp in path:
-            if sys.platform.startswith("win"):
+        if sys.platform.startswith("win"):
+            if isinstance(path,str):
+                path = [path]
+            for pp in path:
                 if len(pp) > 256:
                     error("OS ERROR:",pp)
                     fatal("Path too long!")
