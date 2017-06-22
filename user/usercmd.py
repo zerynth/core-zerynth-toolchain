@@ -250,8 +250,9 @@ where :samp:`options` is a list of one or more of the following options:
                     log_table(table,headers=["Username","Email","Name","Surname","Age","Country","Company","Job","Website"])
                     
                     table = []
+                    sub_type = rj["data"]["subscription"]+ " - expiring" if rj["data"]["subscription"] != "free" and not rj["data"]["sub_id"] else rj["data"]["subscription"]
                     table.append([
-                        rj["data"]["subscription"],
+                        sub_type,
                         rj["data"]["pro"],
                         rj["data"]["roles"],
                         rj["data"]["repositories"]
