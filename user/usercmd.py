@@ -189,7 +189,7 @@ the user profile is retrieved and displayed. The user profile consists of the fo
     * List of roles
     * List of active repositories
 
-* Asset list 
+* Asset and Purchase History list 
 
     * List of account linked assets
     * List of bought virtual machine packs
@@ -250,8 +250,9 @@ where :samp:`options` is a list of one or more of the following options:
                     log_table(table,headers=["Username","Email","Name","Surname","Age","Country","Company","Job","Website"])
                     
                     table = []
+                    sub_type = rj["data"]["subscription"]+ " - expiring" if rj["data"]["subscription"] != "free" and not rj["data"]["sub_id"] else rj["data"]["subscription"]
                     table.append([
-                        rj["data"]["subscription"],
+                        sub_type,
                         rj["data"]["pro"],
                         rj["data"]["roles"],
                         rj["data"]["repositories"]
@@ -263,15 +264,38 @@ where :samp:`options` is a list of one or more of the following options:
 
                     table = []
                     freeassets = rj["data"]["assets"].get("free",[])
-                    vmassets = rj["data"]["assets"].get("vm",[])
                     for asset in freeassets:
-                        table.append([asset["target"],asset["current"],asset["limit"]])
+                        table.append([asset["target"],asset["current"],rj["data"]["free_limit"]])
+                    log()
+                    info("Free Asset")
+                    log_table(table,headers=["target","used","max"])
+
+                    table = []
+                    vmassets = rj["data"]["assets"].get("vm",[])
                     for asset in vmassets:
-                        table.append([asset["target"],asset["current"],asset["limit"]])
-                    
+                        targets = {}
+                        for target in asset["targets"]:
+                            targets.update({target["target"]:target["current"]})
+                        table.append([asset["rtos"],asset["current"],asset["limit"],targets])
                     log()
                     info("Assets")
-                    log_table(table,headers=["target","used","max"])
+                    log_table(table,headers=["rtos","used","max","targets"])
+
+                    table = []
+                    history = rj["data"].get("history",[])
+                    for purchase in history:
+                        table.append([purchase["item"],purchase["date"],"%0.2f $" % purchase["price"],purchase["order"]])
+                    log()
+                    info("Purchase History")
+                    log_table(table,headers=["Item","Date","Price","Order"])
+
+                    # table = []
+                    # badges = rj["data"].get("badges",[])
+                    # for bb in badges:
+                    #     table.append([bb["name"],bb["description"]])
+                    # log()
+                    # info("Earned Badges")
+                    # log_table(table,headers=["Badges","Description"])
                 else:
                     log_json(rj["data"])
             elif rj["code"]==403:

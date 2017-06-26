@@ -536,8 +536,8 @@ To correctly prepare a FOTA update refer to the :ref:`link <ztc-cmd-link> comman
     data = {
         "bcbin":otaj.get("bcbin",""),
         "vmbin":otaj.get("vmbin",""),
-        "vmslot": otaj.get("vm_idx") if otaj.get("vmbin","") else 0,
-        "bcslot": otaj.get("bc_idx") if otaj.get("bcbin","") else 0,
+        "vmslot": otaj.get("vm_idx"),
+        "bcslot": otaj.get("bc_idx"),
         "vmuid": otaj["vmuid"]
     }
     try:
