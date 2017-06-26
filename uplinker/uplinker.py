@@ -350,7 +350,7 @@ For example, assuming a project has been compiled to the bytecode file :samp:`pr
 
 .. note:: It is not possible to generate a FOTA update of the VM only!
 
-.. note:: To generate a Zerynth ADM compatible FOTA bytecode update, add option :option:`-J` before the link command.
+.. note:: To generate a Zerynth ADM compatible FOTA bytecode update, add option :option:`-J` before the link command. The resulting file will be JSON and not binary.
 
 
     """

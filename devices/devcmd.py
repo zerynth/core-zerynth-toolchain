@@ -224,6 +224,8 @@ where :samp:`alias` is the device alias previously set (or just the initial part
 
 The result of a correct registration is a device with the registration firmware on it, the device :samp:`chipid` and the device :samp:`remote_id`. Such attributes are automatically added to the device entry in the known device list.
 
+The option :option:`--skip_burn` avoid flashing the device with the registering firmware (it must be made manually!); it can be helpful in contexts where the device is not recognized correctly.
+
 .. note:: Devices with multiple modes can be registered one at a time only!
 
     """

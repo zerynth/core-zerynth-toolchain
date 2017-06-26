@@ -350,9 +350,10 @@ class CodeObj():
                     for sz in sorted(self.pconst.keys()):
                         cnst = self.pconst[sz]
                         #if cn in cnst:
-                        ss = [(i,x) for i,x in enumerate(self.consts) if x==cn and type(x)==type(cn)]
+                        ss = [(i,x) for i,x in enumerate(cnst) if x==cn and type(x)==type(cn)]
                         if ss:
-                            cpos += ss[0][0]*sz#cnst.index(cn) * sz
+                            cpos += ss[0][0]*sz
+                            #cpos += cnst.index(cn) * sz
                             if isinstance(cn,str) or isinstance(cn,bytes):
                                 if cpos not in self.pconstheader:
                                     op.resolveConst(len(self.pconstheader))
