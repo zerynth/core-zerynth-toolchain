@@ -51,17 +51,30 @@ class zfs():
         return pth
 
     def get_json(self,src):
+        self.check_path(src)
         with open(src,"r",encoding="utf8") as ff:
             return json.load(ff)
 
     def set_json(self,js,dst):
+        self.check_path(dst)
         with open(dst,"w",encoding="utf8") as ff:
             json.dump(js,ff,indent=4,sort_keys=True)
 
     def is_dir(self,src):
+        self.check_path(src)
         return os.path.isdir(src)
 
+    def check_path(self,path):
+        if sys.platform.startswith("win"):
+            if isinstance(path,str):
+                path = [path]
+            for pp in path:
+                if len(pp) > 256:
+                    error("OS ERROR:",pp)
+                    fatal("Path too long!")
+
     def rmtree(self,dst):
+        self.check_path(dst)
         try:
             if not fs.exists(dst):
                 return
@@ -76,12 +89,14 @@ class zfs():
                         print("Warning: can't remove file :", file, "error: ", e)
 
     def rm_file(self, dst):
+        self.check_path(dst)
         try:
             os.remove(os.path.join(dst))
         except Exception as e:
             print("Warning: can't remove file :", dst, "error: ", e)
 
     def copytree(self,src,dst):
+        self.check_path([src, dst])
         shutil.rmtree(dst,ignore_errors=True)
         try:
             shutil.copytree(src,dst,ignore_dangling_symlinks=True)
@@ -90,10 +105,12 @@ class zfs():
             #TODO: copy by walking
 
     def copyfile(self,src,dst):
+        self.check_path([src,dst])
         shutil.copyfile(src,dst)
 
     # Must be used in board support files only!
     def copyfile2(self,src,dst):
+        self.check_path([src,dst])
         if sys.platform.startswith("win"):
             # some block devices don't work with shutil in some windows configurations (e.g. st_nucleo) -_-
             # can't use proc.py with pipes...use os.system -_-
@@ -102,12 +119,14 @@ class zfs():
             shutil.copyfile(src,dst)
 
     def file_hash(self,dst):
+        self.check_path(dst)
         hh = hashlib.md5()
         with open(dst,"rb") as ff:
             hh.update(ff.read())
         return hh.hexdigest()
 
     def untarxz(self,src,dst):
+        self.check_path([src,dst])
         zp = tarfile.open(src,"r:xz")
         zp.extractall(dst)
         zp.close()
@@ -120,6 +139,7 @@ class zfs():
 
 
     def __zipdir(self,path, zip, fn, rmpath):
+        self.check_path(path)
         for root, dirs, files in os.walk(path):
             for file in files:
                 if "/." in root:
@@ -131,12 +151,14 @@ class zfs():
 
 
     def tarxz(self,src,dst):
+        self.check_path([src,dst])
         tar = tarfile.open(dst,"w:xz",preset=9)
         self.__zipdir(src,tar,self.__tarfn,src)
         tar.close()
 
 
     def unique_paths(self,pths):
+        self.check_path(pths)
         pths = list(pths)
         res = []
         dups = set()
@@ -153,50 +175,64 @@ class zfs():
         return res
 
     def path(self,*args):
+        self.check_path(os.path.normpath(os.path.join(*args)))
         return os.path.normpath(os.path.join(*args))
 
     def apath(self,path):
+        self.check_path(path)
         return os.path.normpath(os.path.abspath(os.path.realpath(path)))
 
     def rpath(self,path,parent):
+        self.check_path([path, os.path.relpath(path,parent)])
         return os.path.relpath(path,parent)
 
     def homedir(self):
         return self.apath(os.path.expanduser("~"))
 
     def basename(self,path):
+        self.check_path(path)
         return os.path.basename(os.path.normpath(path))
 
     def dirname(self,path):
+        self.check_path(path)
         return os.path.dirname(os.path.normpath(path))
 
     def split(self,path):
+        self.check_path(path)
         return os.path.split(os.path.normpath(path))
 
     def glob(self,path,pattern):
+        self.check_path([path, glob.glob(fs.path(path,pattern))])
         return glob.glob(fs.path(path,pattern))
 
     def exists(self,path):
+        self.check_path(path)
         return os.path.exists(path)
 
     def isfile(self,path):
+        self.check_path(path)
         return os.path.isfile(path)
 
     def isdir(self,path):
+        self.check_path(path)
         return os.path.isdir(path)
 
     def stat(self,path):
+        self.check_path(path)
         return os.stat(path)
 
     def dirs(self,path):
+        self.check_path(path)
         root,dirnames,files = next(os.walk(path))
         return [self.path(path,x) for x in dirnames]
 
     def files(self,path):
+        self.check_path(path)
         root,dirnames,files = next(os.walk(path))
         return [self.path(path,x) for x in files]
 
     def write_file(self,data,dst):
+        self.check_path(dst)
         if isinstance(data,str):
             d="w"
             with open(dst,d,encoding="utf8") as ff:
@@ -208,6 +244,7 @@ class zfs():
         
 
     def readfile(self,path,param=""):
+        self.check_path(path)
         if param:
             with open(path,"r"+param) as ff:
                 return ff.read()
@@ -216,10 +253,12 @@ class zfs():
                 return ff.read()
 
     def readlines(self,path):
+        self.check_path(path)
         with open(path,encoding="utf8") as ff:
             return ff.readlines()
  
     def makedirs(self,dirs):
+        self.check_path(dirs)
         if isinstance(dirs,str):
             os.makedirs(dirs,exist_ok=True)
         else:
@@ -227,6 +266,7 @@ class zfs():
                 os.makedirs(d,exist_ok=True)
 
     def rm_readonly(self, func, path):
+        self.check_path(path)
         try:
             if not os.path.exists(path):
                 return

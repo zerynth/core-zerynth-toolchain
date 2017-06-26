@@ -118,9 +118,10 @@ class WinUsb():
 						iid = self._split_sid(sid)
 						if curpnp and vid==curvid and pid==curpid:
 							pnps[curpnp].add(iid)
-						elif not curpnp:
+						else:#if not curpnp:
 							# device with no sid -_-
 							pnps[sid]=set()
+							curpnp=None
 					else:
 						if curpnp!=sid:
 							pnps[sid]=set()
