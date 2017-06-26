@@ -259,13 +259,12 @@ def init_cfg():
         # CI
         env.git_url   = os.environ.get("ZERYNTH_GIT_URL","https://test.zerynth.com/git")
         env.backend   = os.environ.get("ZERYNTH_BACKEND_URL","https://test.zerynth.com/v1")
-        env.connector = os.environ.get("ZERYNTH_ADM_URL","http://localhost:7700" )
+        env.connector = os.environ.get("ZERYNTH_ADM_URL","http://test.zerynth.com:7700" )
     else:
         # remote
         env.git_url ="https://backend.zerynth.com/git"
         env.backend="https://backend.zerynth.com/v1"
-        env.connector="http://localhost:7700" 
-        #env.connector="https://api.zerynth.com/v1"
+        env.connector="https://api.zerynth.com/v1"
 
     # dist directories
     env.dist      = fs.path(env.home,"dist",version)
@@ -317,6 +316,15 @@ def init_cfg():
         "installation": env.backend+"/installations",
         "user": env.backend+"/user"
     })
+
+    env.admfile = fs.path(env.cfg,"adm.json")
+    if fs.exists(env.admfile):
+        try:
+            admcfg = fs.get_json(env.admfile)
+            if "url" in admcfg:
+                env.connector=admcfg["url"]
+        except:
+            warning("Bad json in",env.admfile)
 
     env.thing = Var({
         "devices":env.connector+"/devices",
