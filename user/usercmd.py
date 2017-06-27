@@ -98,10 +98,8 @@ The :samp:`authentication_token` can be obtained by manually opening the login/r
         try:
             head = {"Authorization":"Basic "+base64.standard_b64encode(bytes(user+":"+passwd,"utf-8")).decode("utf-8")}
             res = zget(env.api.user,head,auth=False)
-            print(head)
             if res.status_code==200:
                 rj = res.json()
-                print(rj)
                 if rj["status"]=="success":
                     env.set_token(rj["data"]["token"])
                     info("Ok")
