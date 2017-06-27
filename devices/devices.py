@@ -53,12 +53,12 @@ class Device():
         pass
 
     def load_family(self):
+        dpath = fs.path(env.vhal,self.family_type,self.family_name,"vhal.json")
         try:
-            dpath = fs.path(env.vhal,self.family_type,self.family_name,"vhal.json")
             self.family = fs.get_json(dpath)
             return True
         except Exception as e:
-            warning("Can't load device family!",self.family_name)
+            warning("Can't load device family!",self.family_name,"@",dpath)
         return False
 
 
