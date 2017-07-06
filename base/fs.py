@@ -258,7 +258,7 @@ class zfs():
             return ff.readlines()
  
     def makedirs(self,dirs):
-        self.check_path(dirs)
+        #self.check_path(dirs)
         if isinstance(dirs,str):
             os.makedirs(dirs,exist_ok=True)
         else:
