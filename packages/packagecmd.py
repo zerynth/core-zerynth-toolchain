@@ -419,7 +419,8 @@ Moreover, for the examples to be displayed in the Zerynth Studio example panel, 
     # start publishing
     info("Preparing git repository...")
     pack_contents["version"]=version
-    fs.set_json(pack_contents,packfile)
+    if not pack_contents.get("git_pointer","").startswith("zerynth://"):
+        fs.set_json(pack_contents,packfile)
 
     ### updating .zproject
     if fs.exists(projfile):
@@ -641,6 +642,31 @@ The list of packages with updated versions with respect to the current installat
             if cv>iv:
                 pkgs[p.fullname]=v
     #pkgs = {p.fullname:v for p,v in _zpm.get_all_packages() if p.fullname in installed_list and ZpmVersion(installed_list[p.fullname])>ZpmVersion(v)}
+    table=[]
+    if env.human:
+        table = [[k,pkgs[k]] for k in sorted(pkgs)]
+        log_table(table,headers=["fullname","version"])
+    else:
+        log_json(pkgs,cls=ZpmEncoder)
+
+
+@package.command(help="List all available packages.")
+@click.option("--db", flag_value=False, default=True,help="do not sync with online package database")
+def available(db):
+    """
+.. ztc-cmd_package-available:
+
+Available packages
+------------------
+
+The list of packages available on the backend can be retrieved with: ::
+    
+    ztc package available
+
+    """
+    if db: update_repos()
+    pkgs = {p.fullname:v for p,v in _zpm.get_all_packages()}
+    table=[]
     if env.human:
         table = [[k,pkgs[k]] for k in sorted(pkgs)]
         log_table(table,headers=["fullname","version"])
