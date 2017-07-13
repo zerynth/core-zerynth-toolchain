@@ -114,6 +114,7 @@ def handshake(ch):
     info("    symbols:",nsymbols)
     for sj in range(0,nsymbols-3):
         line=ch.readline()
+        debug(line)
         if not line:
             fatal("Bad symbol exchange")
         symbols.append(int(line.strip("\n"),16))
@@ -121,14 +122,17 @@ def handshake(ch):
         #self.log("    vmsym  @"+line.strip("\n"))
         
     line=ch.readline()
+    debug(line)
     _memstart = int(line.strip("\n"),16)
     info("    membase  @"+line.strip("\n"))
     
     line=ch.readline()
+    debug(line)
     _romstart = int(line.strip("\n"),16)
     info("    romstart @"+line.strip("\n"))
 
     line=ch.readline()
+    debug(line)
     _flashspace = int(line.strip("\n"),16)
     info("    flash    @"+line.strip("\n"))
 
@@ -233,6 +237,7 @@ The :command:`uplink` may the additional :option:`--loop times` option that spec
     starttime = time.perf_counter()
     while time.perf_counter()-starttime<10:
         line=ch.readline()
+        debug(line)
         if line=="OK\n":
             #logger.info("OK")
             break

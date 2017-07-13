@@ -27,7 +27,35 @@ class ZerynthCObj():
             if section not in self.sections:
                 self.sections[section]=bytearray()
             self.sections[section].append(data)
-    def finalize(self,table):
+
+    def get_section(self,name):
+        return self.sections.get(name,bytes())
+
+    def romdata_start(self):
+        return self.romdata[0] if self.romdata[0] is not None else 0
+    
+    def romdata_end(self):
+        return self.romdata[1] if self.romdata[1] is not None else 0
+
+    def data_bss_size(self):
+        hstart=0
+        hend = 0
+        if self.data[2]:
+            hstart = self.data[0]
+            hend = self.data[1]
+            #hsize+=vcobj.data[2]
+        if self.bss[2]:
+            if hstart:
+                hend = self.bss[1]
+            else:
+                hstart=self.bss[0]
+                hend=self.bss[1]
+            #hsize+=vcobj.bss[2]
+        return hend-hstart
+
+
+
+    def finalize(self,table,rodata_in_ram=False):
         #print("Finalizing with",table.table)
         has_bss = ".bss" in table.sections
         has_data = ".data" in table.sections
@@ -37,7 +65,7 @@ class ZerynthCObj():
         #print(table)
         #table.info()
         for k,v in table.table.items():
-            #print("Checking",k,v)
+            #info("Checking",k,v)
             if v[3]==".text":
                 self.symbols[v[0]]=int(v[2],16)
             elif v[3]==".bss" and (v[0]=="__bss_end__" or v[0]=="_end"):
@@ -81,18 +109,18 @@ class ZerynthCObj():
                 
     def info(self):
         if self.data[0]:
-            print(".data   :",hex(self.data[0]),"=>",hex(self.data[1]),"::",hex(self.data[2]))
+            debug(".data   :",hex(self.data[0]),"=>",hex(self.data[1]),"::",hex(self.data[2]))
         if self.bss[0]:
-            print(".bss    :",hex(self.bss[0]),"=>",hex(self.bss[1]),"::",hex(self.bss[2]))
+            debug(".bss    :",hex(self.bss[0]),"=>",hex(self.bss[1]),"::",hex(self.bss[2]))
         if self.text[0]:
-            print(".text   :",hex(self.text[0]),"=>",hex(self.text[1]),"::",hex(self.text[2]))
+            debug(".text   :",hex(self.text[0]),"=>",hex(self.text[1]),"::",hex(self.text[2]))
         if self.rodata[0]:
-            print(".rodata :",hex(self.rodata[0]),"=>",hex(self.rodata[1]),"::",hex(self.rodata[2]))
+            debug(".rodata :",hex(self.rodata[0]),"=>",hex(self.rodata[1]),"::",hex(self.rodata[2]))
         if self.romdata[0]:
-            print(".romdata:",hex(self.romdata[0]),"=>",hex(self.romdata[1]),"::",hex(self.romdata[2]))
-        print("binsize :",len(self.binary))
+            debug(".romdata:",hex(self.romdata[0]),"=>",hex(self.romdata[1]),"::",hex(self.romdata[2]))
+        debug("binsize :",len(self.binary))
         for sym,addr in self.symbols.items():
-            print(hex(addr),"::",sym)
+            debug(hex(addr),"::",sym)
 
 
 class symtable():
@@ -102,8 +130,9 @@ class symtable():
         self.table = {}
         self.sections = {"*ABS*":["*ABS*",0,0,0],"*UND*":["*UND*",0,0,0]}
     def add(self, name, size, addr, sect):
-        #print("<<adding",name,size,addr,sect)
+        #info("<<adding",name,size,addr,sect)
         if name.startswith("."):
+            #info("--",name)
             self.sections[name]=[name,int(size,16),addr,0]
         else:
             if sect=="*COM*":
@@ -125,9 +154,9 @@ class symtable():
         return frozenset(self.table.keys())
     def info(self):
         for k,v in self.sections.items():
-            print(k,":",v[1],"@",v[2],"#",v[3])
+            debug(k,":",v[1],"@",v[2],"#",v[3])
         for k,v in self.table.items():
-            print(k,"in",v[3],v[1],"@",v[2])
+            debug(k,"in",v[3],v[1],"@",v[2])
 
 #TODO: abstract for generic platform
 class gcc():
@@ -229,7 +258,7 @@ class gcc():
                 #print(">>",line,"<<")
                 mth = catcher.match(line)
                 if mth:
-                    #print("matched\n")
+                    #info("matched\n",mth.group(5),mth.group(4))
                     ret.add(mth.group(5),mth.group(4),mth.group(1),mth.group(3))
                 else:
                     pass
@@ -252,7 +281,37 @@ class gcc():
         #print(ldopt)
         ret,output = self.run_command(self.ld,ldopt)
         return (ret,output)
-    def generate_zerynth_binary(self,table,fname):
+    def retrieve_sections(self,fname):
+        res,output = self.run_command(self.objdump,["-s",fname])
+        lines = output.replace("\t"," ").split("\n")
+        bcatcher = re.compile(" ([0-9a-fA-F]+) ([0-9a-fA-F]*) ([0-9a-fA-F]*) ([0-9a-fA-F]*) ([0-9a-fA-F]*)(.*)")
+        hcatcher = re.compile("Contents of section ([^:]+)")
+        cursect = None
+        sections = {}
+        for line in lines:
+            hmth = hcatcher.match(line)
+            if hmth:
+                #header line
+                grps = hmth.group(1).split(".")
+                grp = "."+grps[1]
+                if grp not in [".text",".rodata",".data",".bss"]:
+                    cursect = None
+                else:
+                    cursect = grp
+                    if cursect not in sections:
+                        sections[cursect]=0
+                continue
+            bmth = bcatcher.match(line)
+            if bmth:
+                if cursect:
+                    bstr = bmth.group(2).strip()+bmth.group(3).strip()+bmth.group(4).strip()+bmth.group(5).strip()
+                    bstr = [bstr[i:i + 2] for i in range(0, len(bstr), 2)]
+                    for byte in bstr:
+                        sections[cursect]+=1
+                        #cobj.add_data(cursect,int(byte,16))
+        return sections
+
+    def generate_zerynth_binary(self,table,fname,rodata_in_ram=False):
         res,output = self.run_command(self.objdump,["-s",fname])
         cobj = ZerynthCObj()
         if res==0:
@@ -261,6 +320,7 @@ class gcc():
             hcatcher = re.compile("Contents of section ([^:]+)")
             cursect = None
             for line in lines:
+                #info("--",line)
                 hmth = hcatcher.match(line)
                 if hmth:
                     #header line                    
@@ -276,7 +336,7 @@ class gcc():
                         bstr = [bstr[i:i + 2] for i in range(0, len(bstr), 2)]
                         for byte in bstr:
                             cobj.add_data(cursect,int(byte,16))
-        cobj.finalize(table)
+        cobj.finalize(table,rodata_in_ram)
         #cobj.info()
         return cobj                                                
     def info(self):
