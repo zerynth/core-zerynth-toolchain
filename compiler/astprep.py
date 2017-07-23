@@ -2,6 +2,7 @@ from base import *
 import ast
 import json
 from compiler.exceptions import CSyntaxError, CNameError,CNameConstantError, CUnsupportedFeatureError,CWrongSyntax
+from compiler.globals import lookup_table
 
 class AstPreprocessor(ast.NodeTransformer):
     def __init__(self,names,pinmap,defines,cfiles,just_imports=False):
@@ -73,6 +74,24 @@ class AstPreprocessor(ast.NodeTransformer):
                 raise CWrongSyntax(node.lineno,node.col_offset,self.filename,"__define needs an integer as second argument")
             #print("===>>>> ADDING",node.args[0].id,"AS",node.args[1].n)
             self.allnames[node.args[0].id]=val
+            return None
+        elif isinstance(node.func,ast.Name) and node.func.id=="__lookup":
+            if len(node.args)!=1:
+                raise CWrongSyntax(node.lineno,node.col_offset,"","__lookup need 1 argument")
+            if not isinstance(node.args[0],ast.Name):
+                raise CWrongSyntax(node.lineno,node.col_offset,self.filename,"__lookup needs a name as first argument")
+            
+            try:
+                val = lookup_table[node.args[0].id]
+            except:
+                raise CWrongSyntax(node.lineno,node.col_offset,self.filename,"__lookup can't find "+node.args[0].id)
+            debug("__lookup value assigned to",node.args[0].id,"is",str(val))
+            if isinstance(val,str):
+                return ast.Str(val)
+            elif isinstance(val,bytes):
+                return ast.Bytes(val)
+            elif isinstance(val,int) or isinstance(val,float):
+                return ast.Num(val)
             return None
         elif isinstance(node.func,ast.Name) and node.func.id=="__cdefine":
             if len(node.args)>2:

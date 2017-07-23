@@ -276,6 +276,7 @@ class Compiler():
                 raise CSyntaxError(e.lineno,e.offset,mfile,str(e))
             
             self.astp.curpath = fs.dirname(mfile)
+            self.astp.filename = mfile
             tree = self.astp.visit(tree)
             if self.phase==0 and name!="__builtins__":
                 #print("\n\n## Syntax Tree ##\n")
