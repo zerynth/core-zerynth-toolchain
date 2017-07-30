@@ -171,6 +171,26 @@ class Compiler():
             return ret
         return -1
 
+    def addCConf(self,afile):
+        cj = fs.get_json(afile,strict=False)
+        for k,v in cj.items():
+            self.cdefines.add(k+"="+str(v)) #TODO: add support for strings
+
+    def addCBuild(self,afile):
+        warning("Following CBuild",afile)
+        cj = fs.get_json(afile,strict=False)
+        dname = fs.dirname(afile)
+        for k,v in cj.items():
+            warning(k,v,self.cdefines,self.prepdefines)
+            if k in self.cdefines or k in self.prepdefines.get("CDEFS",[]): # if macro is defined, add corresponding code
+                for x in v["src"]:
+                    self.cfiles.add(fs.apath(fs.path(dname,x)))
+                for x in v["inc"]:
+                    self.cincpaths.add(fs.apath(fs.path(dname,x)))
+                    warning("added",fs.apath(fs.path(dname,x)))
+                for x in v["defs"]:
+                    self.cdefines.add(k+"="+str(x)) #TODO: add support for strings
+
 
     def addCThings(self,natives,files,vbls,opts,fbase=""):
         #print("addCThings:",natives,files,vbls,opts,fbase)
@@ -181,7 +201,10 @@ class Compiler():
                 afile = fs.glob(pt,"*.c")
             else:
                 afile = [file.replace("\\","/")]
-            self.cfiles.update(afile)
+            if afile[0].endswith("cbuild.json"):
+                self.addCBuild(afile[0])
+            else:
+                self.cfiles.update(afile)
         for vbl in vbls:
             # if vbl.startswith("VBL_"):
             #     vblf = fs.path(env.stdlib,"__common","vbl",vbl.lower()+".c")
@@ -368,11 +391,16 @@ class Compiler():
         self.cfiles.update(self.prepcfiles)
         self.cfiles = fs.unique_paths(self.cfiles)
         if self.cfiles:
+            
             info("#"*10,"STEP",self.phase,"- C code compilation")
             gccopts = dict(self.board.gccopts)
             if "CDEFS" in self.prepdefines:
                 self.cdefines.update(self.prepdefines["CDEFS"])
-            
+            if fs.exists(fs.path(self.maindir,"cconf.json")):
+                info("Adding global C configuration...")
+                self.addCConf(fs.path(self.maindir,"cconf.json"),strict=False)
+
+
             gccopts["defs"].extend(self.cdefines)
             gccopts["inc"]=set(self.cincpaths)
             gccopts["inc"].add(fs.path(env.stdlib,"__cdefs"))
@@ -462,7 +490,7 @@ class Compiler():
             #    info("==>",ss)
             #warning("Undefined symbols!")
             undf = sym.getfrom(sym.undef)
-            undf = {k:v for k,v in undf.items() if k not in set(self.vmsym)}
+            #undf = {k:v for k,v in undf.items() if k not in set(self.vmsym)}
             #for uu in undf:
             #    info("==>",uu)
             csym = frozenset(self.cnatives)
@@ -472,11 +500,11 @@ class Compiler():
                     error(ss)
                 raise CNativeError(0,0,"","some C natives are not defined!!")
             ofilecnt = fs.readfile(ofile,"b")
-            if len(undf)>0:
-                error("The following symbols are undefined:")
-                for ss in undf:
-                    error(ss)
-                raise CNativeError(0,0,"","undefined symbols!")
+            # if len(undf)>0:
+            #     error("The following symbols are undefined:")
+            #     for ss in undf:
+            #         error(ss)
+            #     raise CNativeError(0,0,"","undefined symbols!")
         else:
             ofilecnt = bytearray()
             if self.cnatives:
@@ -735,22 +763,22 @@ class Compiler():
                 #print("Adding Name:",m.group(1).lower())
                 self.env.addNameCode(m.group(1))
         # parse vmsymdef
-        fnames = []
-        fname = fs.path(self.board.path,"port","config","vmsym.def")
-        if not fs.exists(fname):
-            for dname in fs.glob(fs.path(self.board.path,"port","config","symbols"),"*.def"):
-                fnames.append(dname)
-        else:
-            fnames.append(fname)
-        seen = set()
-        for fname in fnames:
-            lines = fs.readlines(fname)
-            for txt in lines:
-                m = re.match('\s*(SYM|VAR)\((.*)\)',txt)
-                if m and m.group(2):
-                    if m.group(2) in seen: continue
-                    seen.add(m.group(2))
-                    self.vmsym.append(m.group(2))
+        # fnames = []
+        # fname = fs.path(self.board.path,"port","config","vmsym.def")
+        # if not fs.exists(fname):
+        #     for dname in fs.glob(fs.path(self.board.path,"port","config","symbols"),"*.def"):
+        #         fnames.append(dname)
+        # else:
+        #     fnames.append(fname)
+        # seen = set()
+        # for fname in fnames:
+        #     lines = fs.readlines(fname)
+        #     for txt in lines:
+        #         m = re.match('\s*(SYM|VAR)\((.*)\)',txt)
+        #         if m and m.group(2):
+        #             if m.group(2) in seen: continue
+        #             seen.add(m.group(2))
+        #             self.vmsym.append(m.group(2))
 
 
 

@@ -7,17 +7,47 @@ import struct
 class Relocator():
     def __init__(self,zcode,vm,device):
         self.zcode = zcode
-        self.vmsym = []
+        #self.vmsym = []
         self.device = device
-        lines = vm["symdef"].split("\n")
-        for txt in lines:
-            m = re.match('\s*(SYM|VAR)\((.*)\)',txt)
-            if m and m.group(2):
-                self.vmsym.append(m.group(2))
+        self.thevm = vm
+        self.symtable = dict(vm["map"]["table"])
+
+        for k in self.symtable:
+            self.symtable[k]=int(self.symtable[k],16)
+            #debug(k,self.symtable[k])
+
+        self.vmsym = dict(vm["map"]["sym"])
+        for k in self.vmsym:
+            self.vmsym[k]=int(self.vmsym[k],16)
+            #debug(k,self.vmsym[k])
+
+
+        # lines = vm["symdef"].split("\n")
+        # for txt in lines:
+        #     m = re.match('\s*(SYM|VAR)\((.*)\)',txt)
+        #     if m and m.group(2):
+        #         self.vmsym.append(m.group(2))
 
     def get_relocated_code(self,symreloc,ofile,lfile,rodata_in_ram=False):
         cc = gcc(tools[self.device.cc])
-        ret,output = cc.link([ofile],symreloc,reloc=False,ofile=lfile)
+        undf = cc.get_undefined(ofile)
+        fund = set()
+        srel = dict(symreloc)
+        debug(undf)
+        for u in undf:
+            if u in self.vmsym:
+                srel[u] = self.vmsym[u]
+                fund.add(u)
+            elif u in self.symtable:
+                srel[u] = self.symtable[u]
+                fund.add(u)
+
+        if undf!=fund:
+            undf = undf-fund;
+            fatal("There are",len(undf),"missing symbols! This VM does not support the requested features!",undf)
+
+        ret,output = cc.link([ofile],srel,reloc=False,ofile=lfile)
+        debug(output)
         if ret!=0:
             #logger.info("Relocation: %s",output)
             undf = output.count("undefined reference")
@@ -27,7 +57,6 @@ class Relocator():
                 fatal("Relocation error",output)
         sym = cc.symbol_table(lfile)
         vcobj = cc.generate_zerynth_binary(sym,lfile,rodata_in_ram)
-        ##debug
         vcobj.info()
         #sym.info()
         return vcobj
@@ -60,8 +89,9 @@ class Relocator():
             ofile = fs.path(tmpdir,"zerynth.rlo")
             lfile = fs.path(tmpdir,"zerynth.lo")
             fs.write_file(cobj,ofile)
-            if len(_symbols)!=len(self.vmsym): fatal("Symbols mismatch! Expected",len(self.vmsym),"got",len(_symbols))
-            symreloc = {self.vmsym[x]:_symbols[x] for x in range(0,len(_symbols))}
+            #if len(_symbols)!=len(self.vmsym): fatal("Symbols mismatch! Expected",len(self.vmsym),"got",len(_symbols))
+            symreloc = {}#dict(self.vmsym)#{self.vmsym[x]:_symbols[x] for x in range(0,len(_symbols))}
+            #symreloc.update(self.vmsym)
             symreloc.update({"_start":0,".data":_memstart,".text":_textstart})
             vcobj = self.get_relocated_code(symreloc,ofile,lfile,rodata_in_ram)
             cbin = vcobj.binary
@@ -80,7 +110,7 @@ class Relocator():
                 text_bin = vcobj.get_section(".text")
                 text_size = len(text_bin)
                 text_pad = self.align_to(text_size,4)-text_size
-                if vcobj.rodata[0]%4!=0:
+                if vcobj.rodata[0] and vcobj.rodata[0]%4!=0:
                     #add padding
                     rodata_pad = text_pad
                 else:

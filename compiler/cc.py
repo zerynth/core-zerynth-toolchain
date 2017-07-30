@@ -179,6 +179,7 @@ class gcc():
         ret = 0
         torun = [cmd]
         torun.extend(args)
+        debug("Exec:",torun)
         ecode,cout,cerr = proc.run(torun)
         return (ecode,cout)
 
@@ -260,6 +261,25 @@ class gcc():
                 if mth:
                     #info("matched\n",mth.group(5),mth.group(4))
                     ret.add(mth.group(5),mth.group(4),mth.group(1),mth.group(3))
+                else:
+                    pass
+                    #print("not matched\n")
+        return ret
+    def get_undefined(self,fname):
+        res, output = self.run_command(self.objdump,["-t",fname])
+        output = output.replace("\t"," ")
+        ret = set()
+        if res==0:
+            catcher = re.compile("([0-9a-fA-F]+)([A-Za-z ]+)([^ ]+) ([0-9a-fA-F]+) ([^ ]+)")
+            lines = output.split("\n")
+            for line in lines:
+                #print(">>",line,"<<")
+                mth = catcher.match(line)
+                
+                if mth and mth.group(3) in ["*ABS*","*UND*"] and "f" not in mth.group(2):
+                    #info("matched\n",mth.group(5),mth.group(4))
+                    debug(line)
+                    ret.add(mth.group(5))
                 else:
                     pass
                     #print("not matched\n")

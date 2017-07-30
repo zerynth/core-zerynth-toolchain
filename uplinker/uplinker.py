@@ -106,18 +106,18 @@ def handshake(ch):
             #timeout without an answer
             fatal("Timeout without answer")
         frlines+=1
-    line=ch.readline()
+    #line=ch.readline()
 
     # read symbols
     symbols = []
-    nsymbols=int(line.strip("\n"),16)
+    nsymbols=3#int(line.strip("\n"),16)
     info("    symbols:",nsymbols)
-    for sj in range(0,nsymbols-3):
-        line=ch.readline()
-        debug(line)
-        if not line:
-            fatal("Bad symbol exchange")
-        symbols.append(int(line.strip("\n"),16))
+    # for sj in range(0,nsymbols-3):
+    #     line=ch.readline()
+    #     debug(line)
+    #     if not line:
+    #         fatal("Bad symbol exchange")
+    #     symbols.append(int(line.strip("\n"),16))
 
         #self.log("    vmsym  @"+line.strip("\n"))
         
@@ -334,7 +334,7 @@ Generating firmware for FOTA updates can be tricky. The following information is
     * The unique identifier of a new FOTA enabled VM, :samp:`vmuid_new`
     * The current slot the VM is running on, :samp:`vmslot`. Can be retrieved with :ref:`fota library <stdlib.fota>`
     * The current slot the bytecode is running on, :samp:`bcslot`, Can be retrieved with :ref:`fota library <stdlib.fota>`
-
+      
 For example, assuming a project has been compiled to the bytecode file :samp:`project.vbo` and :samp:`vmslot=0` and :samp:`bcslot=0`, the following commands can be given: ::
 
 
@@ -401,7 +401,7 @@ For example, assuming a project has been compiled to the bytecode file :samp:`pr
     if not env.human:
         res = {
             "bcbin":base64.b64encode(bcbin).decode("utf-8"),
-            "vmbin":"" if not otavm else vm["bin"],
+            "vmbin":"" if not otavm else ota_prepare_vm(vm),
             "bc_idx": bc_ota,
             "bc":vm["map"]["bc"][bc_ota],
             "vm_idx": vm_ota,
@@ -419,6 +419,18 @@ For example, assuming a project has been compiled to the bytecode file :samp:`pr
             info("File",file,"saved")
 
 
+def ota_prepare_vm(vm):
+    if isinstance(vm["bin"],str):
+        # single file vm
+        return vm["bin"]
+    else:
+        bin_indexes = vm["vm_indexes"]
+        bin = bytearray()
+        for i in bin_indexes:   # add one after the other the various vm segments
+            b64c = vm["bin"][i]
+            bin.extend(base64.b64decode(bytes(b64c,"utf8")))
+        return base64.b64encode(bin).decode("utf-8")
+        # multi file vm
 
 
 def adler32(buf):

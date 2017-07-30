@@ -50,10 +50,13 @@ class zfs():
         self.makedirs(pth)
         return pth
 
-    def get_json(self,src):
+    def get_json(self,src,strict=True):
         self.check_path(src)
         with open(src,"r",encoding="utf8") as ff:
-            return json.load(ff)
+            if strict:
+                return json.load(ff)
+            else:
+                return commentjson.load(ff)
 
     def set_json(self,js,dst):
         self.check_path(dst)
