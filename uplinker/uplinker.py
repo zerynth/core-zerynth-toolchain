@@ -378,8 +378,10 @@ For example, assuming a project has been compiled to the bytecode file :samp:`pr
     _memstart = int(vm["map"]["memstart"],16)+vm["map"]["memdelta"]
     _romstart = int(vm["map"]["bc"][bc_ota],16)+int(vm["map"]["bcdelta"],16)
 
-    relocator = Relocator(bf,vm,Var({"relocator":vm["relocator"],"cc":vm["cc"]}))
-    addresses = [int(symbols[x],16) for x in relocator.vmsym]
+    debug("MEMSTART: ",hex(_memstart))
+    debug("ROMSTART: ",hex(_romstart))
+    relocator = Relocator(bf,vm,Var({"relocator":vm["relocator"],"cc":vm["cc"],"rodata_in_ram":vm.get("rodata_in_ram",False)}))
+    addresses = []#[int(symbols[x],16) for x in relocator.vmsym]
     thebin = relocator.relocate(addresses,_memstart,_romstart)
     bcbin = thebin
 
@@ -425,6 +427,7 @@ def ota_prepare_vm(vm):
         return vm["bin"]
     else:
         bin_indexes = vm["vm_indexes"]
+        debug(bin_indexes)
         bin = bytearray()
         for i in bin_indexes:   # add one after the other the various vm segments
             b64c = vm["bin"][i]

@@ -527,7 +527,7 @@ The command: ::
 
     ztc ota prepare device firmware
 
-uploads to the ADM instance the correctly compiled and linked firmware update contained in the :samp:`firmware` file for devoce with uid :samp:`device`.
+uploads to the ADM instance the correctly compiled and linked firmware update contained in the :samp:`firmware` file for device with uid :samp:`device`.
 To correctly prepare a FOTA update refer to the :ref:`link <ztc-cmd-link> command`.
 
     """
@@ -542,6 +542,7 @@ To correctly prepare a FOTA update refer to the :ref:`link <ztc-cmd-link> comman
     }
     try:
         res = zpost(url=env.thing.ota%device, data=data,timeout=20)
+        debug(res.text)
         rj = res.json()
         if rj["status"] == "success":
             info("FOTA request prepared with uid:",rj["data"]["uid"])

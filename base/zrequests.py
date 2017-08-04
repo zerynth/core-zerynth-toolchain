@@ -6,9 +6,16 @@ from .cfg import *
 from .fs import *
 from encodings import idna
 import time
+import os
 
 TimeoutException = requests.exceptions.Timeout
-_ssl_verify = fs.path(fs.dirname(__file__),"certs.pem")
+if int(os.environ.get("ZERYNTH_TESTMODE",0))!=0:
+    from requests.packages.urllib3.exceptions import InsecureRequestWarning
+    requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+    _ssl_verify = False
+else:
+    _ssl_verify = fs.path(fs.dirname(__file__),"certs.pem")
+
 _default_timeout=5
 _default_retries=3
 

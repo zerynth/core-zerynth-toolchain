@@ -99,20 +99,29 @@ class Relocator():
             data_end = vcobj.romdata_end()
             hsize = vcobj.data_bss_size()
             if rodata_in_ram:
+                debug("Relocation .rodata")
+                new_memstart = self.align_to(_memstart,16)
+                mem_pad = new_memstart-_memstart
+                _memstart = new_memstart
+                symreloc.update({".data":_memstart})
                 #.rodata if existing must be copied at the end of the ram region (enlarging it)
                 #also, padding of .data .bss and .text must be considered and handled
                 #NOTE: after vcobj2 creation with new addresses it it possible for the compiler to enlarge some ram sections
                 #due to alignment needs greater than 4
-                data_bin = vcobj.get_section(".data")            
+                data_bin = vcobj.get_section(".data")
                 rodata_bin = vcobj.get_section(".rodata")
                 rodata_size = len(rodata_bin)
                 romdata_size = len(data_bin)
                 text_bin = vcobj.get_section(".text")
                 text_size = len(text_bin)
                 text_pad = self.align_to(text_size,4)-text_size
-                if vcobj.rodata[0] and vcobj.rodata[0]%4!=0:
-                    #add padding
-                    rodata_pad = text_pad
+                text_end = vcobj.text[1]
+                if vcobj.rodata[0]:
+                    text_pad = vcobj.rodata[0]-text_end
+                    if vcobj.rodata[0]%4!=0:
+                        rodata_pad = self.align_to(vcobj.rodata[0],4)-vcobj.rodata[0]
+                    else:
+                        rodata_pad = 0
                 else:
                     rodata_pad = 0
 
@@ -168,12 +177,21 @@ class Relocator():
                 if vcobj.data[2] and vcobj2.data[2] and vcobj.data[2]<vcobj2.data[2]:
                     hsize+=vcobj2.data[2]-vcobj.data[2]
                     debug("data mismatch, new bss size:",hex(hsize))
+                if vcobj.rodata[2] and vcobj2.rodata[2] and vcobj.rodata[2]<vcobj2.rodata[2]:
+                    hsize+=vcobj2.rodata[2]-vcobj.rodata[2]
+                    rodata_bin=(vcobj2.rodata[2]-vcobj.rodata[2])*b'\x00'+rodata_bin
+                    rodata_size = len(rodata_bin)
+                    debug("rodata mismatch, new bss size:",hex(hsize))
                 text_bin = vcobj2.get_section(".text") +text_pad*b'\x00'
-                cbin = text_bin+rodata_bin+data_bin
+                cbin = text_bin+(mem_pad*b'\x00')+rodata_bin+data_bin
                 data_start=new_romdata_start
                 data_end=new_romdata_end
                 hsize+=rodata_size
                 debug("ram data size",hex(hsize))
+                debug("binary data size",len(cbin))
+                debug("text size",hex(len(text_bin)))
+                debug("rodata size",hex(len(rodata_bin)))
+                debug("data size",hex(len(data_bin)))
 
                 
             # padding pyobjs

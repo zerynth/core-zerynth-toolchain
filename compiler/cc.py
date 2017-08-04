@@ -278,7 +278,7 @@ class gcc():
                 
                 if mth and mth.group(3) in ["*ABS*","*UND*"] and "f" not in mth.group(2):
                     #info("matched\n",mth.group(5),mth.group(4))
-                    debug(line)
+                    #debug(line)
                     ret.add(mth.group(5))
                 else:
                     pass
