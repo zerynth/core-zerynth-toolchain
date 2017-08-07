@@ -63,7 +63,7 @@ class Relocator():
 
     def align_to(self,x,n):
         return x if x%n==0 else x+(n-(x%n))
-          
+
     def relocate(self,_symbols,_memstart,_romstart):
         #logger.info("Relocating Bytecode for %s",self.upl.board["shortname"])
         cc = gcc(tools[self.device.cc])
@@ -100,99 +100,114 @@ class Relocator():
             hsize = vcobj.data_bss_size()
             if rodata_in_ram:
                 debug("Relocation .rodata")
+                #align everything to 16
                 new_memstart = self.align_to(_memstart,16)
                 mem_pad = new_memstart-_memstart
-                _memstart = new_memstart
-                symreloc.update({".data":_memstart})
-                #.rodata if existing must be copied at the end of the ram region (enlarging it)
-                #also, padding of .data .bss and .text must be considered and handled
-                #NOTE: after vcobj2 creation with new addresses it it possible for the compiler to enlarge some ram sections
-                #due to alignment needs greater than 4
-                data_bin = vcobj.get_section(".data")
-                rodata_bin = vcobj.get_section(".rodata")
-                rodata_size = len(rodata_bin)
-                romdata_size = len(data_bin)
-                text_bin = vcobj.get_section(".text")
-                text_size = len(text_bin)
-                text_pad = self.align_to(text_size,4)-text_size
-                text_end = vcobj.text[1]
-                if vcobj.rodata[0]:
-                    text_pad = vcobj.rodata[0]-text_end
-                    if vcobj.rodata[0]%4!=0:
-                        rodata_pad = self.align_to(vcobj.rodata[0],4)-vcobj.rodata[0]
-                    else:
-                        rodata_pad = 0
-                else:
-                    rodata_pad = 0
 
-                # get correct rodata limits
+                acc = 0
+                new_text_size  = vcobj.text[2]
+                new_text_start = vcobj.text[0]
+                new_text_end   = vcobj.text[1]
+                new_text_pad   =  self.align_to(new_text_end,16)-new_text_end
+
+                new_rodata_size  = vcobj.rodata_size()
+                new_rodata_start = 0 if not new_rodata_size else self.align_to(vcobj.rodata_start()+mem_pad,16)  #reserve space for mem_pad
+                new_rodata_end   = 0 if not new_rodata_size else new_rodata_start+new_rodata_size
+                new_rodata_pad   = self.align_to(new_rodata_size,16)-new_rodata_size
+                
+                acc = vcobj.romdata_start() if not new_rodata_size else new_rodata_start+new_rodata_size+new_rodata_pad
+                new_romdata_size  = vcobj.romdata_size()
+                new_romdata_start = 0 if not new_romdata_size else self.align_to(acc,16)
+                new_romdata_end   = 0 if not new_romdata_size else new_romdata_start+new_romdata_size
+                new_romdata_pad   = self.align_to(new_romdata_size,16)-new_romdata_size
+
+                new_data_size  = vcobj.data_size()
+                new_data_start = 0 if not new_data_size else self.align_to(vcobj.data_start(),16)
+                new_data_end   = 0 if not new_data_size else new_data_start+new_data_size
+                new_data_pad   = self.align_to(new_data_size,16)-new_data_size
+
+                acc = vcobj.bss_start() if not new_data_size else new_data_start+new_data_size+new_data_pad
+                new_bss_size  = vcobj.bss_size()
+                new_bss_start = 0 if not new_bss_size else self.align_to(acc,16)
+                new_bss_end   = 0 if not new_bss_size else new_bss_start+new_bss_size
+                new_bss_pad   = self.align_to(new_bss_size,16)-new_bss_size
+
+                debug("Code blueprints with relocation")
+                debug("text        ::",hex(new_text_start),"::",hex(new_text_end),"::",hex(new_text_size))
+                debug("rodata      ::",hex(new_rodata_start),"::",hex(new_rodata_end),"::",hex(new_rodata_size),"::",hex(new_rodata_start-new_text_end))
+                debug("romdata     ::",hex(new_romdata_start),"::",hex(new_romdata_end),"::",hex(new_romdata_size),"::",hex(new_romdata_start-new_text_end))
+                debug("data        ::",hex(new_data_start),"::",hex(new_data_end),"::",hex(new_data_size))
+                debug("bss         ::",hex(new_bss_start),"::",hex(new_bss_end),"::",hex(new_bss_size),"::",hex(new_bss_start-new_data_end))
+                
+
+                sects = {
+                    ".text":new_text_start,
+                    ".data":new_data_start,
+                    ".romdata":new_romdata_start,
+                    ".rodata":new_rodata_start,
+                    ".bss":new_bss_start
+                }
+                symreloc.update(sects)
+
+
+                # adjust data in mem
                 if vcobj.rodata[2]:
-                    rodata_start = vcobj.rodata[0]
-                    rodata_end = vcobj.rodata[1]
-                elif vcobj.data[2]:
-                    rodata_start = vcobj.romdata[0]
-                    rodata_end = vcobj.romdata[1]
-                else:
-                    rodata_start = vcobj.text[1]+text_pad
-                    rodata_end = rodata_start
-
-
-                if vcobj.data[2]:
-                    new_rodata_start = _memstart #vcobj.data[1]
-                    new_romdata_start = rodata_start+rodata_pad
-                    new_romdata_end   = vcobj.romdata[1]+rodata_pad
-                    new_data = new_rodata_start+rodata_size
-                    new_data_padded = self.align_to(new_data,4)
-                    hsize=hsize+new_data_padded-new_data
-                    data_bin=(new_data_padded-new_data)*b'\x00' + data_bin
-                    symreloc.update({".data":new_data_padded})
-                else:
-                    # no .data, .rodata only
-                    if vcobj.bss[2]:
-                        new_rodata_start = _memstart
-                        new_bss = _memstart+rodata_size
-                        new_bss_padded = self.align_to(new_bss,4)
-                        hsize=hsize+new_bss_padded-new_bss
-                        debug("new_bss",hex(new_bss))
-                        debug("new_bss_padded",hex(new_bss_padded))
-                        symreloc.update({".bss":new_bss_padded})
-                        new_romdata_start = rodata_start+rodata_pad
-                        new_romdata_end = rodata_end+rodata_pad
+                    # has rodata
+                    sects.update({".rodata":new_memstart})
+                    if vcobj.data[2]:
+                        sects.update({".data":self.align_to(new_memstart+vcobj.rodata[2],16)})
+                        if vcobj.bss[2]:
+                            sects.update({".bss":self.align_to(sects[".data"]+vcobj.data[2],16)})
                     else:
-                        new_rodata_start = _memstart
-                        new_romdata_start = rodata_start+rodata_pad
-                        new_romdata_end   = new_romdata_start+rodata_size
+                        if vcobj.bss[2]:
+                            sects.update({".bss":self.align_to(new_memstart+vcobj.rodata[2],16)})
+                elif vcobj.data[2]:
+                    # no rodata, has data
+                    sects.update({".data":new_memstart})
+                    if vcobj.bss[2]:
+                        sects.update({".bss":self.align_to(new_memstart+vcobj.data[2],16)})
+                elif vcobj.bss[2]:
+                    # only bss
+                    sects.update({".bss":new_memstart})
 
-                debug("new_rodata_start",hex(new_rodata_start))
-                debug("new_romdata_start",hex(new_romdata_start))
-                debug("new_romdata_end",hex(new_romdata_end))
-                debug("text_size/text_pad/rodata_pad",hex(text_size),hex(text_pad),hex(rodata_pad))
-                symreloc.update({".rodata":new_rodata_start})
+                symreloc.update(sects)
+                debug("Relocated sections")
+                for k,v in sects.items():
+                    debug(k,"==>",hex(v))
+
+
+                ###########################################
+                # text - pad - rodata - pad - romdata - pad 
+
+
                 lfile2 = fs.path(tmpdir,"zerynth.lo2")
                 vcobj2 = self.get_relocated_code(symreloc,ofile,lfile2,rodata_in_ram)
-                #can happen due to alignment
-                if vcobj.bss[2] and vcobj2.bss[2] and vcobj.bss[2]<vcobj2.bss[2]:
-                    hsize+=vcobj2.bss[2]-vcobj.bss[2]
-                    debug("bss mismatch, new bss size:",hex(hsize))
-                if vcobj.data[2] and vcobj2.data[2] and vcobj.data[2]<vcobj2.data[2]:
-                    hsize+=vcobj2.data[2]-vcobj.data[2]
-                    debug("data mismatch, new bss size:",hex(hsize))
-                if vcobj.rodata[2] and vcobj2.rodata[2] and vcobj.rodata[2]<vcobj2.rodata[2]:
-                    hsize+=vcobj2.rodata[2]-vcobj.rodata[2]
-                    rodata_bin=(vcobj2.rodata[2]-vcobj.rodata[2])*b'\x00'+rodata_bin
-                    rodata_size = len(rodata_bin)
-                    debug("rodata mismatch, new bss size:",hex(hsize))
-                text_bin = vcobj2.get_section(".text") +text_pad*b'\x00'
-                cbin = text_bin+(mem_pad*b'\x00')+rodata_bin+data_bin
-                data_start=new_romdata_start
-                data_end=new_romdata_end
-                hsize+=rodata_size
+
+                fwend = new_romdata_end if new_romdata_size else new_rodata_end
+                fwsize = fwend - new_text_start
+                cbin = bytearray(b'\x00'*fwsize)
+
+                cbin[0:new_text_size] = vcobj2.get_section(".text")
+                prev_end = new_text_start
+                if new_rodata_size:
+                    cbin[new_rodata_start-new_text_start:new_rodata_end-new_text_start] = vcobj.get_section(".rodata")
+                if new_romdata_size:
+                    cbin[new_romdata_start-new_text_start:new_romdata_end-new_text_start] = vcobj.get_section(".data")
+
+                if new_rodata_size:
+                    data_start = new_rodata_start-mem_pad
+                    data_end = new_rodata_end if not new_romdata_size else new_romdata_end
+                elif  new_romdata_size:
+                    data_start = new_romdata_start-mem_pad
+                    data_end = new_romdata_end
+
+                if vcobj2.bss_end() or vcobj2.data_end():
+                    hsize = max(vcobj2.bss_end(),vcobj2.data_end())-_memstart
+                else:
+                    hsize = data_end-data_start
+
                 debug("ram data size",hex(hsize))
                 debug("binary data size",len(cbin))
-                debug("text size",hex(len(text_bin)))
-                debug("rodata size",hex(len(rodata_bin)))
-                debug("data size",hex(len(data_bin)))
-
                 
             # padding pyobjs
             pdsz = _textstart-_romstart-len(header)-len(pyobjs)

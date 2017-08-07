@@ -31,11 +31,53 @@ class ZerynthCObj():
     def get_section(self,name):
         return self.sections.get(name,bytes())
 
+    def romdata_size(self):
+        return self.romdata[2] if self.romdata[2] is not None else 0
+
     def romdata_start(self):
         return self.romdata[0] if self.romdata[0] is not None else 0
     
     def romdata_end(self):
         return self.romdata[1] if self.romdata[1] is not None else 0
+
+    def rodata_size(self):
+        return self.rodata[2] if self.rodata[2] is not None else 0
+
+    def rodata_start(self):
+        return self.rodata[0] if self.rodata[0] is not None else 0
+    
+    def rodata_end(self):
+        return self.rodata[1] if self.rodata[1] is not None else 0
+
+    def data_size(self):
+        return self.data[2] if self.data[2] is not None else 0
+
+    def data_start(self):
+        return self.data[0] if self.data[0] is not None else 0
+    
+    def data_end(self):
+        return self.data[1] if self.data[1] is not None else 0
+
+    def bss_size(self):
+        return self.bss[2] if self.bss[2] is not None else 0
+
+    def bss_start(self):
+        return self.bss[0] if self.bss[0] is not None else 0
+    
+    def bss_end(self):
+        return self.bss[1] if self.bss[1] is not None else 0
+
+    def text_size(self):
+        return self.text[2] if self.text[2] is not None else 0
+
+    def text_start(self):
+        return self.text[0] if self.text[0] is not None else 0
+    
+    def text_end(self):
+        return self.text[1] if self.text[1] is not None else 0
+
+
+
 
     def data_bss_size(self):
         hstart=0
@@ -119,8 +161,8 @@ class ZerynthCObj():
         if self.romdata[0]:
             debug(".romdata:",hex(self.romdata[0]),"=>",hex(self.romdata[1]),"::",hex(self.romdata[2]))
         debug("binsize :",len(self.binary))
-        for sym,addr in self.symbols.items():
-            debug(hex(addr),"::",sym)
+        #for sym,addr in self.symbols.items():
+        #    debug(hex(addr),"::",sym)
 
 
 class symtable():
