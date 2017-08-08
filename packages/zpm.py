@@ -496,8 +496,101 @@ class Zpm():
         self._install_package(package,version)
 
 
-    #TODO: check uninstall
+    def _install_lib_patch(self,package,version,distpath):
+        lib_src = fs.get_tempdir()
+        fs.untarxz(package.file,lib_src)
 
+        doc_src = fs.path(lib_src,"docs")
+
+        libsdir = env.lib_dir(distpath)
+        flds = package.fullname.split(".")
+        namespace = flds[1]
+        name = flds[2]
+        repo = package.repo
+        lib_dst = fs.path(libsdir,repo,namespace,name)
+
+        fs.rmtree(doc_src)
+        # clean directories
+        fs.rmtree(lib_dst)
+        info("    installing in",lib_dst)
+        fs.copytree(lib_src,lib_dst)
+        fs.del_tempdir(lib_src)
+        return lib_dst, fs.path(env.lib_dir(env.dist),repo,namespace,name)
+
+    def _install_sys_patch(self,package,version,distpath):
+        sys_src = fs.get_tempdir()
+        fs.untarxz(package.file,sys_src)
+        pk = fs.get_json(fs.path(sys_src,"package.json"))
+        tdir = pk["targetdir"]
+        
+        if package.fullname.startswith("sys.zerynth.runtime-"):
+            # treat runtime with care! change dst or try first, then change
+            pass
+        elif package.fullname.startswith("sys.zerynth.browser-"):
+            # remove package.json, not needed as a tool and interfere with nw.js
+            fs.rm_file(fs.path(sys_src,"package.json"))
+        dst = fs.path(distpath,"sys",tdir)
+        info("    installing in",dst)
+        fs.copytree(sys_src,dst)
+        fs.del_tempdir(sys_src)
+        return dst, fs.path(env.sys,tdir)
+
+    def _install_vhal_patch(self,package,version,distpath):
+        vhal_src = fs.get_tempdir()
+        fs.untarxz(package.file,vhal_src)
+        pk = fs.get_json(fs.path(vhal_src,"package.json"))
+        tdir = pk["targetdir"]
+        dst = fs.path(env.vhal_dir(distpath),tdir)
+        info("    installing in",dst)
+        fs.copytree(vhal_src,dst)
+        fs.del_tempdir(vhal_src)
+        return dst, fs.path(env.vhaldir(env.dist),tdir)
+
+    def _install_device_patch(self,package,version,distpath):
+        dev_dst = fs.path(env.devices_dir(distpath),package.fullname.split(".")[2])
+        fs.rmtree(dev_dst)
+        fs.makedirs(dev_dst)
+        info("    installing in",dev_dst)
+        fs.untarxz(package.file,dev_dst)
+        return dev_dst, fs.path(env.devices_dir(env.dist),package.fullname.split(".")[2])
+
+
+    def _install_core_patch(self,package,version,distpath):
+        if package.fullname=="core.zerynth.toolchain":
+            dst = env.ztc_dir(distpath)
+            pdst = env.ztc_dir(env.dist)
+        elif package.fullname=="core.zerynth.studio":
+            dst = env.studio_dir(distpath)
+            pdst= env.studio_dir(env.dist)
+        elif package.fullname=="core.zerynth.stdlib":
+            dst = env.stdlib_dir(distpath)
+            pdst = env.stdlib_dir(env.dist)
+        else:
+            # just in case
+            dst = fs.path(distpath,package.fullname.split(".")[2])
+            pdst= fs.path(env.dist,pacakge.fullname.split(".")[2])
+        info("    installing in",dst)
+        fs.rmtree(dst)
+        fs.untarxz(package.file,dst)
+        if package.fullname == "core.zerynth.studio":
+            #change package.json for nw.js
+            packjson = {
+                          "name": "Zerynth Studio",
+                          "main": "index.html",
+                          "window": {
+                            "frame": True,
+                            "min_width": 800,
+                            "min_height": 600
+                          },
+                          "version":env.var.version,
+                          "user-agent":"ide/%ver/"+env.platform
+                        }
+            # no icon for mac, it's already in the browser
+            if not env.is_mac():
+                packjson["window"].update({"icon":"img/Logo512.png"})
+            fs.set_json(packjson,fs.path(dst,"package.json"))
+        return dst, pdst
+    
     def _uninstall_lib(self,package):
         libdirs = package.get_folders(package.installed)
         libdir = libdirs["path"]

@@ -254,16 +254,19 @@ def init_cfg():
         env.git_url   = os.environ.get("ZERYNTH_GIT_URL","http://localhost/git")
         env.backend   = os.environ.get("ZERYNTH_BACKEND_URL","http://localhost/v1")
         env.connector = os.environ.get("ZERYNTH_ADM_URL","http://localhost/v1")
+        env.patchurl  = os.environ.get("ZERYNTH_PATCH_URL","http://localhost/installer")
     elif testmode==2:
         # CI
         env.git_url   = os.environ.get("ZERYNTH_GIT_URL","https://test.zerynth.com/git")
         env.backend   = os.environ.get("ZERYNTH_BACKEND_URL","https://test.zerynth.com/v1")
         env.connector = os.environ.get("ZERYNTH_ADM_URL","https://localapi/v1" )
+        env.patchurl  = os.environ.get("ZERYNTH_PATCH_URL","https://test.zerynth.com/installer")
     else:
         # remote
         env.git_url ="https://backend.zerynth.com/git"
         env.backend="https://backend.zerynth.com/v1"
         env.connector="https://api.zerynth.com/v1"
+        env.patchurl= os.environ.get("ZERYNTH_PATCH_URL","https://backend.zerynth.com/installer")
 
     # dist directories
     env.dist      = fs.path(env.home,"dist",version)

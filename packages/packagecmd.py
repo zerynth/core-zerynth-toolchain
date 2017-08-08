@@ -40,6 +40,7 @@ import sqlite3
 import re
 import hashlib
 import time
+import hashlib
 from urllib.parse import quote_plus, unquote
 from .zpm  import *
 from .zversions import *
@@ -699,4 +700,91 @@ The list of new supported devices with respect to the current installation can b
         log_table(table,headers=["fullname","version"])
     else:
         log_json(pkgs,cls=ZpmEncoder)
+
+def md5(file_or_data):
+    hh = hashlib.new("md5")
+    if is_instance(file_or_data,str):
+        hh.update(fs.readfile(file_or_data,"r"))
+    else:
+        hh.update(file_or_data)
+    return hh.hexdigest()
+
+@package.command(help="Checks and prepares patches")
+@click.option("--finalize",flag_value=True,default=False)
+def patches(finalize):
+    patchfile = fs.path(env.cfg,"patches.json")
+    pth={}
+    crc=""
+    if fs.exists(patchfile):
+        pth = fs.get_json(patchfile)
+        crc = pth.get("hash","")
+    if pth.get("version",env.version)!=env.version:
+        warning("wrong version in patch file",pth["version"],"vs",env.version)
+        return
+    try:
+        res = zget(url=env.patchurl+"/"+env.version+"/patch.json", headers=headers,auth=False)
+        if res.status_code == 200:
+            npth = res.json()
+        else:
+            warning("No patch available for",env.version)
+            return
+    except Exception as e:
+        warning("Error while asking for patches",env.version,e)
+        return
+
+    new_crc = md5(bytes(res.text,"utf-8"))
+    if new_crc==crc:
+        info("No patches to apply")
+        return
+    info("Patch",npth["patchid"],"available")
+    log_json(npth)
+    if not finalize:
+        return
+    # create the patches
+    ppath=fs.path(env.tmp,"patch")
+    fs.rmtree(ppath)
+    fs.makedirs(ppath)
+    pres = {"packs":[]}
+    for fullname,nfo in npth["packs"]:
+        ohash = pth[fullname]["hash"] if fullname in pth else ""
+        chash = nfo["hash"]
+        if ohash==chash:
+            info("Skipping",fullname,": no changes")
+            continue
+        pack = Var({
+            "fullname":fullname,
+            "version":nfo["nversion"],
+            "repo":"official",
+            "type":fullname.split(".")[0],
+            "file":fs.path(env.tmp,fullname+"-"+nfo["version"]+".tar.xz")
+        })
+        # download and unpack
+        info("Downloading",fullname)
+        if _zpm._download_package(pack,nfo["version"]) is not True:
+            fatal("Error while downloading",fullname)
+        
+        if pack.type=="lib":
+            src,dst =  _zpm._install_lib_patch(pack,pack.version,ppath)
+        elif pack.type=="core":
+            src,dst =  _zpm._install_core_patch(pack,vers,ppath)
+        elif pack.type=="board":
+            src,dst =  _zpm._install_device_patch(pack,vers,ppath)
+        elif pack.type=="vhal":
+            src,dst =  _zpm._install_vhal_patch(pack,vers,ppath)
+        elif pack.type=="sys":
+            src,dst =  _zpm._install_sys_patch(pack,vers,ppath)
+        else:
+            warning("unpatchable package",pack.fullname)
+            continue
+        pres["packs"].append({
+            "destdir":dst,
+            "srcdir":src
+        })
+    npth["hash"]=new_crc
+    pres["patch"]=npth
+    fs.set_json(pres,fs.path(env.tmp,"patchfile.json"))
+    info("Patches ready!")
+
+
+    
 
