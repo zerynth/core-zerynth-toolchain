@@ -386,7 +386,7 @@ class Zpm():
             res = zget(url=env.patchurl+"/patches/"+version+"/"+fname,auth=False)
             if res.status_code == 200:
                 npth = res.json()
-                fs.set_json(fs.path(path,"patches.json"),npth)
+                fs.set_json(npth,fs.path(path,"patches.json"))
             else:
                 warning("No patches available for",version,[res.status_code])
                 return
