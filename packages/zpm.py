@@ -542,11 +542,13 @@ class Zpm():
         tdir = pk["targetdir"]
         
         if package.fullname.startswith("sys.zerynth.runtime-"):
-            # treat runtime with care! change dst or try first, then change
-            pass
+            # for patches there is no need for newpython hack
+            tdir = tdir.replace("newpython","python")
         elif package.fullname.startswith("sys.zerynth.browser-"):
             # remove package.json, not needed as a tool and interfere with nw.js
             fs.rm_file(fs.path(sys_src,"package.json"))
+            # no need for newbrowser
+            tdir = tdir.replace("newbrowser","browser")
         dst = fs.path(distpath,"sys",tdir)
         info("    installing in",dst)
         fs.copytree(sys_src,dst)
@@ -562,7 +564,7 @@ class Zpm():
         info("    installing in",dst)
         fs.copytree(vhal_src,dst)
         fs.del_tempdir(vhal_src)
-        return dst, fs.path(env.vhaldir(env.dist),tdir)
+        return dst, fs.path(env.vhal_dir(env.dist),tdir)
 
     def _install_device_patch(self,package,version,distpath):
         dev_dst = fs.path(env.devices_dir(distpath),package.fullname.split(".")[2])

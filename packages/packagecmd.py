@@ -774,7 +774,7 @@ def patches(finalize):
         ohash = pth["packs"][fullname]["hash"] if fullname in pth["packs"] else ""
         chash = nfo["hash"]
         if ohash==chash:
-            info("Skipping",fullname,": no changes")
+            debug("Skipping",fullname,": no changes")
             toskip.add(fullname)
             continue
         if not finalize:
@@ -795,13 +795,13 @@ def patches(finalize):
         if pack.type=="lib":
             src,dst =  _zpm._install_lib_patch(pack,pack.version,ppath)
         elif pack.type=="core":
-            src,dst =  _zpm._install_core_patch(pack,vers,ppath)
+            src,dst =  _zpm._install_core_patch(pack,pack.version,ppath)
         elif pack.type=="board":
-            src,dst =  _zpm._install_device_patch(pack,vers,ppath)
+            src,dst =  _zpm._install_device_patch(pack,pack.version,ppath)
         elif pack.type=="vhal":
-            src,dst =  _zpm._install_vhal_patch(pack,vers,ppath)
+            src,dst =  _zpm._install_vhal_patch(pack,pack.version,ppath)
         elif pack.type=="sys":
-            src,dst =  _zpm._install_sys_patch(pack,vers,ppath)
+            src,dst =  _zpm._install_sys_patch(pack,pack.version,ppath)
         else:
             warning("unpatchable package",pack.fullname)
             continue
