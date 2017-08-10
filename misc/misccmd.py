@@ -31,7 +31,8 @@ import click
 @click.option("--devices","__devices",flag_value=True, default=False,help="Display supported devices currently installed")
 @click.option("--vms","__vms", help="Display installed virtual machines for a specific target")
 @click.option("--examples","__examples",flag_value=True, default=False,help="Display the list of installed examples")
-def __info(__tools,__devices,__vms,__examples,__version,__modules):
+@click.option("--messages","__messages",flag_value=True, default=False,help="Display the list of system messages")
+def __info(__tools,__devices,__vms,__examples,__version,__modules,__messages):
     """ 
 Info
 ----
@@ -46,6 +47,7 @@ It takes the following options (one at a time):
 * :option:`--modules` display the list of installed Zerynth libraries that can be imported in a Zerynth program.
 * :option:`--examples` display the list of installed examples gathered from all the installed libraries.
 * :option:`--vms target` display the list of virtual machines in the current installation for the specified :samp:`target`
+* :option:`--messages` display the list of unread system messages
 
     """
     if __tools:
@@ -133,6 +135,13 @@ It takes the following options (one at a time):
         return
 
     if __version:
+        patchfile = fs.path(env.cfg,"patches.json")
+        if fs.exists(patchfile):
+            pth = fs.get_json(patchfile)
+        else:
+            pth = {}
+        patchid = pth.get("patchid","")
+        vrs = env.var.version+patchid
         log(env.var.version)
         return
 
@@ -146,6 +155,35 @@ It takes the following options (one at a time):
         else:
             log_json(mods)
 
+    if __messages:
+        msg_file = fs.path(env.cfg,"messages.json")
+        if fs.exists(msg_file):
+            msg_list = fs.get_json(msg_file)
+            for msg in msg_list:
+                msg["read"]=True
+        else:
+            msg_list = []
+        last_msg = msg_list[0]["visibleFrom"] if msg_list else ""
+        try:
+            res = zget(url=env.api.user+"/messages",params={"from":last_msg})
+            rj = res.json()
+            log_json(rj)
+            if rj["status"]=="success":
+                msg_list = rj["data"]["list"]+msg_list
+                if env.human:
+                    for k in msg_list:
+                        log(k["visibleFrom"])
+                        log(k["message"])
+                        log("------------------------")
+                else:
+                    log_json(msg_list)
+            else:
+                critical("Can't retrieve message list",rj["message"])
+        except Exception as e:
+            critical("Can't retrieve message list",exc=e)
+        msg_list = msg_list[:100]
+        fs.set_json(msg_list,msg_file)
+        
 
 # @cli.command("hex2bin")
 # @click.argument("hexfile",type=click.Path())

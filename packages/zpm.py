@@ -343,6 +343,10 @@ class Zpm():
             # need to create a new dist
             dpath = env.dist_dir(core)
             fs.copytree(env.dist,dpath)
+            #delete any patches.json in new folder
+            pthfile = fs.path(dpath,"patches.json")
+            if fs.exists(pthfile):
+                fs.rm_file(pthfile)
             #reload installed packages db
             self.load_ipack_db(env.idb_dir(dpath))
         else:
@@ -372,10 +376,24 @@ class Zpm():
 
         self._clear_tmp_folder()
         if core:
-            
             env.save(version=core)
+            self.save_patch(dpath,core)
         return core
 
+    def save_patch(self,path,version):
+        try:
+            fname = "patch-"+env.platform+".json"
+            res = zget(url=env.patchurl+"/patches/"+version+"/"+fname,auth=False)
+            if res.status_code == 200:
+                npth = res.json()
+                fs.set_json(fs.path(path,"patches.json"),npth)
+            else:
+                warning("No patches available for",version,[res.status_code])
+                return
+        except Exception as e:
+            warning("Error while asking for patches",version,e)
+            return
+        
 
     def _install_lib(self,package,version,distpath):
         lib_src = fs.get_tempdir()

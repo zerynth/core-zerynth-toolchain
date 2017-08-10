@@ -74,7 +74,7 @@ def update_zdb(repolist):
             info(repo, "repository is in sync")
         elif res.status_code == 200:
             info(repo, "repository downloaded")
-            fs.makedirs(repopath)
+            fs.makedirs(repopath) 
             fs.write_file(res.content, fs.path(repopath, "repo.tar.xz"))
         else:
             if repo=="official": has_official=False
@@ -107,6 +107,7 @@ def update_repos():
 def package():
     global _zpm
     _zpm = Zpm()
+
 
 
 
@@ -143,6 +144,7 @@ displays information about the package identified by :samp:`fullname`.
         ]
         log_table(table)
     else:
+
         log_json(pack.to_dict(),cls=ZpmEncoder)
 
 
@@ -703,57 +705,84 @@ The list of new supported devices with respect to the current installation can b
 
 def md5(file_or_data):
     hh = hashlib.new("md5")
-    if is_instance(file_or_data,str):
+    if isinstance(file_or_data,str):
         hh.update(fs.readfile(file_or_data,"r"))
     else:
         hh.update(file_or_data)
     return hh.hexdigest()
 
+def retrieve_patch_info(base=False):
+    try:
+        if base:
+            fname = "patchbase-"+env.platform+".json"
+        else:
+            fname = "patch-"+env.platform+".json"
+
+        res = zget(url=env.patchurl+"/patches/"+env.var.version+"/"+fname,auth=False)
+        if res.status_code == 200:
+            npth = res.json()
+        else:
+            warning("No patches available for",env.var.version,[res.status_code])
+            return
+    except Exception as e:
+        warning("Error while asking for patches",env.var.version,e)
+        return
+    return npth
+
+
+
 @package.command(help="Checks and prepares patches")
 @click.option("--finalize",flag_value=True,default=False)
 def patches(finalize):
-    patchfile = fs.path(env.cfg,"patches.json")
+    patchdir = fs.path(env.dist)
+    patchfile = fs.path(patchdir,"patches.json")
+    if not fs.exists(patchfile):
+        npth = retrieve_patch_info(True)
+        if not npth:
+            return
+        fs.set_json(npth,patchfile)
+
     pth={}
     crc=""
     if fs.exists(patchfile):
         pth = fs.get_json(patchfile)
-        crc = pth.get("hash","")
-    if pth.get("version",env.version)!=env.version:
-        warning("wrong version in patch file",pth["version"],"vs",env.version)
+        pid = pth.get("patchid","")
+    if pth.get("version",env.var.version)!=env.var.version:
+        warning("wrong version in patch file",pth["version"],"vs",env.var.version)
         return
-    try:
-        res = zget(url=env.patchurl+"/"+env.version+"/patch.json", headers=headers,auth=False)
-        if res.status_code == 200:
-            npth = res.json()
-        else:
-            warning("No patch available for",env.version)
-            return
-    except Exception as e:
-        warning("Error while asking for patches",env.version,e)
-        return
-
-    new_crc = md5(bytes(res.text,"utf-8"))
-    if new_crc==crc:
+    npth = retrieve_patch_info()
+    if not npth:
+        return   
+    new_pid = npth["patchid"]
+    if new_pid==pid:
         info("No patches to apply")
         return
-    info("Patch",npth["patchid"],"available")
-    log_json(npth)
-    if not finalize:
+    if "ignore" in npth:
+        # save to file but ignore
+        fs.set_json(npth,patchfile)
+        info("No patches to apply")
         return
+
+    info("Patch",npth["patchid"],"available")
     # create the patches
     ppath=fs.path(env.tmp,"patch")
     fs.rmtree(ppath)
     fs.makedirs(ppath)
     pres = {"packs":[]}
-    for fullname,nfo in npth["packs"]:
-        ohash = pth[fullname]["hash"] if fullname in pth else ""
+    toskip = set()
+    for fullname,nfo in npth["packs"].items():
+        ohash = pth["packs"][fullname]["hash"] if fullname in pth["packs"] else ""
         chash = nfo["hash"]
         if ohash==chash:
             info("Skipping",fullname,": no changes")
+            toskip.add(fullname)
+            continue
+        if not finalize:
+            # skip donwload and install if not finalizing
             continue
         pack = Var({
             "fullname":fullname,
-            "version":nfo["nversion"],
+            "version":nfo["version"],
             "repo":"official",
             "type":fullname.split(".")[0],
             "file":fs.path(env.tmp,fullname+"-"+nfo["version"]+".tar.xz")
@@ -780,10 +809,15 @@ def patches(finalize):
             "destdir":dst,
             "srcdir":src
         })
-    npth["hash"]=new_crc
     pres["patch"]=npth
-    fs.set_json(pres,fs.path(env.tmp,"patchfile.json"))
-    info("Patches ready!")
+    if finalize:
+        fs.set_json(pres,fs.path(env.tmp,"patchfile.json"))
+        fs.set_json(npth,patchfile)
+        info("Patches ready!")
+    else:
+        for ts in toskip:
+            npth["packs"].pop(ts)
+        log_json(npth)
 
 
     
