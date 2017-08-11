@@ -27,12 +27,13 @@ import click
 @cli.command("info",help="Display info about ZTC status.")
 @click.option("--tools","__tools",flag_value=True, default=False,help="Display installed tools")
 @click.option("--version","__version",flag_value=True, default=False,help="Display current version")
+@click.option("--fullversion","__fullversion",flag_value=True, default=False,help="Display current version with patches")
 @click.option("--modules","__modules",flag_value=True, default=False,help="Display installed Zerynth modules")
 @click.option("--devices","__devices",flag_value=True, default=False,help="Display supported devices currently installed")
 @click.option("--vms","__vms", help="Display installed virtual machines for a specific target")
 @click.option("--examples","__examples",flag_value=True, default=False,help="Display the list of installed examples")
 @click.option("--messages","__messages",flag_value=True, default=False,help="Display the list of system messages")
-def __info(__tools,__devices,__vms,__examples,__version,__modules,__messages):
+def __info(__tools,__devices,__vms,__examples,__version,__fullversion,__modules,__messages):
     """ 
 Info
 ----
@@ -42,6 +43,7 @@ The :command:`info` command  displays information about the status of the ZTC.
 It takes the following options (one at a time):
 
 * :option:`--version` display the current version of the ZTC.
+* :option:`--fullversion` display the current version of the ZTC together with current update.
 * :option:`--devices` display the list of supported devices currently installed.
 * :option:`--tools` display the list of available ZTC tools. A ZTC tool is a third party program used to accomplish a particular task. For example the gcc compiler for various architecture is a ZTC tool.
 * :option:`--modules` display the list of installed Zerynth libraries that can be imported in a Zerynth program.
@@ -134,15 +136,18 @@ It takes the following options (one at a time):
             log_json(exl)
         return
 
-    if __version:
+    if __version or __fullversion:
         patchfile = fs.path(env.cfg,"patches.json")
         if fs.exists(patchfile):
             pth = fs.get_json(patchfile)
         else:
             pth = {}
-        patchid = pth.get("patchid","")
-        vrs = env.var.version+patchid
-        log(env.var.version)
+        patchid = pth.get("patchid","base")
+        vrs = env.var.version+"-"+patchid
+        if __fullversion:
+            log(vrs)
+        else:
+            log(env.var.version)
         return
 
     if __modules:
