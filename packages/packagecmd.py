@@ -722,16 +722,16 @@ def retrieve_patch_info(base=False):
         if res.status_code == 200:
             npth = res.json()
         else:
-            warning("No patches available for",env.var.version,[res.status_code])
+            warning("No updates available for",env.var.version,[res.status_code])
             return
     except Exception as e:
-        warning("Error while asking for patches",env.var.version,e)
+        warning("Error while asking for updates",env.var.version,e)
         return
     return npth
 
 
 
-@package.command(help="Checks and prepares patches")
+@package.command(help="Checks and prepares updates")
 @click.option("--finalize",flag_value=True,default=False)
 def patches(finalize):
     patchdir = fs.path(env.dist)
@@ -748,22 +748,23 @@ def patches(finalize):
         pth = fs.get_json(patchfile)
         pid = pth.get("patchid","")
     if pth.get("version",env.var.version)!=env.var.version:
-        warning("wrong version in patch file",pth["version"],"vs",env.var.version)
+        warning("wrong version in update file",pth["version"],"vs",env.var.version)
+        # delete it, must be there from previous installation
+        fs.rm_file(patchfile)
         return
     npth = retrieve_patch_info()
     if not npth:
         return   
     new_pid = npth["patchid"]
     if new_pid==pid:
-        info("No patches to apply")
+        info("No updates to apply")
         return
     if "ignore" in npth:
         # save to file but ignore
         fs.set_json(npth,patchfile)
-        info("No patches to apply")
+        info("No updates to apply")
         return
 
-    info("Patch",npth["patchid"],"available")
     # create the patches
     ppath=fs.path(env.tmp,"patch")
     fs.rmtree(ppath)
@@ -813,11 +814,19 @@ def patches(finalize):
     if finalize:
         fs.set_json(pres,fs.path(env.tmp,"patchfile.json"))
         fs.set_json(npth,patchfile)
-        info("Patches ready!")
+        info("Update ready!")
     else:
+        cpth = dict(npth) # make a copy
         for ts in toskip:
             npth["packs"].pop(ts)
-        log_json(npth)
+        if npth["packs"]:
+            # there is still some pack to update
+            log_json(npth)
+        else:
+            # this patch has a different patchid but nothing is updated
+            # save it as current. May happen right after a new installation
+            fs.set_json(cpth,patchfile)
+            info("No updates to apply") 
 
 
     

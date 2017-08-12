@@ -382,7 +382,7 @@ class Zpm():
 
     def save_patch(self,path,version):
         try:
-            fname = "patch-"+env.platform+".json"
+            fname = "patchbase-"+env.platform+".json"
             res = zget(url=env.patchurl+"/patches/"+version+"/"+fname,auth=False)
             if res.status_code == 200:
                 npth = res.json()
