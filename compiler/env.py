@@ -385,7 +385,7 @@ class Env():
             edict[k]=etable.index(v)
         self.edict = edict
         self.mdict = mdict
-        #print(etable)  
+        # print(etable)  
         #print(edict)
 
     def resolveException(self,name):

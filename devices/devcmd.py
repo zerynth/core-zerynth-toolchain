@@ -285,7 +285,7 @@ The option :option:`--skip_burn` avoid flashing the device with the registering 
     except:
         fatal("Can't open serial port!")
     lines = []
-    for x in range(20):
+    for x in range(30):
         line=ch.readline()
         lines.append(line.strip("\n"))
     ch.close()

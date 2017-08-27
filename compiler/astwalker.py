@@ -933,6 +933,21 @@ class AstWalker(ast.NodeVisitor):
         self.env.addException(node.args[0].id,node.args[1].id,excmsg)
         code.addCode(OpCode.BUILD_EXCEPTION(ename))
         return code
+    
+    def visit_nameof(self,node):
+        self.setup_emitter(node)
+        code = ByteCode(node.lineno,self.prgLine(node.lineno))
+        if len(node.args)!=1:
+            raise CWrongSyntax(node.lineno,node.col_offset,self.filename,"__nameof: needs one argument")
+        if (not isinstance(node.args[0],ast.Name)):
+            raise CWrongSyntax(node.lineno,node.col_offset,self.filename,"__nameof: need a name as argument")
+        try:
+            ename = self.env.getNameCode(node.args[0].id)
+        except:
+            raise CWrongSyntax(node.lineno,node.col_offset,self.filename,"__nameof: unknown name "+node.args[0].id)
+
+        code.addCode(OpCode.CONST(ename))
+        return code
 
     def visit_new_resource(self,node):
         self.setup_emitter(node)
@@ -991,6 +1006,8 @@ class AstWalker(ast.NodeVisitor):
             return self.visit_fnprep(node,node.func.id)
         if isinstance(node.func,ast.Name) and node.func.id=="new_resource":
             return self.visit_new_resource(node)
+        if isinstance(node.func,ast.Name) and node.func.id=="__nameof":
+            return self.visit_nameof(node)
 
         #normal call            
         code = ByteCode(node.lineno,self.prgLine(node.lineno))
