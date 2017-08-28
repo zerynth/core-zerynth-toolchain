@@ -259,7 +259,7 @@ def init_cfg():
         # CI
         env.git_url   = os.environ.get("ZERYNTH_GIT_URL","https://test.zerynth.com/git")
         env.backend   = os.environ.get("ZERYNTH_BACKEND_URL","https://test.zerynth.com/v1")
-        env.connector = os.environ.get("ZERYNTH_ADM_URL","https://localapi/v1" )
+        env.connector = os.environ.get("ZERYNTH_ADM_URL","https://test.zerynth.com:444/v1" )
         env.patchurl  = os.environ.get("ZERYNTH_PATCH_URL","https://test.zerynth.com/installer")
     else:
         # remote
