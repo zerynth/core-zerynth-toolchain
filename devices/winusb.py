@@ -7,6 +7,7 @@ from .wmi import WMI
 class WinUsb():
 	def __init__(self):
 		self.smth = re.compile("USB\\\\(?:[^\\\\]*&)*VID_([0-9a-fA-F]*)&PID_([0-9a-fA-F]*)(?:&[^\\\\]*)*\\\\([^\\\\]*)")
+		self.ftdimth = re.compile("FTDIBUS\\\\(?:[^\\\\]*&)*VID_([0-9a-fA-F]*)\+PID_([0-9a-fA-F]*)\+([^\\\\]*)A\\\\(?:[^\\\\]*)")
 		self.hmth = re.compile('.*="(.*)"')
 		self.matchcom = re.compile(".*\((COM[0-9]+)\).*")
 		pythoncom.CoInitialize()
@@ -90,12 +91,11 @@ class WinUsb():
 	def _get_win_device_id(self,pnp):
 		mth =self.smth.match(pnp)
 		if mth:
-			return (
-				mth.group(1).upper(),
-				mth.group(2).upper(),
-				mth.group(3).upper()
-				)
-		return (None,None,None)
+			return ( mth.group(1).upper(), mth.group(2).upper(), mth.group(3).upper() )
+		mth =self.ftdimth.match(pnp)
+		if mth:
+			return ( mth.group(1).upper(), mth.group(2).upper(), mth.group(3).upper() )
+		return ( None, None, None )
 
 	def _split_sid(self,sid):
 		if "&" in sid:
