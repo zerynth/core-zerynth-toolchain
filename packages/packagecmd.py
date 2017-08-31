@@ -722,7 +722,7 @@ def retrieve_patch_info(base=False):
         if res.status_code == 200:
             npth = res.json()
         else:
-            warning("No updates available for",env.var.version,[res.status_code])
+            debug("No updates available for",env.var.version,[res.status_code])
             return
     except Exception as e:
         warning("Error while asking for updates",env.var.version,e)
@@ -828,6 +828,8 @@ def patches(finalize):
             fs.set_json(cpth,patchfile)
             info("No updates to apply") 
 
-
+    # Check for installer version
+    if not env.installer_v2:
+        warning("It seems this instance of Zerynth does not support updates!! Please refer here TODO: add link")
     
 

@@ -259,7 +259,7 @@ def init_cfg():
         # CI
         env.git_url   = os.environ.get("ZERYNTH_GIT_URL","https://test.zerynth.com/git")
         env.backend   = os.environ.get("ZERYNTH_BACKEND_URL","https://test.zerynth.com/v1")
-        env.connector = os.environ.get("ZERYNTH_ADM_URL","https://test.zerynth.com:444/v1" )
+        env.connector = os.environ.get("ZERYNTH_ADM_URL","https://testapi.zerynth.com:444/v1" )
         env.patchurl  = os.environ.get("ZERYNTH_PATCH_URL","https://test.zerynth.com/installer")
     else:
         # remote
@@ -351,6 +351,7 @@ def init_cfg():
             warning("Bad json in",env.proxyfile)
 
     #set minimum compatible vm version
-    env.min_vm_dep="r2.0.9"
+    env.min_vm_dep="r2.0.10"
+    env.installer_v2 = fs.exists(fs.path(env.cfg,"root.json"))
 
 add_init(init_cfg,prio=0)

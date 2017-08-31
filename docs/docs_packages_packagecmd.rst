@@ -101,7 +101,7 @@ Publishing a package
 Zerynth projects can be published as library packages and publicly shared on different repositories (default is :samp:`community`). In order to convert a project into a publishable packages some requirements must be met:
 
 * The project must exist as a repository on the Zerynth backend (see :ref:`git_init <ztc-cmd-project-git_init>`)
-* The user must own at least a :ref:`namespace <ztc-cmd-namespace-create`
+* The user must own at least a :ref:`namespace <ztc-cmd-namespace-create>`
 * The project folder must contain a :file:`package.json` file with all relevant package information
 
 In particular, the :file:`package.json` must contain the following mandatory fields:
