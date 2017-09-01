@@ -816,10 +816,11 @@ def patches(finalize):
     pres["version"]=env.var.version
     if finalize:
         fs.set_json(pres,fs.path(env.tmp,"patchfile.json"))
-        fs.set_json(npth,patchfile)
+        # fs.set_json(npth,patchfile)
         info("Update ready!")
     else:
-        cpth = dict(npth) # make a copy
+        import copy
+        cpth = copy.deepcopy(npth) # make a copy
         for ts in toskip:
             npth["packs"].pop(ts)
         if npth["packs"]:
