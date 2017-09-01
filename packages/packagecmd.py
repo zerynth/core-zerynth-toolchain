@@ -813,6 +813,7 @@ def patches(finalize):
             "srcdir":src
         })
     pres["patch"]=npth
+    pres["version"]=env.var.version
     if finalize:
         fs.set_json(pres,fs.path(env.tmp,"patchfile.json"))
         fs.set_json(npth,patchfile)
