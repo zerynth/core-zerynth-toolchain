@@ -766,7 +766,7 @@ def patches(finalize):
         return
 
     if finalize and not env.installer_v2:
-        fatal("Can't install update! This instance of Zerynth does not support updates: refere to TODO: add link here")
+        fatal("Can't install update! This instance of Zerynth does not support updates: refer to this %link%guide%https://docs.zerynth.com/latest/official/core.zerynth.docs/migration2/docs/index.html%")
     # create the patches
     ppath=fs.path(env.tmp,"patch")
     fs.rmtree(ppath)
@@ -834,6 +834,6 @@ def patches(finalize):
 
     # Check for installer version
     if not env.installer_v2:
-        warning("It seems this instance of Zerynth does not support updates!! Please refer here TODO: add link")
+        warning("It seems this instance of Zerynth does not support updates!! Please refer to this %link%guide%https://docs.zerynth.com/latest/official/core.zerynth.docs/migration2/docs/index.html%")
     
 

@@ -377,7 +377,11 @@ class Zpm():
         self._clear_tmp_folder()
         if core:
             env.save(version=core)
-            self.save_patch(dpath,core)
+            if offline:
+                # update patchfile for offline installations
+                fs.copy(fs.path(offline,"patches.json"),fs.path(dpath,"patches.json"))
+            else:
+                self.save_patch(dpath,core)
         return core
 
     def save_patch(self,path,version):

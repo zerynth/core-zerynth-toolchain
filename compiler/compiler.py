@@ -198,10 +198,10 @@ class Compiler():
             #file.replace("/",os.path.sep);
             if file.endswith("*"):
                 pt = fs.dirname(file)
-                afile = fs.glob(pt,"*.c")
+                afile = fs.glob(pt,"*.c")   
             else:
                 afile = [file.replace("\\","/")]
-            if afile[0].endswith("cbuild.json"):
+            if afile and afile[0].endswith("cbuild.json"):
                 self.addCBuild(afile[0])
             else:
                 self.cfiles.update(afile)
