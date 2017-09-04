@@ -379,7 +379,10 @@ class Zpm():
             env.save(version=core)
             if offline:
                 # update patchfile for offline installations
-                fs.copy(fs.path(offline,"patches.json"),fs.path(dpath,"patches.json"))
+                try:
+                    fs.copyfile(fs.path(offline,"patches.json"),fs.path(dpath,"patches.json"))
+                except:
+                    warning("Can't copy patch file!")
             else:
                 self.save_patch(dpath,core)
         return core
