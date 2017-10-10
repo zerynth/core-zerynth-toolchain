@@ -240,6 +240,16 @@ The list of packages with updated versions with respect to the current installat
     ztc package updated
 
     
+.. ztc-cmd_package-available:
+
+Available packages
+------------------
+
+The list of packages available on the backend can be retrieved with: ::
+    
+    ztc package available
+
+    
 .. ztc-cmd_package-devices:
 
 New Devices

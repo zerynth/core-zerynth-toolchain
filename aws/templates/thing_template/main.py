@@ -7,7 +7,7 @@ from wireless import wifi
 
 from espressif.esp32net import esp32wifi as wifi_driver
 
-from aws import aws
+from aws.iot import iot
 import helpers
 
 new_resource('private.pem.key')
@@ -17,12 +17,12 @@ new_resource('thing.conf.json')
 streams.serial()
 wifi_driver.auto_init()
 
-wifi.link("Zerynth",wifi.WIFI_WPA2,"zerynthwifi")
+wifi.link("SSID",wifi.WIFI_WPA2,"PSW")
 
 pkey, clicert = helpers.load_key_cert('private.pem.key', 'certificate.pem.crt')
 thing_conf = helpers.load_thing_conf()
 
-thing = aws.Thing(thing_conf['endpoint'], thing_conf['mqttid'], clicert, pkey, thingname=thing_conf['thingname'])
+thing = iot.Thing(thing_conf['endpoint'], thing_conf['mqttid'], clicert, pkey, thingname=thing_conf['thingname'])
 thing.mqtt.connect()
 thing.mqtt.loop()
 

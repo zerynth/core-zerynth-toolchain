@@ -39,7 +39,7 @@ The command: ::
 
     ztc link vmuid bytecode
 
-generates a file containing the bytecode :samp:`bytecode` modified in such a way that it can be run on the VM :samp:`vmuid` without the need for an uplink.
+generates a file containing the bytecode :samp:`bytecode` modified in such a way that it can be executed on the VM :samp:`vmuid` without the need for an uplink.
 
 This command is mainly used to generate executable bytecode for FOTA updates. Alternatively it can be used to generate a binary firmware to be manually flashed on a device, skipping both device recognition and uplinking.
 
@@ -60,20 +60,20 @@ Generating firmware for FOTA updates can be tricky. The following information is
     * The unique identifier of a new FOTA enabled VM, :samp:`vmuid_new`
     * The current slot the VM is running on, :samp:`vmslot`. Can be retrieved with :ref:`fota library <stdlib.fota>`
     * The current slot the bytecode is running on, :samp:`bcslot`, Can be retrieved with :ref:`fota library <stdlib.fota>`
+      
+For example, assuming a project has been compiled to the bytecode file :samp:`project.vbo` and :samp:`vmslot=0` and :samp:`bcslot=0`, the following commands can be given: ::
 
-For example, assuming a project has been compile to the bytecode file :samp:`project.vbo` and :samp:`vmslot=0` and :samp:`bcslot=0`, the following commands can be given: ::
 
-
-    # generate bytecode capable of running on slot 1 and VM 0
+    # generate bytecode capable of running on slot 1 with VM in slot 0
     # the resulting file can be used for a FOTA update of the bytecode
     ztc link vmuid project.vbo --bc 1 --file project.vbe
     
-    # generate bytecode capable of running on slot 1 and VM 1
-    # the resulting file CAN'T be used for a FOTA update because the running VM is 0
+    # generate bytecode capable of running on slot 1 with VM in slot 1
+    # the resulting file CAN'T be used for a FOTA update because the running VM is in slot 0
     # and project.vbe does not contain the new VM
     ztc link vmuid_new project.vbo --bc 1 --vm 1 --file project.vbe 
 
-    # generate bytecode capable of running on slot 1 and VM 1
+    # generate bytecode capable of running on slot 1 with VM in slot 1
     # the resulting file can be used for a FOTA update of the bytecode and VM
     # because project.vbe contains the new VM
     ztc link vmuid_new project.vbo --bc 1 --vm 1 --otavm --file project.vbe 
@@ -81,7 +81,7 @@ For example, assuming a project has been compile to the bytecode file :samp:`pro
 
 .. note:: It is not possible to generate a FOTA update of the VM only!
 
-.. note:: To generate a Zerynth ADM compatible FOTA bytecode update, add option :option:`-J` before the link command.
+.. note:: To generate a Zerynth ADM compatible FOTA bytecode update, add option :option:`-J` before the link command. The resulting file will be JSON and not binary.
 
 
     

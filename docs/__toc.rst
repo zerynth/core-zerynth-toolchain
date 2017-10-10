@@ -14,5 +14,6 @@
        docs_packages_nscmd
        docs_packages_packagecmd
        docs_things_thingcmd
+       docs_aws_awscmd
        docs_misc_misccmd
 
