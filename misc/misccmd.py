@@ -137,7 +137,7 @@ It takes the following options (one at a time):
         return
 
     if __version or __fullversion:
-        patchfile = fs.path(env.cfg,"patches.json")
+        patchfile = fs.path(env.dist,"patches.json")
         if fs.exists(patchfile):
             pth = fs.get_json(patchfile)
         else:
