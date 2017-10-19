@@ -2,7 +2,7 @@
 # @Author: Lorenzo
 # @Date:   2017-10-03 09:34:26
 # @Last Modified by:   Lorenzo
-# @Last Modified time: 2017-10-12 13:27:58
+# @Last Modified time: 2017-10-19 09:57:29
 
 """
 .. _ztc-cmd-aws:
@@ -45,7 +45,7 @@ AWS IoT Platform
 ****************
 
 AWS IoT is a managed cloud platform that lets connected devices easily and securely interact with cloud applications and other devices: `AWS IoT platform <https://aws.amazon.com/iot-platform/>`_.
-It is officially supported by Zerynth powered devices through a :ref:`specific module <awsiot>`.
+It is officially supported by Zerynth powered devices through a :ref:`specific module <lib.aws.iot>`.
 
 Zerynth Toolchain and AWS IoT Platform integration provides a full device project workflow: from single Thing creation and testing to :ref:`mass programming <ztc-cmd-aws-set_active_thing_note>` utilies for production environment.
 
