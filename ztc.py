@@ -103,6 +103,7 @@ import user
 import linter
 import misc
 import things
+import aws
 
 
 if __name__=="__main__":

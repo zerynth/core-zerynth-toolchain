@@ -13,6 +13,7 @@
 		["Namespaces","packages/nscmd.py"],
 		["Packages","packages/packagecmd.py"],
 		["Connected Devices","things/thingcmd.py"],
+		["AWS","aws/awscmd.py"],
 		["Miscellanea","misc/misccmd.py"]
 	]
 }

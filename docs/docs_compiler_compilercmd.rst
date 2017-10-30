@@ -7,7 +7,7 @@ The ZTC compiler takes a project as input and produces an executable bytecode fi
 
 The command: ::
     
-        ztc compiler project target
+        ztc compile project target
 
 compiles the source files found at :samp:`project` (the project path) for a device with target :samp:`target`.
 

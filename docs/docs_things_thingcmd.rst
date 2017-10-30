@@ -217,7 +217,7 @@ The command: ::
 
     ztc ota prepare device firmware
 
-uploads to the ADM instance the correctly compiled and linked firmware update contained in the :samp:`firmware` file for devoce with uid :samp:`device`.
+uploads to the ADM instance the correctly compiled and linked firmware update contained in the :samp:`firmware` file for device with uid :samp:`device`.
 To correctly prepare a FOTA update refer to the :ref:`link <ztc-cmd-link> command`.
 
     
