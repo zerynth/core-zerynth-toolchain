@@ -201,7 +201,7 @@ class Zpm():
                 except Exception as e:
                     debug("download exception",str(e))
                 debug("Attempt",str(attempt))
-                time.sleep(3*(attempt+1))
+                time.sleep(6*(attempt+1))
             return False
         else:
             fs.copyfile(fs.path(offline,package.fullname+"-"+str(version)+".tar.xz"),fs.path(env.tmp, package.fullname+"-"+str(version)+".tar.xz"))
