@@ -277,6 +277,9 @@ The option :option:`--skip_burn` avoid flashing the device with the registering 
     if tgt.reset_after_register:
         info("Please reset the device!")
 
+    if tgt.sw_reset_after_register is True:
+        tgt.reset()
+
     conn = ConnectionInfo()
     conn.set_serial(tgt.port,**tgt.connection)
     ch = Channel(conn)
