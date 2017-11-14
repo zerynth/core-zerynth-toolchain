@@ -5,7 +5,7 @@ import json
 import tarfile
 import zlib
 import lzma
-
+import time
 
 
 class Zpm():
@@ -177,24 +177,28 @@ class Zpm():
 
     def _download_package(self,package,version,callback=None,offline=None):
         if not offline:
-            res = zget(url=env.api.packages+"/"+package.fullname+"/"+str(version),stream=True,auth="conditional")
-            if res.status_code == 200:
-                try:
-                    total_size = int(res.headers['content-length'])
-                except:
-                    total_size = -1
-                down_data = 0
-                prev_data = 0
-                #TODO: test streaming for progress notification
-                with open(fs.path(env.tmp, package.fullname+"-"+str(version)+".tar.xz"),"wb") as f:
-                    for data in res.iter_content(chunk_size=64 * 1024):
-                        f.write(data)
-                        prev_data = down_data
-                        down_data+=len(data)
-                        if callback:
-                            callback(down_data,prev_data,total_size)
-                return True
-            return res.status_code
+            for attempt in range(3):
+                res = zget(url=env.api.packages+"/"+package.fullname+"/"+str(version),stream=True,auth="conditional")
+                if res.status_code == 200:
+                    try:
+                        total_size = int(res.headers['content-length'])
+                    except:
+                        total_size = -1
+                    down_data = 0
+                    prev_data = 0
+                    #TODO: test streaming for progress notification
+                    with open(fs.path(env.tmp, package.fullname+"-"+str(version)+".tar.xz"),"wb") as f:
+                        for data in res.iter_content(chunk_size=64 * 1024):
+                            f.write(data)
+                            prev_data = down_data
+                            down_data+=len(data)
+                            if callback:
+                                callback(down_data,prev_data,total_size)
+                    return True
+                elif attempt==2:
+                    return res.status_code
+                time.sleep(3*(attempt+1))
+
         else:
             fs.copyfile(fs.path(offline,package.fullname+"-"+str(version)+".tar.xz"),fs.path(env.tmp, package.fullname+"-"+str(version)+".tar.xz"))
             return True
