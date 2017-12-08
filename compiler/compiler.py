@@ -438,6 +438,7 @@ class Compiler():
                         cheaders = gcc.get_headers([cfile])
                         #print("HEADERS",cheaders)
                         ret,wrn,err,cout = gcc.compile([cfile],o=hfile)
+                        debug(cout)
                         if ret==0:
                             if wrn:
                                 for k,v in wrn.items():

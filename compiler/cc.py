@@ -216,6 +216,16 @@ class gcc():
         self.objdump = tools["objdump"]
         self.ld = tools["ld"]
         self.readelf = tools["readelf"]
+        # search for compiler libraries in ../lib
+        libpath = None
+        libfiles = fs.all_files(fs.path(fs.dirname(self.gcc),"..","lib"))
+        for libfile in libfiles:
+            if fs.basename(libfile)=="libgcc.a":
+                libpath = fs.dirname(libfile)
+                break
+        else:
+            fatal("Can't find libgcc!")
+        self.libpath = libpath
 
     def run_command(self,cmd, args):
         ret = 0
@@ -326,7 +336,7 @@ class gcc():
                     pass
                     #print("not matched\n")
         return ret
-    def link(self, fnames, symt={}, reloc=True, ofile=None):
+    def link(self, fnames, symt={}, reloc=True, ofile=None, stdlib=False):
         ldopt =[]
         for k,v in symt.items():
             if k.startswith("."):
@@ -337,6 +347,11 @@ class gcc():
         if reloc:
             ldopt.append("-r")
         ldopt.extend(fnames)
+        
+        ldopt.append("-L")
+        ldopt.append(self.libpath)
+        ldopt.append("-lgcc")
+        
         if ofile:
             ldopt.append("-o")
             ldopt.append(ofile)

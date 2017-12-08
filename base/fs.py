@@ -233,6 +233,13 @@ class zfs():
         self.check_path(path)
         root,dirnames,files = next(os.walk(path))
         return [self.path(path,x) for x in files]
+    
+    def all_files(self,path):
+        self.check_path(path)
+        res = []
+        for root,dirnames,files in os.walk(path):
+            res.extend([self.path(root,x) for x in files])
+        return res
 
     def write_file(self,data,dst):
         self.check_path(dst)
