@@ -336,7 +336,7 @@ class gcc():
                     pass
                     #print("not matched\n")
         return ret
-    def link(self, fnames, symt={}, reloc=True, ofile=None, stdlib=False):
+    def link(self, fnames, symt={}, reloc=True, ofile=None, libs=[]):
         ldopt =[]
         for k,v in symt.items():
             if k.startswith("."):
@@ -348,10 +348,24 @@ class gcc():
             ldopt.append("-r")
         ldopt.extend(fnames)
         
+        #always add libgcc
         ldopt.append("-L")
         ldopt.append(self.libpath)
         ldopt.append("-lgcc")
-        
+
+        for lib in libs:
+            if fs.exists(lib):
+                if fs.isfile(lib):
+                    #add to linker
+                    ldopt.append(lib)
+                else:
+                    #it's a dir, add -L
+                    ldopt.append("-L")
+                    ldopt.append(lib)
+            else:
+                #it's an abbreviated lib
+                ldopt.append("-l"+lib)
+
         if ofile:
             ldopt.append("-o")
             ldopt.append(ofile)
