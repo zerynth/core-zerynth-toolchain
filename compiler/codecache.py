@@ -1,5 +1,6 @@
 from base import *
 import hashlib
+import base64
 
 class CodeCache():
     def __init__(self):
@@ -13,9 +14,7 @@ class CodeCache():
             sdf=sdf+str(x)+"&&"
         self.target=target
         self.hash=target+"::"+sdf
-        hasher = hashlib.sha1()
-        hasher.update(bytes(self.hash,"utf-8"))
-        self.path=fs.path(self.basepath,hasher.hexdigest()+"_"+prefix.replace("\\","_").replace("/","_").replace(":","_")+"_"+target)
+        self.path=fs.path(self.basepath,self.hashme(self.hash)+"_"+self.hashme(prefix+target)+"_"+fs.basename(prefix))
         fs.makedirs(self.path)
         try:
             self.cache=fs.get_json(fs.path(self.path,".cache"))
@@ -50,3 +49,8 @@ class CodeCache():
                         return False
                 return file["ofile"]
         return False
+
+    def hashme(self,msg):
+        hasher = hashlib.md5()
+        hasher.update(bytes(msg,"utf-8"))
+        return base64.standard_b64encode(hasher.digest()).decode("utf-8").replace("=","").replace("+","").replace("/","")

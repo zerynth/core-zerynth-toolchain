@@ -46,7 +46,7 @@ class Relocator():
         #    undf = undf-fund;
         #    debug("There are",len(undf),"missing symbols! This VM does not support the requested features!",undf)
 
-        ret,output = cc.link([ofile],srel,reloc=False,ofile=lfile)
+        ret,output = cc.link([ofile],srel,reloc=False,ofile=lfile,abi=True)
         debug(output)
         if ret!=0:
             #logger.info("Relocation: %s",output)

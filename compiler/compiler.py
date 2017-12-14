@@ -419,7 +419,7 @@ class Compiler():
             for cfile in self.cfiles:
                 if not fs.exists(cfile):
                     warning(cfile,"does not exist")
-                hfile = fs.path(tmpdir,self.target+"_"+cfile.replace("\\","_").replace("/","_").replace(":","_")+".o")
+                hfile = fs.path(tmpdir,self.target+"_"+self.cncache.hashme(cfile)+"_"+fs.basename(cfile).replace(".c","")+".o")
                 ofiles[cfile]=hfile
                 if cfile.endswith(".rvo"):
                     #handle rvo files
