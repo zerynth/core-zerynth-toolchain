@@ -53,4 +53,4 @@ class CodeCache():
     def hashme(self,msg):
         hasher = hashlib.md5()
         hasher.update(bytes(msg,"utf-8"))
-        return base64.standard_b64encode(hasher.digest()).decode("utf-8").replace("=","").replace("+","").replace("/","")
+        return base64.standard_b64encode(hasher.digest()).decode("utf-8").replace("=","").replace("/","_")
