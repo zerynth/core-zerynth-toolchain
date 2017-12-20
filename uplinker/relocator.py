@@ -42,17 +42,17 @@ class Relocator():
                 srel[u] = self.symtable[u]
                 fund.add(u)
 
-        if undf!=fund:
-            undf = undf-fund;
-            fatal("There are",len(undf),"missing symbols! This VM does not support the requested features!",undf)
+        #if undf!=fund:
+        #    undf = undf-fund;
+        #    debug("There are",len(undf),"missing symbols! This VM does not support the requested features!",undf)
 
-        ret,output = cc.link([ofile],srel,reloc=False,ofile=lfile)
+        ret,output = cc.link([ofile],srel,reloc=False,ofile=lfile,abi=True)
         debug(output)
         if ret!=0:
             #logger.info("Relocation: %s",output)
             undf = output.count("undefined reference")
             if undf > 0:
-                fatal("There are",undf,"missing symbols! This VM does not support the requested features!")
+                debug("There are",undf,"missing symbols! This VM does not support the requested features!")
             else:
                 fatal("Relocation error",output)
         sym = cc.symbol_table(lfile)

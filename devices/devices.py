@@ -103,6 +103,7 @@ class Device():
                 "PWMD":0x0400,
                 "ICUD":0x0500,
                 "CAN":0x0600,
+                "SD":0x0B00
             }
 
             # build dictionary with all valid pin names and prph names

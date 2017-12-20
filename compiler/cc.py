@@ -216,6 +216,16 @@ class gcc():
         self.objdump = tools["objdump"]
         self.ld = tools["ld"]
         self.readelf = tools["readelf"]
+        # search for compiler libraries in ../lib
+        libpath = None
+        libfiles = fs.all_files(fs.path(fs.dirname(self.gcc),"..","lib"))
+        for libfile in libfiles:
+            if fs.basename(libfile)=="libgcc.a":
+                libpath = fs.dirname(libfile)
+                break
+        else:
+            fatal("Can't find libgcc!")
+        self.libpath = libpath
 
     def run_command(self,cmd, args):
         ret = 0
@@ -326,7 +336,7 @@ class gcc():
                     pass
                     #print("not matched\n")
         return ret
-    def link(self, fnames, symt={}, reloc=True, ofile=None):
+    def link(self, fnames, symt={}, reloc=True, ofile=None, abi=False, libs=[]):
         ldopt =[]
         for k,v in symt.items():
             if k.startswith("."):
@@ -337,6 +347,26 @@ class gcc():
         if reloc:
             ldopt.append("-r")
         ldopt.extend(fnames)
+        
+        #add libgcc
+        if abi:
+            ldopt.append("-L")
+            ldopt.append(self.libpath)
+            ldopt.append("-lgcc")
+
+        for lib in libs:
+            if fs.exists(lib):
+                if fs.isfile(lib):
+                    #add to linker
+                    ldopt.append(lib)
+                else:
+                    #it's a dir, add -L
+                    ldopt.append("-L")
+                    ldopt.append(lib)
+            else:
+                #it's an abbreviated lib
+                ldopt.append("-l"+lib)
+
         if ofile:
             ldopt.append("-o")
             ldopt.append(ofile)
