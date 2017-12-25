@@ -98,6 +98,10 @@ class zfs():
         except Exception as e:
             print("Warning: can't remove file :", dst, "error: ", e)
 
+    def copyfileobj(self,src,dst):
+        shutil.copyfileobj(src,dst)
+
+
     def copytree(self,src,dst):
         self.check_path([src, dst])
         shutil.rmtree(dst,ignore_errors=True)

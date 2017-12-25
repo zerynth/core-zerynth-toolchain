@@ -3,11 +3,12 @@ import sys
 import traceback
 import time
 import json
+import hashlib
 from . import tabulate
 from . import websocket as ws
 from . import commentjson as commentjson
 
-__all__ =['Critical','Error','Warning','Info','echo','cli','error','warning','debug','info','log','log_json','log_table','critical','fatal','add_init','init_all','sleep','set_output_filter','ws','commentjson']
+__all__ =['Critical','Error','Warning','Info','echo','cli','error','warning','debug','info','log','log_json','log_table','critical','fatal','add_init','init_all','sleep','set_output_filter','ws','commentjson',"md5"]
 
 
 ## GLOBAL OPTIONS
@@ -135,6 +136,16 @@ indent = None
 
 def sleep(n):
     time.sleep(n)
+
+def md5(file_or_data):
+    hh = hashlib.new("md5")
+    if isinstance(file_or_data,str):
+        hh.update(fs.readfile(file_or_data,"r"))
+    else:
+        hh.update(file_or_data)
+    return hh.hexdigest()
+
+
 ## Main entrypoint gathering 
 
 @click.group(help="Zerynth Toolchain.")

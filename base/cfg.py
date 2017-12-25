@@ -64,6 +64,33 @@ class Environment():
         except Exception as e:
             critical("can't load configuration",exc=e)
 
+    def load_patches(self,cfgdir):
+        try:
+            js = fs.get_json(fs.path(cfgdir,"patches.json"))
+            self.patches = js
+        except:
+            self.patches = {self.var.version:"base"}
+    
+    def save_patches(self):
+        try:
+            js = fs.set_json(self.patches,fs.path(self.cfgdir,"patches.json"))
+        except:
+            pass
+    
+    def load_versions(self,cfgdir):
+        try:
+            js = fs.get_json(fs.path(cfgdir,"versions.json"))
+            self.versions = js
+        except:
+            self.versions = {self.var.version:["base"]}
+    
+    def save_versions(self):
+        try:
+            js = fs.set_json(self.versions,fs.path(self.cfgdir,"versions.json"))
+        except:
+            pass
+
+
     def save(self,cfgdir=None,version=None):
         try:
             if not cfgdir:
@@ -255,18 +282,21 @@ def init_cfg():
         env.backend   = os.environ.get("ZERYNTH_BACKEND_URL","http://localhost/v1")
         env.connector = os.environ.get("ZERYNTH_ADM_URL","http://localhost/v1")
         env.patchurl  = os.environ.get("ZERYNTH_PATCH_URL","http://localhost/installer")
+        env.packurl   = os.environ.get("ZERYNTH_PACK_URL","http://localhost")
     elif testmode==2:
         # CI
         env.git_url   = os.environ.get("ZERYNTH_GIT_URL","https://test.zerynth.com/git")
         env.backend   = os.environ.get("ZERYNTH_BACKEND_URL","https://test.zerynth.com/v1")
         env.connector = os.environ.get("ZERYNTH_ADM_URL","https://testapi.zerynth.com:444/v1" )
         env.patchurl  = os.environ.get("ZERYNTH_PATCH_URL","https://test.zerynth.com/installer")
+        env.packurl   = os.environ.get("ZERYNTH_PACK_URL","https://test.zerynth.com")
     else:
         # remote
         env.git_url ="https://backend.zerynth.com/git"
         env.backend="https://backend.zerynth.com/v1"
         env.connector="https://api.zerynth.com/v1"
         env.patchurl= os.environ.get("ZERYNTH_PATCH_URL","https://backend.zerynth.com/installer")
+        env.packurl= os.environ.get("ZERYNTH_PACK_URL","https://backend.zerynth.com")
 
     # dist directories
     env.dist      = fs.path(env.home,"dist",version)
@@ -310,9 +340,10 @@ def init_cfg():
         "devices":env.backend+"/devices",
         "vm":env.backend+"/vms",
         "vmlist":env.backend+"/vmlist",
-        "packages":env.backend+"/packages",
+        "packages":env.packurl+"/packages",
         "ns":env.backend+"/namespaces",
         "db":env.backend+"/repository",
+        "repo":env.patchurl,
         "search": env.backend+"/packages/search",
         "profile": env.backend+"/user/profile",
         "installation": env.backend+"/installations",
@@ -353,5 +384,6 @@ def init_cfg():
     #set minimum compatible vm version
     env.min_vm_dep="r2.0.10"
     env.installer_v2 = fs.exists(fs.path(env.cfg,"root.json"))
+    env.installer_v3 = fs.exists(fs.path(env.cfg,"root3.json"))
 
 add_init(init_cfg,prio=0)

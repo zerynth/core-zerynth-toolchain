@@ -87,6 +87,9 @@ def zput(url, data,headers={},auth=True,timeout=_default_timeout):
             timeout=timeout*2
     raise TimeoutException
 
+def zgetraw(url):
+    r = requests.get(url,stream=True)
+    return r.raw
 
 def get_token(continue_if_none=False):
     tokdata = env.get_token()
