@@ -64,18 +64,6 @@ class Environment():
         except Exception as e:
             critical("can't load configuration",exc=e)
 
-    def load_patches(self,cfgdir):
-        try:
-            js = fs.get_json(fs.path(cfgdir,"patches.json"))
-            self.patches = js
-        except:
-            self.patches = {self.var.version:"base"}
-    
-    def save_patches(self):
-        try:
-            js = fs.set_json(self.patches,fs.path(self.cfgdir,"patches.json"))
-        except:
-            pass
     
     def load_versions(self,cfgdir):
         try:
@@ -273,6 +261,7 @@ def init_cfg():
     # load configuration
     env.load(env.cfg)
     env.load_dbs(env.cfg,"devices.db")
+    env.load_versions(env.cfg)
     #env.load_zpack_db(env.zdb,"packages.db")
     #env.load_ipack_db(env.idb,"packages.db")
     version = env.var.version
@@ -308,7 +297,7 @@ def init_cfg():
     env.studio    = fs.path(env.home,"dist",version,"studio")
     env.docs      = fs.path(env.home,"dist",version,"docs")
     env.examples  = fs.path(env.home,"dist",version,"examples")
-    env.devices    = fs.path(env.home,"dist",version,"devices")
+    env.devices   = fs.path(env.home,"dist",version,"devices")
     env.things    = fs.path(env.home,"dist",version,"things")
     env.idb       = fs.path(env.home,"dist",version,"idb")
 
@@ -336,14 +325,16 @@ def init_cfg():
         "project":env.backend+"/projects",
         "renew":env.backend+"/user/renew",
         "sso":env.backend+"/sso",
+        "github":"https://github.com/login/oauth/authorize",
         "pwd_reset":env.backend+"/user/reset",
         "devices":env.backend+"/devices",
         "vm":env.backend+"/vms",
         "vmlist":env.backend+"/vmlist",
+        "community":env.backend+"/community",
         "packages":env.packurl+"/packages",
         "ns":env.backend+"/namespaces",
-        "db":env.backend+"/repository",
-        "repo":env.patchurl,
+        "db":env.packurl+"/repository",
+        "repo":env.packurl,
         "search": env.backend+"/packages/search",
         "profile": env.backend+"/user/profile",
         "installation": env.backend+"/installations",
@@ -385,5 +376,11 @@ def init_cfg():
     env.min_vm_dep="r2.0.10"
     env.installer_v2 = fs.exists(fs.path(env.cfg,"root.json"))
     env.installer_v3 = fs.exists(fs.path(env.cfg,"root3.json"))
+
+    #load patches
+    try:
+        env.patches = fs.get_json(fs.path(env.dist,"patch.json"))
+    except:
+        env.patches = {env.var.version:"base"}
 
 add_init(init_cfg,prio=0)

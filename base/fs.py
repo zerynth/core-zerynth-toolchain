@@ -6,6 +6,7 @@ import shutil
 import tarfile
 import hashlib
 import sys
+import time
 
 from .cfg import *
 import glob
@@ -83,20 +84,20 @@ class zfs():
                 return
             shutil.rmtree(dst)
         except Exception as e:
-            print(e)
+            log(e)
             for path, dirs, files in os.walk(dst):
                 for file in files:
                     try:
                         os.remove(os.path.join(path, file))
                     except Exception as e:
-                        print("Warning: can't remove file :", file, "error: ", e)
+                        log("Warning: can't remove file :", file, "error: ", e)
 
     def rm_file(self, dst):
         self.check_path(dst)
         try:
             os.remove(os.path.join(dst))
         except Exception as e:
-            print("Warning: can't remove file :", dst, "error: ", e)
+            log("Warning: can't remove file :", dst, "error: ", e)
 
     def copyfileobj(self,src,dst):
         shutil.copyfileobj(src,dst)
@@ -135,6 +136,12 @@ class zfs():
     def untarxz(self,src,dst):
         self.check_path([src,dst])
         zp = tarfile.open(src,"r:xz")
+        zp.extractall(dst)
+        zp.close()
+    
+    def untargz(self,src,dst):
+        self.check_path([src,dst])
+        zp = tarfile.open(src,"r:gz")
         zp.extractall(dst)
         zp.close()
 
@@ -238,11 +245,15 @@ class zfs():
         root,dirnames,files = next(os.walk(path))
         return [self.path(path,x) for x in files]
     
-    def all_files(self,path):
+    def all_files(self,path,filter=None):
         self.check_path(path)
         res = []
         for root,dirnames,files in os.walk(path):
-            res.extend([self.path(root,x) for x in files])
+            if not filter:
+                res.extend([self.path(root,x) for x in files])
+            else:
+                res.extend([self.path(root,x) for x in files if x==filter])
+
         return res
 
     def write_file(self,data,dst):
@@ -287,7 +298,17 @@ class zfs():
             os.chmod(path, stat.S_IWRITE)
             func(path)
         except Exception as e:
-            print("ERROR in rmtree %s"%str(e))
+            log("ERROR in rmtree %s"%str(e))
+
+    def move(self,src,dst):
+        shutil.move(src,dst)
+
+    def mtime(self,src):
+        return os.path.getmtime(src)
+
+    def unchanged_since(self,src,seconds):
+        mt = self.mtime(src)
+        return time.time()-mt>seconds
 
     # def remove_readonly_no_output(self, func, path, excinfo):
     #     #used to hide the whooosh bug when updating the index in, guess.., windows -_-
