@@ -280,6 +280,13 @@ The package archive will be downloaded and installed from the corresponding Gith
             fs.makedirs(destdir)
             info("Unpacking in",destdir)
             fs.untargz(outfile,destdir)
+            #find tdir...not always as expected (see release with v1.0.0 tag)
+            for dd in fs.dirs(destdir):
+                if fs.basename(dd).startswith(reponame+"-"):
+                    tdir = dd
+                    info("new tdir",tdir)
+                    break
+
             #rename dir to correct reponame
             fs.move(tdir,edir)
             fs.set_json({
@@ -300,7 +307,14 @@ The package archive will be downloaded and installed from the corresponding Gith
 
 
 @package.command(help="Authorize Zerynth to access Github use info")
-def authorize():
+@click.option("--user",default="")
+@click.option("--token",default="")
+def authorize(user,token):
+    if user and token:
+        gdata = {"user":user,"access_token":token}
+        fs.set_json(gdata,fs.path(env.cfg,"github.json"))
+        info("Done")
+        return
     try:
         res = zget(url=env.api.profile)
         rj = res.json()
@@ -323,9 +337,10 @@ def authorize():
 @package.command(help="Publish a community library")
 @click.argument("repo")
 @click.argument("nfofile")
-def publish(repo,nfofile):
+@click.option("--automatic",default=False)
+def publish(repo,nfofile,automatic):
     nfo = fs.get_json(nfofile)
-    if not nfo.get("keywords") or not nfo.get("title") or not nfo.get("description"):
+    if not nfo.get("keywords") or not nfo.get("title") or not nfo.get("description") or not nfo.get("version") or not nfo.get("release"):
         fatal("Missing fields in",nfofile)
 
     data = {
@@ -336,17 +351,72 @@ def publish(repo,nfofile):
     }
     try:
         res = zpost(env.api.community,data)
-        log(res)
-        log(res.content)
         rj = res.json()
         if rj["status"] == "success":
-            info("Thanks for publishing! You will shortly receive an email with the library status")
+            info("Thanks for publishing! You will receive an email with the library status")
         else:
             fatal("Can't publish!",rj["message"])
     except Exception as e:
         fatal("Can't publish",e)
 
-    
+    ## automatic publishing: automatic is the path of the project
+    if not automatic: return
+    gh = fs.get_json(fs.path(env.cfg,"github.json"))
+    repopath = fs.path(env.tmp,"community_lib")
+    fs.rmtree(repopath)
+    # credentials as per: https://github.com/blog/1270-easier-builds-and-deployments-using-git-over-https-and-oauth
+    git.git_clone_from_url("https://github.com/"+gh["user"]+"/"+repo,gh["access_token"],"x-oauth-basic",repopath)    
+    info("Copying project...")
+    for f in fs.all_files(automatic):
+        if "/.git" not in f:
+            dst = fs.path(repopath,fs.rpath(f,automatic))
+            fs.makedirs(fs.dirname(dst))
+            info("Copying",f,"to",dst)
+            fs.copyfile(f,dst)
+        else:
+            info("Skipping",f)
+    fs.rm_file(fs.path(repopath,".zproject")) 
+    git.git_commit(repopath,"Zerynth Studio automatic commit")
+    git.git_push(repopath,"origin",zcreds=False)
+    # publish git release
+    info("Publishing a new release on Github...")
+    try:
+        res = zpost(env.api.github_api+"/repos/"+gh["user"]+"/"+repo+"/releases?access_token="+gh["access_token"],{"tag_name":nfo["version"],"body":nfo["release"],"name":nfo["version"]},auth=False)
+        if res.status_code==201 or res.status_code==200:
+            info("Done")
+        else:
+            raise Exception("Github API error",res.status_code)
+    except Exception as e:
+        fatal("Error publishing the Github release",e)
+
+@package.command(help="Get info about a github account")
+def github():
+    try:
+        gh = fs.get_json(fs.path(env.cfg,"github.json"))
+        url = env.api.github_api+"/users/"+gh["user"]+"/repos?per_page=100&access_token="+gh["access_token"]
+        res = zget(url,auth=False)
+        rj = res.json()
+        if res.status_code==200:
+            repos = []
+            for repo in rj:
+                if repo["private"]:
+                    continue
+                r = {
+                    "name":repo["full_name"],
+                    "reponame":repo["name"],
+                    "url":repo["git_url"],
+                    "fullname":repo["name"].replace("-","_"),
+                    "import":repo["full_name"].replace("/",".").replace("-","_")
+                }
+                repos.append(r)
+            log_json({
+                "user":gh["user"],
+                "repos":repos})
+        else:
+            raise Exception("API failure:"+str(res.status_code))
+    except Exception as e:
+        fatal("Can't retrieve Github credentials!",e)
+        
 
 def retrieve_packages_info(version=None):
     if not version:
@@ -390,6 +460,7 @@ def retrieve_community(force=False):
         fln = {p["fullname"]:p for p in retrieve_installed_community()}
         for pp in npth:
             pp["last_version"]=pp["versions"][-1]
+            pp["import"]="community."+pp["fullname"].replace("-","_")[4:]  #starts with lib
             fp = fln.get(pp["fullname"])
             if fp:
                 pp["installed"]=fp["version"]
@@ -436,6 +507,7 @@ The list of currently installed official and community packages (of type lib) ca
             inst.append({
                 "fullname":pp["fullname"],
                 "last_version":env.var.version,
+                "import":pp["fullname"][4:],
                 "repo":"official",
                 "installed":env.var.version,
                 "title":pp["title"],
@@ -451,6 +523,7 @@ The list of currently installed official and community packages (of type lib) ca
             "fullname":pp["fullname"],
             "last_version":pp["version"],
             "repo":"community",
+            "import":pp["fullname"].replace("-","_")[4:],
             "url":pp["url"]
         })
 

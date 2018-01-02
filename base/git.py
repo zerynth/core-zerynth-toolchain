@@ -69,9 +69,12 @@ class Git():
             repo.remotes.create(remote, url)
             
 
-    def git_push(self,path,remote,refspec=None):
+    def git_push(self,path,remote,refspec=None,zcreds=True):
         repo = self.get_repo(path)
-        r = self.get_remote(repo,remote)
+        if zcreds:
+            r = self.get_remote(repo,remote)
+        else:
+            r = repo.remotes[remote]
         Git.push_error = False
 
         class PushCallback(pygit2.RemoteCallbacks):
@@ -261,6 +264,16 @@ class Git():
         try:
             repo = pygit2.clone_repository(url,path)
             repo.remotes.rename("origin","zerynth")
+        except Exception as e:
+            fatal("Can't clone:",str(e))
+        info("Ok")
+    
+    def git_clone_from_url(self,url,user,password,path):
+        pos = url.find(":") #http(s):
+        url = url[:pos+3]+user+":"+password+"@"+url[pos+3:]
+        info("Cloning",url)
+        try:
+            repo = pygit2.clone_repository(url,path)
         except Exception as e:
             fatal("Can't clone:",str(e))
         info("Ok")

@@ -325,6 +325,7 @@ def init_cfg():
         "project":env.backend+"/projects",
         "renew":env.backend+"/user/renew",
         "sso":env.backend+"/sso",
+        "github_api":"https://api.github.com",
         "github":"https://github.com/login/oauth/authorize",
         "pwd_reset":env.backend+"/user/reset",
         "devices":env.backend+"/devices",
