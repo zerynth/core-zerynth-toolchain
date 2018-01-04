@@ -137,12 +137,7 @@ It takes the following options (one at a time):
         return
 
     if __version or __fullversion:
-        patchfile = fs.path(env.dist,"patches.json")
-        if fs.exists(patchfile):
-            pth = fs.get_json(patchfile)
-        else:
-            pth = {}
-        patchid = pth.get("patchid","base")
+        patchid = env.patches[env.var.version]
         vrs = env.var.version+"-"+patchid
         if __fullversion:
             log(vrs)

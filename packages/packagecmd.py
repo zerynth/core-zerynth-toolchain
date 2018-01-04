@@ -18,12 +18,12 @@ There exist several package types, each one targeting a different Zerynth functi
 A package :samp:`fullname` is composed of three fields uniquely identifying the package:
 
 * type
-* :ref:`namespace <ztc-cmd-namespace>`
+* namespace
 * package name
 
 For example, the package :samp:`lib.broadcom.bmc43362` contains the Python driver for the Broadcom bcm43362 wifi chip. 
 Its fullname contains the type (:samp:`lib`), the namespace (:samp:`broadcom`) grouping all packages implementing Broadcom drivers, and the actual package name (:samp:`bcm43362`) specifying which particular driver is implemented.
-A package has one or more available versions each one tagged following a modified `semantic versionig <http://semver.org>`_ scheme.
+A package has one or more available versions each one tagged following a modified `semantic versioning <http://semver.org>`_ scheme.
 
 Moreover packages can belong to multiple "repositories" (collections of packages). There are two main public repositories, the :samp:`official` one, containing packages created, published and mantained by the Zerynth team, and the :samp:`community` one, containing packages created by community members.
 
@@ -68,19 +68,20 @@ def package():
     pass
 
 
-@package.command(help="Retrieve and store current distributions")
+@package.command(help="Retrieve and store the available major releases of Zerynth")
 def versions():
     """
 .. _ztc-cmd-package-sync:
 
-Versions
---------
+Available versions
+------------------
 
-The available versions of Zerynth can be retrieved with the command: ::
+The available versions of the full Zerynth suite can be retrieved with the command: ::
 
     ztc package versions
 
-The command overwrites the local copy of available versions.
+The command overwrites the local copy of available versions. 
+Details about patches for each version are also contained in the database.
 
     """
     try:
@@ -115,22 +116,6 @@ The command overwrites the local copy of available versions.
         fatal("Can't check versions",e)
 
 
-
-@package.command("info",help="Get info for package")
-@click.argument("fullname")
-def get_info(fullname):
-    npth = retrieve_community()
-    if not npth: 
-        fatal("Can't find package info")
-
-    for p in npth:
-        if p["fullname"]==fullname:
-            log_json(p)
-            break
-    else:
-        fatal("Can't find package",fullname)
-
-
 @package.command(help="Retrieve and store current available packages")
 @click.argument("version")
 def available(version):
@@ -162,21 +147,27 @@ The command returns info on every official Zerynth package.
     except Exception as e:
         fatal("Can't check packages",e)
 
+
+@package.command("info",help="Get info for package")
+@click.argument("fullname")
+def get_info(fullname):
+    npth = retrieve_community()
+    if not npth: 
+        fatal("Can't find package info")
+
+    for p in npth:
+        if p["fullname"]==fullname:
+            log_json(p)
+            break
+    else:
+        fatal("Can't find package",fullname)
+
+
+
+
 @package.command(help="Describe a patch relative to current installation")
 @click.argument("patch")
 def describe(patch):
-    """
-.. _ztc-cmd-package-describe:
-
-Describe patch
---------------
-
-The difference between the current installation of Zerynth and a new patch can be described with the command: ::
-
-    ztc package describe patch
-
-
-    """
     try:
         curpatch = env.patches[env.var.version]
         if patch<=curpatch:
@@ -310,6 +301,22 @@ The package archive will be downloaded and installed from the corresponding Gith
 @click.option("--user",default="")
 @click.option("--token",default="")
 def authorize(user,token):
+    """
+.. _ztc-cmd-package-authorize:
+
+Github Authorization
+--------------------
+
+A necessary step in order to publish community packages is the generation of a Github authorization token
+allowing the ZTC to interact with the user's Github repositories where the packages are stored and mantained.
+
+Retrieve an authorization token with the following command: ::
+
+    ztc package authorize
+
+The Github authorization url for Zerynth will be opened in the system browser asking for the user credentials. Upon correct authorization, the Zerynth backend will display the user access token that must be copied back to the ZTC prompt. From this point on, the Zerynth user account will be associated with the Github account. 
+
+    """
     if user and token:
         gdata = {"user":user,"access_token":token}
         fs.set_json(gdata,fs.path(env.cfg,"github.json"))
@@ -323,10 +330,10 @@ def authorize(user,token):
         else:
             fatal("Can't retrieve user info")
         log("Hello!")
-        log("In a few seconds a browser will open to the login page")
+        log("In a few seconds a browser will open to the Github authorization page")
         log("Once logged, copy the authorization token and paste it here")
         time.sleep(1)
-        webbrowser.open(env.api.github+"?client_id=99fdc1e39d8ce3051ce6&scope=user&state=-"+state)
+        webbrowser.open(env.api.github+"&state=-"+state)
         token = input("Paste the token here and press enter -->")
         user,token = token.split(":")
         fs.set_json({"user":user,"access_token":token},fs.path(env.cfg,"github.json"))
@@ -339,8 +346,124 @@ def authorize(user,token):
 @click.argument("nfofile")
 @click.option("--automatic",default=False)
 def publish(repo,nfofile,automatic):
+    """
+.. _ztc-cmd-package-publish:
+
+Publishing a community library
+------------------------------
+
+Zerynth projects can be published as library packages and publicly shared on different repositories (default is :samp:`community`). 
+The library files need to be stored on a public Github repository owned by the user and the repository must be associated with the Zerynth user account by means
+of the :ref:`authorize <ztc-cmd-package-authorize>` command. The authorization is necessary only on first time publishing; from there on, the Zerynth backend will automatically query Github for library updates.
+
+The library updates are managed through `Github releases <https://help.github.com/articles/creating-releases/>`_; when a new version is ready, a Github release is created (manually or via ZTC) with a tag and a description. The release tag will be used as the library version while the release description will be used as library changelog. 
+
+
+
+
+In order to convert a project into a publishable library, a json file with the library info must be created and filled with:
+
+* :samp:`title`: the title of the library (will be shown in Zerynth Studio library manager)
+* :samp:`description`: a longer description of the library (will be shown in Zerynth Studio library manager)
+* :samp:`keywords`: an array of keywords to make the library easily searchable
+* :samp:`version`: the version to assign to the current release of the library. It is suggested to keep using the Zerynth convention (rx.y.z).
+* :samp:`release`: the current release description. It can be used as a changelog and it will be shown in Zerynth Studio as the text associated to this specific version of the library.
+
+An example of such file: ::
+
+    {
+        "title": "DS1307 Real Time Clock",
+        "description": "Foo's DS1307 RTC Driver ... ",
+        "keywords": [
+            "rtc",
+            "maxim",
+            "time"
+        ],
+        "release": "Fixed I2C bugs",
+        "version": "r2.0.0"
+    }
+
+The library can be published in two ways: manual and automatic. In the manual procedure, the user is responsible for manually updating the Github repository and create the Github release. In this case, it is necessary to publish the library just once providing :samp:`title`,:samp:`description` and :samp:`keywords` in the json file. Each time the user adds a new release, the Zerynth backend will automatically include the new release in the available versions of the library. In the automatic procedure, the user is responsible for the creation of a Github repository to store the library while the management of the repository updates and the release creation is performed by th ZTC. In this case the additional :samp:`version` and :samp:`release` must be given in the json file. It is suggested to store the json file in the Github repository itself to track its changes.
+
+
+
+The command: ::
+
+    ztc package publish reponame json_file
+
+will publish the library with the manual procedure. It just informs the Zerynth backend of a new association between :samp:`reponame` and the user account (already associated with a Github account). The user must then create every new Github release to make the library updates available to users.
+
+The command: ::
+
+    ztc package publish reponame json_file --automatic project_dir
+
+will publish the library with the automatic procedure. The following operations are performed: 
+
+    * the Zerynth backend is informed of a new association between :samp:`reponame` and the user account
+    * the :samp:`reponame` Github repository is clone to a temp directory
+    * the project files in the folder :samp:`project_dir` are copied to the cloned repository
+    * a new commit is created
+    * the commit is pushed to the Github repository master branch
+    * the commit is tagged with the :samp:`version` field of :samp:`json_file`
+    * a new Github release is created using the :samp:`release` field of :samp:`json_file` as the descriptive text
+
+
+The resulting library will be importable as: ::
+
+    from community.github_username.repo_name import ...
+
+where :samp:`github_username` and :samp:`repo_name` are the Github username and Github repository name associated to the library, with minus signs (:samp:`-`) replaced by underscores (:samp:`_`).
+
+For example, if the user :samp:`foo` wants to publish the :samp:`bar` library, the following steps must be taken: 
+
+    * a json file with the required fields is created, :samp:`bar.json`.
+    * the library files are stored in the folder :samp:`bar_lib`.
+    * the command :samp:`ztc package publish bar --automatic bar_lib` is used to publish the library :samp:`community.foo.bar`  
+
+
+
+Library Documentation
+^^^^^^^^^^^^^^^^^^^^^
+
+It is suggested to write the library documentation in the README.md file in the root of the repository. Zerynth Studio will redirect users to the Github repository page for doc info.
+
+
+Library Examples
+^^^^^^^^^^^^^^^^
+
+Libraries can bedistributed with a set of examples stored under an :file:`examples` folder in the project. Each example must be contained in its own folder accordinto to the following requirements:
+
+* The example folder name will be converted into the example "title" (shown in the Zerynth Studio example panel) by replacing underscores ("_") with spaces
+* The example folder can contain any number of files, but only two are mandatory: :file:`main.py`, the entry point file and :file:`project.md`, a description of the example. Both files will be automatically included in the library documentation.
+
+Moreover, for the examples to be displayed in the Zerynth Studio example panel, a file :file:`order.txt` must be placed in the :file:`examples` folder. It contains information about the example positioning in the example tree: ::
+
+    ; order.txt of the lib.adafruit.neopixel package
+    ; comments starts with ";"
+    ; inner tree nodes labels start with a number of "#" corresponding to their level
+    ; leaves corresponds to the actual example folder name
+    #Adafruit
+        ##Neopixel
+           Neopixel_LED_Strips
+           Neopixel_Advanced
+
+    ; this files is translated to:
+    ; example root
+    ; |
+    ; |--- ...
+    ; |--- ...
+    ; |--- Adafruit
+    ; |        |--- ...
+    ; |        \--- Neopixel
+    ; |                |--- Neopixel LED Strips
+    ; |                \--- Neopixel Advanced
+    ; |--- ...
+    ; |--- ...
+    """
     nfo = fs.get_json(nfofile)
-    if not nfo.get("keywords") or not nfo.get("title") or not nfo.get("description") or not nfo.get("version") or not nfo.get("release"):
+    if not nfo.get("keywords") or not nfo.get("title") or not nfo.get("description"): 
+        fatal("Missing fields in",nfofile)
+    if automatic and (not nfo.get("version") or not nfo.get("release")):
         fatal("Missing fields in",nfofile)
 
     data = {

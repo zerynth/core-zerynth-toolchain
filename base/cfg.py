@@ -272,6 +272,7 @@ def init_cfg():
         env.connector = os.environ.get("ZERYNTH_ADM_URL","http://localhost/v1")
         env.patchurl  = os.environ.get("ZERYNTH_PATCH_URL","http://localhost/installer")
         env.packurl   = os.environ.get("ZERYNTH_PACK_URL","http://localhost")
+        github_app = "NO_APP"
     elif testmode==2:
         # CI
         env.git_url   = os.environ.get("ZERYNTH_GIT_URL","https://test.zerynth.com/git")
@@ -279,6 +280,7 @@ def init_cfg():
         env.connector = os.environ.get("ZERYNTH_ADM_URL","https://testapi.zerynth.com:444/v1" )
         env.patchurl  = os.environ.get("ZERYNTH_PATCH_URL","https://test.zerynth.com/installer")
         env.packurl   = os.environ.get("ZERYNTH_PACK_URL","https://test.zerynth.com")
+        github_app = "882c71c6f98cd0354d97"
     else:
         # remote
         env.git_url ="https://backend.zerynth.com/git"
@@ -286,6 +288,7 @@ def init_cfg():
         env.connector="https://api.zerynth.com/v1"
         env.patchurl= os.environ.get("ZERYNTH_PATCH_URL","https://backend.zerynth.com/installer")
         env.packurl= os.environ.get("ZERYNTH_PACK_URL","https://backend.zerynth.com")
+        github_app = "99fdc1e39d8ce3051ce6"
 
     # dist directories
     env.dist      = fs.path(env.home,"dist",version)
@@ -326,7 +329,7 @@ def init_cfg():
         "renew":env.backend+"/user/renew",
         "sso":env.backend+"/sso",
         "github_api":"https://api.github.com",
-        "github":"https://github.com/login/oauth/authorize",
+        "github":"https://github.com/login/oauth/authorize?client_id="+github_app+"&scope=user,repo",
         "pwd_reset":env.backend+"/user/reset",
         "devices":env.backend+"/devices",
         "vm":env.backend+"/vms",
@@ -380,7 +383,7 @@ def init_cfg():
 
     #load patches
     try:
-        env.patches = fs.get_json(fs.path(env.dist,"patch.json"))
+        env.patches = fs.get_json(fs.path(env.dist,"patches.json"))
     except:
         env.patches = {env.var.version:"base"}
 
