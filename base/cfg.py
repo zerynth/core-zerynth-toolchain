@@ -374,7 +374,7 @@ def init_cfg():
             warning("Bad json in",env.proxyfile)
 
     #set minimum compatible vm version
-    env.min_vm_dep="r2.0.10"
+    env.min_vm_dep="r2.0.11"
     env.installer_v2 = fs.exists(fs.path(env.cfg,"root.json"))
     env.installer_v3 = fs.exists(fs.path(env.cfg,"root3.json"))
 
