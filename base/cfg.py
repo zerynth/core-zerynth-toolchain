@@ -379,11 +379,11 @@ def init_cfg():
     #set minimum compatible vm version
     env.min_vm_dep="r2.0.11"
     env.installer_v2 = fs.exists(fs.path(env.cfg,"root.json"))
-    env.installer_v3 = fs.exists(fs.path(env.cfg,"root3.json"))
+    env.installer_v3 = fs.exists(fs.path(env.cfg,"root2.json"))
 
     #load patches
     try:
-        env.patches = fs.get_json(fs.path(env.dist,"patches.json"))
+        env.patches = {env.var.version: fs.get_json(fs.path(env.dist,"patches.json"))["patch"]}
     except:
         env.patches = {env.var.version:"base"}
 

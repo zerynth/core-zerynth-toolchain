@@ -85,6 +85,9 @@ Details about patches for each version are also contained in the database.
 
     """
     try:
+        if not env.installer_v3:
+            warning("This instance of Zerynth does not support future updates: refer to this %link%guide%https://docs.zerynth.com/latest/official/core.zerynth.docs/migration2/docs/index.html%")
+ 
         vrs = update_versions()
         if vrs:
             if not env.human:
@@ -173,6 +176,7 @@ def describe(patch):
         if patch<=curpatch:
             return
         nfo = retrieve_packages_info()
+        info(curpatch,patch)
         if nfo:
             res = {
                 "packs":[],
@@ -180,7 +184,7 @@ def describe(patch):
             }
             pos = nfo["patches"].index(patch)
             if pos:
-                res["changelog"]=nfo["changelog"][pos]
+                res["changelog"]=nfo["changelogs"][patch]
             for pack in nfo["packs"]:
                 fullname = pack["fullname"]
                 patches = pack["patches"]
@@ -195,7 +199,7 @@ def describe(patch):
                 res["packs"].append({
                     "fullname":fullname,
                     "size":pack["size"],
-                    "hash":pack["hashes"][patches.index(packpatches[-1])]
+                    "hash":pack["hashes"][patches.index(packpatches[-1][0])]
                 })
 
             if not env.human:
@@ -203,7 +207,7 @@ def describe(patch):
             else:
                 table = []
 
-                for pack in res:
+                for pack in res["packs"]:
                     table.append([pack["fullname"],pack["hash"],pack["size"]//1024])
                 table.sort()
                 log_table(table,headers=["fullname","hash","size Kb"])
@@ -655,14 +659,12 @@ The list of currently installed official and community packages (of type lib) ca
     else:
         log_json(inst)
 
-
-
-
 @package.command(help="Checks and prepares updates")
 @click.option("--finalize",flag_value=True,default=False)
 def patches(finalize):
 
     versions = env.versions
+    print(env.var.version)
     curpatch = env.patches[env.var.version]
     
     if not curpatch:
@@ -671,14 +673,13 @@ def patches(finalize):
    
     patchid = curpatch
     lastpatchid = versions[env.var.version][-1]
-    
 
     if lastpatchid==patchid:
         info("No updates to apply")
         return
    
-    pth = retrieve_patch_info()
-    if not pth:
+    npth = retrieve_packages_info()
+    if not npth:
         warning("Can't retrieve current patch")
         return
 
@@ -698,10 +699,10 @@ def patches(finalize):
         packpatches = [ (x,pack["hashes"][i]) for i,x in enumerate(patches) if x>patchid and x<=lastpatchid ]
         if not packpatches:
             #this package must be skipped, already installed or newer 
-            pass
+            continue
         if pack.get("sys",env.platform)!=env.platform:
             # skip, not for this platform
-            pass
+            continue
         to_update.append(pack)
         if not finalize:
             # skip donwload and install if not finalizing
@@ -719,8 +720,10 @@ def patches(finalize):
         if not todelete:
             # download and unpack
             info("Downloading",fullname)
-            if download_package(pack,nfo["version"]) is not True:
+            if download_package(pack,env.var.version,packpatch) is not True:
                 fatal("Error while downloading",fullname)
+        # else:
+        #     info("Deleting",fullname)
 
         if pack.type=="lib":
             src,dst =  install_lib_patch(pack,pack.version,ppath,simulate = todelete)
