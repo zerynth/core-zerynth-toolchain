@@ -86,7 +86,7 @@ Details about patches for each version are also contained in the database.
     """
     try:
         if not env.installer_v3:
-            warning("This instance of Zerynth does not support future updates: refer to this %link%guide%https://docs.zerynth.com/latest/official/core.zerynth.docs/migration2/docs/index.html%")
+            warning("This instance of Zerynth does not support future updates: refer to this %link%guide%https://docs.zerynth.com/latest/official/core.zerynth.docs/migration3/docs/index.html%")
  
         vrs = update_versions()
         if vrs:
@@ -208,7 +208,7 @@ def describe(patch):
                 table = []
 
                 for pack in res["packs"]:
-                    table.append([pack["fullname"],pack["hash"],pack["size"]//1024])
+                    table.append([pack["fullname"],pack["hash"],pack["size"]//1024 if pack["hash"]!="-" else "-"])
                 table.sort()
                 log_table(table,headers=["fullname","hash","size Kb"])
     except Exception as e:
@@ -684,7 +684,7 @@ def patches(finalize):
         return
 
     if finalize and not env.installer_v3:
-        fatal("Can't install update! This instance of Zerynth does not support updates: refer to this %link%guide%https://docs.zerynth.com/latest/official/core.zerynth.docs/migration2/docs/index.html%")
+        fatal("Can't install update! This instance of Zerynth does not support updates: refer to this %link%guide%https://docs.zerynth.com/latest/official/core.zerynth.docs/migration3/docs/index.html%")
  
     # create the patches
     ppath=fs.path(env.tmp,"patch")
@@ -722,8 +722,8 @@ def patches(finalize):
             info("Downloading",fullname)
             if download_package(pack,env.var.version,packpatch) is not True:
                 fatal("Error while downloading",fullname)
-        # else:
-        #     info("Deleting",fullname)
+        else:
+            info("Deleting",fullname)
 
         if pack.type=="lib":
             src,dst =  install_lib_patch(pack,pack.version,ppath,simulate = todelete)
