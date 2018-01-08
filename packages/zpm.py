@@ -6,9 +6,10 @@ import zlib
 import lzma
 import time
 
-def download_package(fullname,version,patch="base",hash=None,callback=None):
+def download_package(pack,version,patch="base",hash=None,callback=None):
     for attempt in range(6,20,6):
         try:
+            fullname = pack.fullname
             outfile = fs.path(env.tmp,fullname+"-"+str(version)+".tar.xz")
             url = env.api.packages+"/"+fullname+"/"+str(version)+"/"+patch
             r = zgetraw(url)
@@ -21,7 +22,7 @@ def download_package(fullname,version,patch="base",hash=None,callback=None):
                     continue
             return True
         except Exception as e:
-            debug("download exception",str(e))
+            info("download exception",str(e))
         debug("Attempt",str(attempt))
         time.sleep(attempt)
     return False
