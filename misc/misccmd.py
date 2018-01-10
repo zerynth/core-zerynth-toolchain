@@ -86,13 +86,14 @@ It takes the following options (one at a time):
             chipid = None
         vms = tools.get_vms(__vms,chipid,full_info=True)
         vmdb = {}
-        im = ZpmVersion(env.min_vm_dep)                             # minimum vm version compatible with current ztc
+        # im = ZpmVersion(env.min_vm_dep)                             # minimum vm version compatible with current ztc
                
         for uid,vmc in vms.items():
             vmf = vmc[0]
             vv= vmc[1]
-            ik = ZpmVersion(vv)                                     # vm version
-            if ik<im:
+            # ik = ZpmVersion(vv)   # vm version
+            #if ik<im
+            if compare_versions(vv,env.min_vm_dep) < 0:
                 # skip versions lower than min_dep
                 continue
             # load vm
