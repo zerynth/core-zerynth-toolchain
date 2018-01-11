@@ -76,10 +76,10 @@ def probing(ch,devtarget, adjust_timeouts=True):
     else:
         fatal("No answer to probe")
 
-    im = ZpmVersion(env.min_vm_dep)                             # minimum vm version compatible with current ztc
-    ik = ZpmVersion(version)                                    # vm version
+    # im = ZpmVersion(env.min_vm_dep)                             # minimum vm version compatible with current ztc
+    # ik = ZpmVersion(version)                                    # vm version
 
-    if ik<im:
+    if compare_versions(version,env.min_vm_dep) < 0:
         fatal("VM version [",version,"] is not compatible with this uplinker! Virtualize again with a newer VM...")
 
     if target!=devtarget:

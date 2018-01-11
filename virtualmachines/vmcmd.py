@@ -209,14 +209,16 @@ For the device target, a list of possible virtual machine configurations is retu
         if rj["status"]=="success":
             vmt = {}
             for k in rj["data"]:
-                ik = ZpmVersion(k)                                          # vm version
-                im = ZpmVersion(env.min_vm_dep)                             # minimum vm version compatible with current ztc
-                ic = ZpmVersion(rj["data"][k][0].get("core_dep","r2.0.0"))  # core_dep: minimum version of ztc compatible with vm
-                zv = ZpmVersion(env.var.version)                            # current ztc version
-                if ik<im:
+                ik = k                                          # vm version
+                im = env.min_vm_dep                             # minimum vm version compatible with current ztc
+                ic = rj["data"][k][0].get("core_dep","r2.0.0")  # core_dep: minimum version of ztc compatible with vm
+                zv = env.var.version                            # current ztc version
+                # if ik<im:
+                if compare_versions(ik,im) < 0:
                     # skip versions lower than min_dep
                     continue
-                if ic>zv:
+                # if ic>zv:
+                if compare_versions(ic,zv) < 0:
                     # skip versions higher than current ztc
                     continue
                 if k not in vmt:
