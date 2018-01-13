@@ -176,15 +176,12 @@ def describe(patch):
         if patch<=curpatch:
             return
         nfo = retrieve_packages_info()
-        info(curpatch,patch)
         if nfo:
             res = {
                 "packs":[],
                 "changelog":""
             }
-            pos = nfo["patches"].index(patch)
-            if pos:
-                res["changelog"]=nfo["changelogs"][patch]
+            res["changelog"]=nfo["changelogs"][patch]
             for pack in nfo["packs"]:
                 fullname = pack["fullname"]
                 patches = pack["patches"]
@@ -224,7 +221,7 @@ Trigger Update
 
 As soon as a new major release of Zerynth is available, it can be installed by triggering it with the following command: ::
 
-    ztc package trigger_install
+    ztc package trigger_update
 
 The next time the Zerynth installer is started, it will try to install the new version of Zerynth. 
     """
