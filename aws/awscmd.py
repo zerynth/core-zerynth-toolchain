@@ -27,6 +27,8 @@ Since AWS Platform provides several services, this page wil report the documenta
     """
 
 from base import *
+import base64
+import time
 import click
 from . import awscli
 from . import awsthing
@@ -290,3 +292,53 @@ Deletes AWS IoT Things bound to Zerynth project placed at :code:`project_path` a
 
     fs.rmtree(thingsresources_dir)
     fs.rm_file(fs.path(project_path, zawsconf_filename))
+
+
+@aws.command("iot-fota-start",help="send a fota job for a thing")
+@click.argument("thing-name", type=str)
+@click.argument("thing-firmware", type=click.Path())
+@click.argument("s3-bucket", type=str)
+@click.argument("s3-role", type=str)
+@click.option("--duration",type=int,default=3600)
+def __iot_fota_start(thing_name,thing_firmware,s3_bucket,s3_role,duration):
+    _awscli = awscli.AWSCli()
+
+    fw = fs.get_json(thing_firmware)
+    bc_bin = base64.b64decode(fw["bcbin"])
+    tmpdir = fs.get_tempdir()
+    now = str(int(time.time()))
+    fw_file = fs.path(tmpdir,"fota-"+now+"-bc")
+    job_file = fs.path(tmpdir,"fota-"+now+"-job")
+    http_bucket = s3_bucket.replace("s3://","https://s3.amazonaws.com/")
+    job_doc = {
+        "operation":"fota",
+        "bc_crc":md5(bc_bin),
+        "bc_size":len(bc_bin),
+        "bc_idx":fw["bc_idx"],
+        "bc_url":"${aws:iot:s3-presigned-url:"+http_bucket+"/"+thing_name+"/"+fs.basename(fw_file)+"}"
+    }
+
+    fs.set_json(job_doc,job_file)
+    log_json(job_doc)
+    fs.write_file(bc_bin,fw_file)
+    
+    if not _awscli.upload_to_s3(tmpdir,s3_bucket+"/"+thing_name):
+        fatal("Can't upload to S3!")
+    thing = _awscli.describe_thing(thing_name)   
+    if thing is None:
+        fatal("Can't retrieve thing description!")
+    role = _awscli.list_iam_roles(s3_role)
+    if not role:
+        fatal("Can't find s3 role!")
+
+    thing_arn = thing["thingArn"]
+    role_arn = role["Arn"]
+    job_source = http_bucket+"/"+thing_name+"/"+fs.basename(job_file)
+    rolestr = '"{\\"roleArn\\":\\"'+role_arn+'\\",\\"expiresInSec\\":'+str(duration)+'}"'
+    job_name = "fota-"+thing_name+"-"+now
+    if not _awscli.create_iot_job(job_name,[thing_arn],job_source,rolestr):
+       fatal("Error creating Job!")
+    info("Job created:",job_name)
+
+  
+

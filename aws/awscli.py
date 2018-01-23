@@ -50,3 +50,25 @@ class AWSCli:
                         '--new-status', 'INACTIVE')
         code, out, _ = proc.run('aws','iot','delete-certificate','--certificate-id', certificate_id)
 
+    def upload_to_s3(self,source,dest):
+        code, out, _ = proc.run("aws","s3","sync",source,dest,outfn=log)
+        return code==0
+
+    def describe_thing(self,thing_name):
+        code,out,_ = proc.run("aws","iot","describe-thing","--thing-name",thing_name)
+        if code==0:
+            return json.loads(out)
+    def list_iam_roles(self,role_name=None):
+        code,out,_ = proc.run("aws","iam","list-roles")
+        if code!=0:
+            return None
+        roles = json.loads(out)
+        if not role_name:
+            return roles
+        for role in roles["Roles"]:
+            if role["RoleName"]==role_name:
+                return role
+
+    def create_iot_job(self,jobname,targets,job_source,s3_role):
+        code,out,_ = proc.run("aws","iot","create-job","--job-id",jobname,"--targets"," ".join(targets),"--document-source",job_source,"--presigned-url-config",s3_role)
+        return code==0
