@@ -384,6 +384,12 @@ def init_cfg():
     #load patches
     try:
         env.patches = fs.get_json(fs.path(env.cfg,"patches.json"))
+        if fs.exists(fs.path(env.dist,"patches.json")):
+            curpatch = env.patches[env.var.version]
+            instpatch = fs.get_json(fs.path(env.dist,"patches.json"))["patch"]
+            if curpatch != instpatch:
+                env.patches[env.var.version] = instpatch
+                fs.set_json(env.patches,fs.path(env.cfg,"patches.json"))
     except:
         env.patches = {env.var.version:"base"}
 
