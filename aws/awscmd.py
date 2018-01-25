@@ -23,6 +23,7 @@ Since AWS Platform provides several services, this page wil report the documenta
         * :ref:`add-things <ztc-cmd-aws-add_things>`
         * :ref:`set-active-thing <ztc-cmd-aws-set_active_thing>`
         * :ref:`iot-cleanup <ztc-cmd-aws-iot_cleanup>`
+        * :ref:`iot-fota-start <ztc-cmd-aws-iot_fota_start>`
 
     """
 
@@ -301,6 +302,25 @@ Deletes AWS IoT Things bound to Zerynth project placed at :code:`project_path` a
 @click.argument("s3-role", type=str)
 @click.option("--duration",type=int,default=3600)
 def __iot_fota_start(thing_name,thing_firmware,s3_bucket,s3_role,duration):
+    """
+.. _ztc-cmd-aws-iot_fota_start:
+
+Initiate a FOTA update via AWS IoT Jobs
+---------------------------------------
+
+The command: ::
+
+    ztc aws iot-fota_start thing-name thing-firmware s3-bucket s3-role
+
+Will perform the following operations:
+
+    * Extract FOTA information from the :samp:`thing-firmware` file (created with the :ref:`link <ztc-cmd-link>` command and :option:`-J` option) 
+    * Upload the new firmware to the :samp:`s3-bucket` S3 bucket url (must start with :samp:`s3://`)
+    * Create an AWS IoT Job for the specified :samp:`thing-name`.
+
+The AWS IoT endpoint must be able to read from the S3 bucket so an S3 read role named :samp:`s3-read-role` must be assigned to the endpoint. Such role must be used in the creation of the Job and therefore its name must be passed to this command. The Thing will receive a pre-signed https S3 url to download the new firmware; such url will be valid for a duration of one hour. It is possible to increase or decrease the duration validity using the :option:`--duration` followed by the number of seconds the link will remain valid.
+
+    """
     _awscli = awscli.AWSCli()
 
     fw = fs.get_json(thing_firmware)
