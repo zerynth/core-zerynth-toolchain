@@ -46,7 +46,7 @@ class Environment():
         pass
 
     def dirs(self):
-        prefix = fs.homedir()
+        prefix = os.environ.get("ZERYNTH_HOME"),fs.homedir())
         for x in self.__dict__:
             if isinstance(self[x],str) and self[x].startswith(prefix):
                 yield self[x]
@@ -249,7 +249,7 @@ def init_cfg():
         zdir = "zerynth2_test" if env.is_windows() else ".zerynth2_test"
     else:
         zdir = "zerynth2" if env.is_windows() else ".zerynth2"
-    env.home      = fs.path(fs.homedir(),zdir)
+    env.home      = fs.path(os.environ.get("ZERYNTH_HOME",fs.homedir()),zdir)
     env.cfg       = fs.path(env.home,"cfg")
     env.tmp       = fs.path(env.home,"tmp")
     env.sys       = fs.path(env.home,"sys")
