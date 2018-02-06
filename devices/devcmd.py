@@ -300,23 +300,13 @@ The option :option:`--skip_burn` avoid flashing the device with the registering 
     else:
         fatal("Can't find chipid")
     chipid=lines[pos]
-
-    # call api to register device
     dinfo = {
         "name": tgt.custom_name or tgt.name,
         "on_chip_id": chipid,
         "type": tgt.target,
         "category": tgt.family_name
     }
-    try:
-        res = zpost(url=env.api.devices, data=dinfo)
-        rj = res.json()
-        if rj["status"] == "success":
-            info("Device",tgt.custom_name  or tgt.name,"registered with uid:", rj["data"]["uid"])
-        else:
-            fatal("Remote device registration failed with:", rj["message"])
-    except Exception as e:
-        critical("Error during remote registration",exc=e)
+    _register_device(dinfo)
     tgt = tgt.to_dict()
     tgt["chipid"]=chipid
     tgt["remote_id"]=rj["data"]["uid"]
@@ -328,6 +318,35 @@ The option :option:`--skip_burn` avoid flashing the device with the registering 
         env.put_dev(alter_ego)
 
 
+def _register_device(dinfo):
+    # call api to register device
+    # dinfo = {
+    #     "name": tgt.custom_name or tgt.name,
+    #     "on_chip_id": chipid,
+    #     "type": tgt.target,
+    #     "category": tgt.family_name
+    # }
+    try:
+        res = zpost(url=env.api.devices, data=dinfo)
+        rj = res.json()
+        if rj["status"] == "success":
+            info("Device",dinfo.get("name",""),"registered with uid:", rj["data"]["uid"])
+        else:
+            fatal("Remote device registration failed with:", rj["message"])
+    except Exception as e:
+        critical("Error during remote registration",exc=e)
+
+
+@device.command(help="Register a new device without extracting the uid")
+@click.argument("chipid")
+@click.argument("target")
+def register_by_uid(chipid,target):
+    dinfo = {
+        "on_chip_id": chipid,
+        "type": target
+    }
+    _register_device(dinfo)
+    
 
 
 
@@ -428,7 +447,8 @@ tries to open the default serial port with the correct parameters for the device
 
 @device.command(help="List of supported devices.")
 @click.option("--type",default="board",type=click.Choice(["board","jtag","usbtoserial"]),help="type of device [board, jtag,usbtoserial]")
-def supported(type):
+@click.option("--single",default=False,flag_value=True)
+def supported(type,single):
     """ 
 .. _ztc-cmd-device-supported:
 
@@ -448,17 +468,23 @@ Supported devices can be filtered by type with the :option:`--type type` option 
 
     """
     table = []
+    jst = []
     for k,v in _dsc.device_cls.items():
         if v["type"]==type:
             if env.human:
                 table.append([v["target"],v["path"]])
             else:
-                log_json({
+                tt ={
                     "target":v["target"],
                     "path":v["path"]
-                })
+                }
+                jst.append(tt)
+                if not single:
+                    log_json(tt)
     if env.human:
         log_table(table,headers=["Target","Path"])
+    elif single:
+        log_json(jst)
 
 
 

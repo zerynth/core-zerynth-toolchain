@@ -79,7 +79,6 @@ If virtual machine creation ends succesfully, the virtual machine binary is also
     dev=dev[0]
     if not dev.remote_id:
         fatal("Device",dev.alias,"not registered")
-
     vminfo = {
         "name":name or (dev.name+" "+version),
         "dev_uid":dev.remote_id,
@@ -88,13 +87,18 @@ If virtual machine creation ends succesfully, the virtual machine binary is also
         "patch":patch,
         "features": feat
         }
-    info("Creating vm for device",dev.alias)
+    _vm_create(vminfo)
+
+
+
+def _vm_create(vminfo):
+    info("Creating vm for device",vminfo["dev_uid"])
     try:
         res = zpost(url=env.api.vm, data=vminfo,timeout=20)
         rj = res.json()
         if rj["status"] == "success":
             vminfo["uid"]=rj["data"]["uid"]
-            info("VM",name,"created with uid:", vminfo["uid"])
+            info("VM",vminfo["name"],"created with uid:", vminfo["uid"])
             download_vm(vminfo["uid"])
         else:
             critical("Error while creating vm:", rj["message"])
@@ -102,6 +106,24 @@ If virtual machine creation ends succesfully, the virtual machine binary is also
         critical("No answer yet")
     except Exception as e:
         critical("Can't create vm", exc=e)
+
+@vm.command(help="Request virtual machine creation given device uid")
+@click.argument("dev_uid")
+@click.argument("version")
+@click.argument("rtos")
+@click.argument("patch")
+@click.option("--feat", multiple=True, type=str,help="add extra features to the requested virtual machine (multi-value option)")
+@click.option("--name", default="",help="Virtual machine name")
+def create_by_uid(dev_uid,version,rtos,feat,name,patch):
+    vminfo = {
+        "name": "dev:"+dev_uid,
+        "dev_uid":dev_uid,
+        "version": version,
+        "rtos": rtos,
+        "patch":patch,
+        "features": feat
+        }
+    _vm_create(vminfo)
 
 
 
@@ -171,31 +193,17 @@ For the device target, a list of possible virtual machine configurations is retu
         res = zget(url=env.api.vmlist+"/"+target+"/"+env.var.version)
         rj = res.json()
         if rj["status"]=="success":
-            vmt = {}
-            for k in rj["data"]:
-                ik = k                                          # vm version
-                im = env.min_vm_dep                             # minimum vm version compatible with current ztc
-                ic = rj["data"][k][0].get("core_dep","r2.0.0")  # core_dep: minimum version of ztc compatible with vm
-                zv = env.var.version                            # current ztc version
-                # if ik<im:
-                if compare_versions(ik,im) < 0:
-                    # skip versions lower than min_dep
-                    continue
-                # if ic>zv:
-                if compare_versions(ic,zv) < 0:
-                    # skip versions higher than current ztc
-                    continue
-                if k not in vmt:
-                    vmt[k]=[]
-                for vm in rj["data"][k]:
-                    vmt[k].append(vm)
             if env.human:
-                for k in vmt:
-                    for vm in vmt[k]:
-                       table.append([k,vm["title"],vm["description"],vm["rtos"],vm["features"],vm["pro"]])
-                log_table(table,headers=["Version","Title","Description","Rtos","Features","Pro"])
+                vmt = rj["data"]["vms"]
+                for patch in rj["data"]["patches"]:
+                    if patch not in vmt:
+                        #skip 
+                        continue
+                    for vm in vmt[patch]:
+                        table.append([vm["title"],vm["description"],vm["rtos"],vm["features"],"Premium" if vm["pro"] else "Starter",env.var.version,patch])
+                log_table(table,headers=["Title","Description","Rtos","Features","Type","Version","Patch"])
             else:
-                log_json(vmt)
+                log_json(rj["data"])
         else:
             fatal("Can't get vm list",rj["message"])
     except Exception as e:

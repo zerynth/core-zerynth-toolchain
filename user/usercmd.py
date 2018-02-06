@@ -231,6 +231,18 @@ where :samp:`options` is a list of one or more of the following options:
             res = zget(url=env.api.profile)
             rj = res.json()
             if rj["status"]=="success":
+                # do some calculation on data
+                rj["data"]["asset_groups"]={
+                    "rtos":{},
+                    "starter":[],
+                    "premium":[]
+                }
+                ag = rj["data"]["asset_groups"]
+                for asset in rj["data"]["assets"]:
+                    if asset["rtos"] not in ag["rtos"]:
+                        ag["rtos"][asset["rtos"]]=[]
+                    ag["rtos"][asset["rtos"]].append(asset)
+                    ag["premium" if asset["pro"] else "starter"].append(asset)
                 if env.human:
                     table.append([
                         rj["data"]["display_name"],
@@ -248,41 +260,22 @@ where :samp:`options` is a list of one or more of the following options:
                     log_table(table,headers=["Username","Email","Name","Surname","Age","Country","Company","Job","Website"])
                     
                     table = []
-                    if rj["data"]["subscription"] != "free" and not rj["data"]["sub_id"]:
-                        sub_type = rj["data"]["subscription"]+ " - expiring"
-                    elif rj["data"]["trial_period"]:
-                        sub_type = rj["data"]["subscription"]+ " - trial period"
-                    else:
-                        sub_type = rj["data"]["subscription"]
                     table.append([
-                        sub_type,
-                        rj["data"]["pro"],
                         rj["data"]["roles"],
                         rj["data"]["repositories"]
                     ])
                     
                     log()
                     info("Account info")
-                    log_table(table,headers=["Subscription","Pro Expiry","Roles","Repositories"])
+                    log_table(table,headers=["Roles","Repositories"])
 
                     table = []
-                    freeassets = rj["data"]["assets"].get("free",[])
-                    for asset in freeassets:
-                        table.append([asset["target"],asset["current"],rj["data"]["free_limit"]])
-                    log()
-                    info("Free Asset")
-                    log_table(table,headers=["target","used","max"])
-
-                    table = []
-                    vmassets = rj["data"]["assets"].get("vm",[])
+                    vmassets = rj["data"]["assets"]
                     for asset in vmassets:
-                        targets = {}
-                        for target in asset["targets"]:
-                            targets.update({target["target"]:target["current"]})
-                        table.append([asset["rtos"],asset["current"],asset["limit"],targets])
+                        table.append([asset["rtos"],asset["value"],asset["total"],"Premium" if asset["pro"] else "Starter",asset["target"],asset["description"]])
                     log()
                     info("Assets")
-                    log_table(table,headers=["rtos","used","max","targets"])
+                    log_table(table,headers=["Rtos","Available","Total","Type","Target","Description"])
 
                     table = []
                     history = rj["data"].get("history",[])
@@ -292,13 +285,6 @@ where :samp:`options` is a list of one or more of the following options:
                     info("Purchase History")
                     log_table(table,headers=["Item","Date","Price","Order"])
 
-                    # table = []
-                    # badges = rj["data"].get("badges",[])
-                    # for bb in badges:
-                    #     table.append([bb["name"],bb["description"]])
-                    # log()
-                    # info("Earned Badges")
-                    # log_table(table,headers=["Badges","Description"])
                 else:
                     log_json(rj["data"])
             elif rj["code"]==403:
