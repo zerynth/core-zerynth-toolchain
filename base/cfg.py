@@ -379,10 +379,6 @@ def init_cfg():
         except:
             warning("Bad json in",env.proxyfile)
 
-    #set minimum compatible vm version
-    env.installer_v2 = fs.exists(fs.path(env.cfg,"root.json"))
-    env.installer_v3 = fs.exists(fs.path(env.cfg,"root2.json"))
-
     #load patches
     try:
         env.patches = fs.get_json(fs.path(env.cfg,"patches.json"))

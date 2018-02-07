@@ -231,18 +231,6 @@ where :samp:`options` is a list of one or more of the following options:
             res = zget(url=env.api.profile)
             rj = res.json()
             if rj["status"]=="success":
-                # do some calculation on data
-                rj["data"]["asset_groups"]={
-                    "rtos":{},
-                    "starter":[],
-                    "premium":[]
-                }
-                ag = rj["data"]["asset_groups"]
-                for asset in rj["data"]["assets"]:
-                    if asset["rtos"] not in ag["rtos"]:
-                        ag["rtos"][asset["rtos"]]=[]
-                    ag["rtos"][asset["rtos"]].append(asset)
-                    ag["premium" if asset["pro"] else "starter"].append(asset)
                 if env.human:
                     table.append([
                         rj["data"]["display_name"],
@@ -270,7 +258,7 @@ where :samp:`options` is a list of one or more of the following options:
                     log_table(table,headers=["Roles","Repositories"])
 
                     table = []
-                    vmassets = rj["data"]["assets"]
+                    vmassets = rj["data"]["assets"]["list"]
                     for asset in vmassets:
                         table.append([asset["rtos"],asset["value"],asset["total"],"Premium" if asset["pro"] else "Starter",asset["target"],asset["description"]])
                     log()

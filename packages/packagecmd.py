@@ -85,9 +85,6 @@ Details about patches for each version are also contained in the database.
 
     """
     try:
-        if not env.installer_v3:
-            warning("This instance of Zerynth does not support future updates: refer to this %link%guide%https://docs.zerynth.com/latest/official/core.zerynth.docs/migration3/docs/index.html%")
- 
         vrs = update_versions()
         if vrs:
             if not env.human:
@@ -680,9 +677,6 @@ def patches(finalize):
         warning("Can't retrieve current patch")
         return
 
-    if finalize and not env.installer_v3:
-        fatal("Can't install update! This instance of Zerynth does not support updates: refer to this %link%guide%https://docs.zerynth.com/latest/official/core.zerynth.docs/migration3/docs/index.html%")
- 
     # create the patches
     ppath=fs.path(env.tmp,"patch")
     fs.rmtree(ppath)

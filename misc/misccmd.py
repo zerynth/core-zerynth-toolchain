@@ -166,7 +166,7 @@ It takes the following options (one at a time):
             msg_list = []
         last_msg = msg_list[0]["visibleFrom"] if msg_list else ""
         try:
-            res = zget(url=env.api.user+"/messages",params={"from":last_msg})
+            res = zget(url=env.api.user+"/messages",params={"from":last_msg,"version":env.var.version})
             rj = res.json()
             log_json(rj)
             if rj["status"]=="success":
