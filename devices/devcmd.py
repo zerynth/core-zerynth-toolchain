@@ -348,9 +348,48 @@ def register_by_uid(chipid,target):
     _register_device(dinfo)
     
 
+@device.command(help="Virtualize a device.")
+@click.argument("vmuid")
+@click.option("--spec","__specs",default="",multiple=True)
+def virtualize_raw(vmuid,__specs):
+    vms = tools.get_vm_by_prefix(vmuid)
+    if len(vms)==0:
+        fatal("No such VM uid")
+    if len(vms)>1:
+        fatal("Ambiguous VM uid:",vms[:10])
+    vmfile = vms[0]
+    vm = fs.get_json(vmfile)
+    # manage specs
+    options = {}
+    for spec in __specs:
+        pc = spec.find(":")
+        if pc<0:
+            fatal("invalid spec format. Give key:value")
+        options[spec[:pc]]=spec[pc+1:]
+    for dkey,dinfo in _dsc.device_cls.items():
+        if vm["dev_type"]!=dinfo["target"]:
+            continue
+        cls = dinfo["cls"]
+        dev = cls(dinfo,options)
+        break
+    else:
+        fatal("No such target!",vm["dev_type"])
+    # TODO: call virtualization    
+    info("Starting Virtualization...")
+    if isinstance(vm["bin"],str):
+        res,out = dev.burn(bytearray(base64.standard_b64decode(vm["bin"])),info)
+    else:
+        res,out = dev.burn([ base64.standard_b64decode(x) for x in vm["bin"]],info)
+    if not res:
+        fatal("Error in virtualization",out)
+    else:
+        info("Virtualization Ok")
+    
+
+    
 
 
-@device.command(help="Virtualize a device. \n\n Arguments: \n\n ALIAS: device alias. \n\n VMUID: Virtual Mahine identifier.")
+@device.command(help="Virtualize a device. \n\n Arguments: \n\n ALIAS: device alias. \n\n VMUID: Virtual Machine identifier.")
 @click.argument("alias")
 @click.argument("vmuid")
 def virtualize(alias,vmuid):
@@ -443,6 +482,35 @@ tries to open the default serial port with the correct parameters for the device
     #     log(data.decode("ascii","replace"),sep="",end="")
     #     #print(,sep="",end="")
 
+@device.command(help="Open device serial.")
+@click.argument("port")
+@click.option("--echo","__echo",flag_value=True, default=False,help="print typed characters to stdin")
+@click.option("--baud","__baud", default=115200,type=int,help="open with a specific baudrate")
+@click.option("--parity","__parity", default="n",type=str,help="open with a specific parity")
+@click.option("--bits","__bits", default=8,type=int,help="")
+@click.option("--stopbits","__stopbits", default=1,type=int,help="")
+@click.option("--dsrdtr","__dsrdtr", default=False,flag_value=True,help="")
+@click.option("--rtscts","__rtscts", default=False,flag_value=True,help="")
+def open_raw(port,__echo,__baud,__parity,__bits,__stopbits,__dsrdtr,__rtscts):
+    conn = ConnectionInfo()
+    options={
+        "baudrate":__baud,
+        "parity":__parity,
+        "bytesize":__bits,
+        "stopbits":__stopbits,
+        "dsrdtr":__dsrdtr,
+        "rtscts":__rtscts
+    }
+    conn.set_serial(port,**options)
+    ch = Channel(conn,__echo)
+    ch.open()
+    ch.run()
+    # import serial
+    # ser = serial.Serial(tgt.port,115200)
+    # while True:
+    #     data = ser.read()
+    #     log(data.decode("ascii","replace"),sep="",end="")
+    #     #print(,sep="",end="")
 
 
 @device.command(help="List of supported devices.")

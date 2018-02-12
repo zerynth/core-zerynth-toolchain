@@ -1,6 +1,7 @@
 from .base import *
 from .fs import *
 from .cfg import *
+from .pygtrie import *
 
 __all__ = ["tools"]
 
@@ -100,6 +101,18 @@ class Tools():
                 else:
                     vms[vmuid]=vmf
         return vms
+    
+    def get_vm_by_prefix(self,vmuid):
+        #for root,dirnames,files in os.walk(fs.path(env.vms)):
+        res = []
+        for target in fs.dirs(env.vms):
+            for chid in fs.dirs(fs.path(env.vms,target)):
+                for ff in fs.files(fs.path(env.vms,target,chid)):
+                    path_splitted = ff.split('/')
+                    ff_ = fs.basename(ff)
+                    if ff_.startswith(vmuid):
+                        res.append(fs.path(ff))
+        return res
 
     def _parse_order(self,path):
         order = fs.readfile(fs.path(path,"order.txt"))

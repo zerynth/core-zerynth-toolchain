@@ -49,10 +49,6 @@ def compile(project,target,output,include,define,imports,proj):
         project=fs.dirname(project)
     else:
         mainfile = fs.path(project,"main.py")
-    try:
-        prj = fs.get_json(fs.path(project,".zproject"))
-    except:
-        fatal("Can't open project at",project)
     # create project import list
     prjs = {}
     for p in proj:
