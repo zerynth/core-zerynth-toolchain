@@ -180,18 +180,17 @@ the user profile is retrieved and displayed. The user profile consists of the fo
     * Company
     * Website
 
-* Subscription Info
+# * Subscription Info
 
-    * Subscription type
-    * Date of subscription expiration
-    * List of roles
-    * List of active repositories
+#     * Subscription type
+#     * Date of subscription expiration
+#     * List of roles
+#     * List of active repositories
 
 * Asset and Purchase History list 
 
     * List of account linked assets
-    * List of bought virtual machine packs
-
+    * List of bought virtual machines
 
 The profile  command can be used to change mutable generic info with the following syntax: ::
 
@@ -244,7 +243,7 @@ where :samp:`options` is a list of one or more of the following options:
                         rj["data"]["website"]
                     ])
                     log()
-                    info("General Info")
+                    info("General Info\n")
                     log_table(table,headers=["Username","Email","Name","Surname","Age","Country","Company","Job","Website"])
                     
                     table = []
@@ -254,7 +253,7 @@ where :samp:`options` is a list of one or more of the following options:
                     ])
                     
                     log()
-                    info("Account info")
+                    info("Account info\n")
                     log_table(table,headers=["Roles","Repositories"])
 
                     table = []
@@ -262,7 +261,7 @@ where :samp:`options` is a list of one or more of the following options:
                     for asset in vmassets:
                         table.append([asset["rtos"],asset["value"],asset["total"],"Premium" if asset["pro"] else "Starter",asset["target"],asset["description"]])
                     log()
-                    info("Assets")
+                    info("Assets\n")
                     log_table(table,headers=["Rtos","Available","Total","Type","Target","Description"])
 
                     table = []
@@ -270,7 +269,7 @@ where :samp:`options` is a list of one or more of the following options:
                     for purchase in history:
                         table.append([purchase["item"],purchase["date"],"%0.2f $" % purchase["price"],purchase["order"]])
                     log()
-                    info("Purchase History")
+                    info("Purchase History\n")
                     log_table(table,headers=["Item","Date","Price","Order"])
 
                 else:

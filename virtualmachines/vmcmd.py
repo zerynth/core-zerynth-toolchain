@@ -130,7 +130,8 @@ def create_by_uid(dev_uid,version,rtos,feat,name,patch):
 
 @vm.command("list", help="List all owned virtual machines")
 @click.option("--from","_from",default=0,help="skip the first n virtual machines")
-def __list(_from):
+@click.option("--dev_uid","_dev_uid",default=None,help="ask for specific device")
+def __list(_from, _dev_uid):
     """ 
 .. _ztc-cmd-vm-list:
 
@@ -146,11 +147,15 @@ The retrieved list contains at most 50 virtual machines.
 Additional options can be provided to filter the returned virtual machine set:
 
 * :option:`--from n`, skip the first :samp:`n` virtual machines
+* :option:`--dev_uid`, ask vm list for a specific device
 
     """
     table=[]
     try:
-        prms = {"from":_from}
+        prms = {
+            "from":_from,
+            "dev_uid": _dev_uid
+        }
         prms["version"]=env.var.version
         res = zget(url=env.api.vm,params=prms)
         rj = res.json()

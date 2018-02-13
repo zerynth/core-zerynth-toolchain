@@ -306,7 +306,7 @@ The option :option:`--skip_burn` avoid flashing the device with the registering 
         "type": tgt.target,
         "category": tgt.family_name
     }
-    _register_device(dinfo)
+    rj = _register_device(dinfo)
     tgt = tgt.to_dict()
     tgt["chipid"]=chipid
     tgt["remote_id"]=rj["data"]["uid"]
@@ -331,6 +331,7 @@ def _register_device(dinfo):
         rj = res.json()
         if rj["status"] == "success":
             info("Device",dinfo.get("name",""),"registered with uid:", rj["data"]["uid"])
+            return rj
         else:
             fatal("Remote device registration failed with:", rj["message"])
     except Exception as e:
