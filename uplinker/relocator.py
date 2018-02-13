@@ -52,7 +52,7 @@ class Relocator():
             #logger.info("Relocation: %s",output)
             undf = output.count("undefined reference")
             if undf > 0:
-                debug("There are",undf,"missing symbols! This VM does not support the requested features!")
+                warning("There are",undf,"missing symbols! This VM does not support the requested features!")
             else:
                 fatal("Relocation error",output)
         sym = cc.symbol_table(lfile)
