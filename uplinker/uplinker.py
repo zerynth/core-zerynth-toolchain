@@ -7,6 +7,7 @@ import time
 import re
 import struct
 import base64
+from jtag import *
 
 def get_device(alias,loop):
     _dsc = devices.Discover()
@@ -49,22 +50,19 @@ def get_device(alias,loop):
     return dev
 
 
-def get_device_by_target(target,options):
+def get_device_by_target(target,options,skip_reset=False):
     info("Searching for device",target)
-    _dsc = devices.Discover()
-    for dkey,dinfo in _dsc.device_cls.items():
-        if target!=dinfo["target"]:
-            continue
-        cls = dinfo["cls"]
-        dev = cls(dinfo,options)
+    dev = tools.get_target(target,options)
+    if not dev:
+        fatal("No such target!",target)
+
+    if not skip_reset:
         if dev.uplink_reset is True:
             info("Please reset the device!")
             sleep(dev.reset_time/1000)
         elif dev.uplink_reset == "reset":
             dev.reset()
-        return dev
-    else:
-        fatal("No such target!",target)
+    return dev
 
 
 def probing(ch,devtarget, adjust_timeouts=True):
@@ -212,6 +210,16 @@ def uplink_raw(target,bytecode,loop,__specs):
         options[spec[:pc]]=spec[pc+1:]
     dev = get_device_by_target(target,options) 
     _uplink_dev(dev,bytecode,loop)
+
+@cli.command(help="Uplink bytecode to a device using a probe.")
+@click.argument("target")
+@click.argument("probe")
+@click.argument("linked_bytecode",type=click.Path())
+def uplink_by_probe(target,probe,linked_bytecode):
+    dev = get_device_by_target(target,{},skip_reset=True)
+    tp = start_temporary_probe(target,probe)
+    dev.burn_with_probe(fs.readfile(linked_bytecode,"b"),offset=dev.bytecode_offset)
+    stop_temporary_probe(tp)
 
 def _uplink_dev(dev,bytecode,loop):
     try:

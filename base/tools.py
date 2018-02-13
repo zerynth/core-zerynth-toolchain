@@ -46,6 +46,12 @@ class Tools():
                 warning("Can't load tool info",tooldir,err=True)
         #print(self.tools)
 
+    def get_tool_dir(self,toolname):
+        for tooldir in fs.dirs(env.sys):
+            if fs.basename(tooldir)==toolname:
+                return tooldir
+        return None
+
     def __getattr__(self,attr):
         if attr in self.tools:
             return self.tools[attr]
@@ -177,6 +183,17 @@ class Tools():
                 yield bj
             except Exception as e:
                 warning(e)
+    
+    def get_target(self,target,options={}):
+        import devices
+        _dsc = devices.Discover()
+        for dkey,dinfo in _dsc.device_cls.items():
+            if target!=dinfo["target"]:
+                continue
+            cls = dinfo["cls"]
+            dev = cls(dinfo,options)
+            return dev
+        return None
 
     def get_modules(self):
         res = {}

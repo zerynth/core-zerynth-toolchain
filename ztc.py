@@ -104,7 +104,7 @@ import linter
 import misc
 import things
 import aws
-
+import jtag
 
 if __name__=="__main__":
     init_all()

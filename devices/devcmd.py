@@ -39,6 +39,7 @@ The list of supported devices is available :ref:`here <doc-supported-boards>`
     """
 from base import *
 from .discover import *
+from jtag import *
 import click
 import re
 import base64
@@ -346,6 +347,35 @@ def register_by_uid(chipid,target):
         "type": target
     }
     _register_device(dinfo)
+
+@device.command(help="Register a new device without extracting the uid")
+@click.argument("target")
+@click.argument("probe")
+@click.option("--skip-probe","__skip_probe",default=False,flag_value=True)
+@click.option("--skip-remote","__skip_remote",default=False,flag_value=True)
+def register_by_probe(target,probe,__skip_probe,__skip_remote):
+    dev = tools.get_target(target)
+    if not dev:
+        fatal("Can't find target",target)
+    if not dev.get_chipid:
+        fatal("Target does not support probes!")
+    
+    # start temporary probe
+    if not __skip_probe:
+        tp = start_temporary_probe(target,probe) 
+    chipid = dev.get_chipid()
+    # stop temporary probe
+    if not __skip_probe:
+        stop_temporary_probe(tp)
+    if not chipid:
+        fatal("Can' retrieve chip id!")
+    info("Chip Id retrieved:",chipid)
+    if not __skip_remote:
+        dinfo = {
+            "on_chip_id": chipid,
+            "type": target
+        }
+        _register_device(dinfo)
     
 
 @device.command(help="Virtualize a device.")
@@ -377,9 +407,21 @@ def virtualize_raw(vmuid,__specs):
     # TODO: call virtualization    
     info("Starting Virtualization...")
     if isinstance(vm["bin"],str):
-        res,out = dev.burn(bytearray(base64.standard_b64decode(vm["bin"])),info)
+        vmbin=bytearray(base64.standard_b64decode(vm["bin"]))
+        if options.get("probe"):
+            tp = start_temporary_probe(dinfo["target"],options.get("probe"))
+            res,out = dev.burn_with_probe(vmbin)
+            stop_temporary_probe(tp)
+        else:
+            res,out = dev.burn(vmbin,info)
     else:
-        res,out = dev.burn([ base64.standard_b64decode(x) for x in vm["bin"]],info)
+        vmbin=[ base64.standard_b64decode(x) for x in vm["bin"]]
+        if options.get("probe"):
+            tp = start_temporary_probe(dinfo["target"],options.get("probe"))
+            res,out = dev.burn_with_probe(vmbin)
+            stop_temporary_probe(tp)
+        else:
+            res,out = dev.burn(vmbin,info)
     if not res:
         fatal("Error in virtualization",out)
     else:

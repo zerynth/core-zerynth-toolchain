@@ -1,7 +1,7 @@
 from base import *
 import re
 
-__all__=["Device","UsbToSerial","JTag","Board"]
+__all__=["Device","Board"]
 
 class Device():
     def __init__(self,info={},dev={}):
@@ -235,15 +235,6 @@ class Device():
         }
 
         return (defines,vprph,pinout)
-
-
-class UsbToSerial(Device):
-    def __init__(self,info={},dev={}):
-        super().__init__(info,dev)
-
-class JTag(Device):
-    def __init__(self,info={},dev={}):
-        super().__init__(info,dev)
 
 class Board(Device):
     def __init__(self,info={},dev={}):
