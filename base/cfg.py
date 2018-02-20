@@ -46,7 +46,7 @@ class Environment():
         pass
 
     def dirs(self):
-        prefix = os.environ.get("ZERYNTH_HOME"),fs.homedir())
+        prefix = os.environ.get("ZERYNTH_HOME",fs.homedir())
         for x in self.__dict__:
             if isinstance(self[x],str) and self[x].startswith(prefix):
                 yield self[x]
@@ -247,8 +247,11 @@ def init_cfg():
     if testmode == 2:
         # special testing mode
         zdir = "zerynth2_test" if env.is_windows() else ".zerynth2_test"
-    else:
+    elif testmode == 0:
         zdir = "zerynth2" if env.is_windows() else ".zerynth2"
+    elif testmode == 1:
+        zdir = "zerynth2_local" if env.is_windows() else ".zerynth2_local"
+
     env.home      = fs.path(os.environ.get("ZERYNTH_HOME",fs.homedir()),zdir)
     env.cfg       = fs.path(env.home,"cfg")
     env.tmp       = fs.path(env.home,"tmp")
@@ -375,11 +378,6 @@ def init_cfg():
             env.proxies = fs.get_json(env.proxyfile)
         except:
             warning("Bad json in",env.proxyfile)
-
-    #set minimum compatible vm version
-    env.min_vm_dep="r2.0.11"
-    env.installer_v2 = fs.exists(fs.path(env.cfg,"root.json"))
-    env.installer_v3 = fs.exists(fs.path(env.cfg,"root2.json"))
 
     #load patches
     try:

@@ -7,3 +7,4 @@ from .tools import *
 from .zrequests import *
 from .hex2bin import *
 from .git import *
+from .pygtrie import *
