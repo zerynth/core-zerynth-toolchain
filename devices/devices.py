@@ -1,5 +1,7 @@
 from base import *
 import re
+import base64
+from jtag import *
 
 __all__=["Device","Board"]
 
@@ -45,6 +47,46 @@ class Device():
 
     def virtualize(self,bin):
         pass
+
+    def do_burn_vm(self,vm,options={},outfn=None):
+        try:
+            if isinstance(vm["bin"],str):
+                vmbin=bytearray(base64.standard_b64decode(vm["bin"]))
+                if options.get("probe"):
+                    tp = start_temporary_probe(self.target,options.get("probe"))
+                    res,out = self.burn_with_probe(vmbin)
+                    stop_temporary_probe(tp)
+                else:
+                    res,out = self.burn(vmbin,outfn)
+            else:
+                vmbin=[ base64.standard_b64decode(x) for x in vm["bin"]]
+                if options.get("probe"):
+                    tp = start_temporary_probe(self.target,options.get("probe"))
+                    res,out = self.burn_with_probe(vmbin)
+                    stop_temporary_probe(tp)
+                else:
+                    res,out = self.burn(vmbin,outfn)
+            return res,out
+        except Exception as e:
+            return False, str(e)
+
+    def do_get_chipid(self,probe,skip_probe=False):
+        if not self.get_chipid:
+            return False, "Target does not support registration by probe!"
+        try:
+            # start temporary probe
+            if not skip_probe:
+                tp = start_temporary_probe(self.target,probe) 
+            chipid = self.get_chipid()
+            # stop temporary probe
+            if not skip_probe:
+                stop_temporary_probe(tp)
+            if not chipid:
+                return None,"Can't retrieve chip id"
+            return chipid,""
+        except Exception as e:
+            warning(e)
+            return None,"Can't retrieve chip id"
 
     def reset(self):
         pass

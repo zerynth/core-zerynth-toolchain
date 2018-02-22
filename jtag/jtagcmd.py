@@ -5,6 +5,8 @@ import threading
 import time
 
 
+# Load here because other modules can call this module functions without accessing probe group comands
+_interfaces = fs.get_yaml(fs.path(fs.dirname(__file__),"probes.yaml"),failsafe=True)
 
 @cli.group(help="Manage probes.")
 def probe():
@@ -14,11 +16,11 @@ def probe():
 def list():
     if env.human:
         table = []
-        for intf,iinfo in interfaces.items():
+        for intf,iinfo in _interfaces.items():
             table.append([intf,iinfo.get("name","---"),iinfo.get("script","---")])
         log_table(table,headers=["probe","name","script"])
     else:
-        log_json(interfaces)
+        log_json(_interfaces)
 
 
 @probe.command(help="Start probe")
@@ -124,17 +126,6 @@ def inspect(target,probe):
     info(" vm uid:",vmuid)
 
 
-#TODO: move into a yaml file
-interfaces = {
-        "sam_ice":{
-            "script":"cmsis-dap.cfg",
-            "name":"Atmel SAM ICE"
-        },
-        "jlink":{
-            "script":"jlink.cfg",
-            "name":"SEGGER JLINK"
-        }
-}
 
 def interface_to_script(interface):
-    return interfaces.get(interface,{}).get("script")
+    return _interfaces.get(interface,{}).get("script")

@@ -183,7 +183,16 @@ class Tools():
                 yield bj
             except Exception as e:
                 warning(e)
-    
+   
+    def get_specs(self,specs):
+        options = {}
+        for spec in specs:
+            pc = spec.find(":")
+            if pc<0:
+                fatal("invalid spec format. Give key:value")
+            options[spec[:pc]]=spec[pc+1:]
+        return options
+
     def get_target(self,target,options={}):
         import devices
         _dsc = devices.Discover()

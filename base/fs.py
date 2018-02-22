@@ -7,7 +7,7 @@ import tarfile
 import hashlib
 import sys
 import time
-
+from . import yaml
 from .cfg import *
 import glob
 
@@ -50,6 +50,23 @@ class zfs():
         self.rmtree(pth)
         self.makedirs(pth)
         return pth
+
+    def get_yaml(self,src, failsafe=False):
+        try:
+            self.check_path(src)
+            with open(src,"r",encoding="utf8") as ff:
+                return yaml.load(ff) 
+        except Exception as e:
+            if failsafe:
+                return {}
+            else:
+                raise e
+
+    def set_yaml(self,ym,dst):
+        self.check_path(dst)
+        with open(dst,"w",encoding="utf8") as ff:
+            yaml.dump(ym,ff,indent=4,encoding="utf-8",explicit_start=True,explicit_end=True,default_flow_style=False,allow_unicode=True)
+
 
     def get_json(self,src,strict=True):
         self.check_path(src)

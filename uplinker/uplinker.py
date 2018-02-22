@@ -215,10 +215,11 @@ def uplink_raw(target,bytecode,loop,__specs):
 @click.argument("target")
 @click.argument("probe")
 @click.argument("linked_bytecode",type=click.Path())
-def uplink_by_probe(target,probe,linked_bytecode):
+@click.option("--address",default="")
+def uplink_by_probe(target,probe,linked_bytecode,address):
     dev = get_device_by_target(target,{},skip_reset=True)
     tp = start_temporary_probe(target,probe)
-    dev.burn_with_probe(fs.readfile(linked_bytecode,"b"),offset=dev.bytecode_offset)
+    dev.burn_with_probe(fs.readfile(linked_bytecode,"b"),offset=address or dev.bytecode_offset)
     stop_temporary_probe(tp)
 
 def _uplink_dev(dev,bytecode,loop):

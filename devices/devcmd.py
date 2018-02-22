@@ -204,6 +204,29 @@ def _target_exists(target):
             return True
     return False
 
+
+def _extract_chipid_from_serial(tgt):
+    conn = ConnectionInfo()
+    conn.set_serial(tgt.port,**tgt.connection)
+    ch = Channel(conn)
+    try:
+        ch.open(timeout=2)
+    except:
+        return False, "Can't open serial port!"
+    lines = []
+    for x in range(30):
+        line=ch.readline()
+        lines.append(line.strip("\n"))
+    ch.close()
+    cnt = [lines.count(x) for x in lines]
+    pos = cnt.index(max(cnt))
+    
+    if pos>=0 and cnt[pos]>3 and len(lines[pos])>=8:
+        return True,lines[pos]
+    else:
+        return False, "Can't find chipid"
+
+
 @device.command(help="Register a new device. \n\n Arguments: \n\n ALIAS: device alias")
 @click.argument("alias")
 @click.option("--skip_burn",flag_value=True, default=False,help="bootloader is not flashed on the device (must be flashed manually!)")
@@ -248,11 +271,7 @@ The option :option:`--skip_burn` avoid flashing the device with the registering 
     # burn register.vm
     if not skip_burn:
         info("Burning bootloader...")
-        if isinstance(reg["bin"],str):
-            res,out = tgt.burn(bytearray(base64.standard_b64decode(reg["bin"])),info)
-        else:
-            res,out = tgt.burn([ base64.standard_b64decode(x) for x in reg["bin"]],info)
-        
+        res,out = tgt.do_burn_vm(reg,outfn=info)
         if not res:
             fatal("Can't burn bootloader! -->",out)
     else:
@@ -281,26 +300,9 @@ The option :option:`--skip_burn` avoid flashing the device with the registering 
     if tgt.sw_reset_after_register is True:
         tgt.reset()
 
-    conn = ConnectionInfo()
-    conn.set_serial(tgt.port,**tgt.connection)
-    ch = Channel(conn)
-    try:
-        ch.open(timeout=2)
-    except:
-        fatal("Can't open serial port!")
-    lines = []
-    for x in range(30):
-        line=ch.readline()
-        lines.append(line.strip("\n"))
-    ch.close()
-    cnt = [lines.count(x) for x in lines]
-    pos = cnt.index(max(cnt))
-    
-    if pos>=0 and cnt[pos]>3 and len(lines[pos])>=8:
-        info("Found chipid:",lines[pos])
-    else:
-        fatal("Can't find chipid")
-    chipid=lines[pos]
+    res,chipid = _extract_chipid_from_serial(tgt)
+    if not res:
+        fatal(chipid)
     dinfo = {
         "name": tgt.custom_name or tgt.name,
         "on_chip_id": chipid,
@@ -348,28 +350,41 @@ def register_by_uid(chipid,target):
     }
     _register_device(dinfo)
 
-@device.command(help="Register a new device without extracting the uid")
+@device.command(help="Register a new device giving target details")
 @click.argument("target")
-@click.argument("probe")
-@click.option("--skip-probe","__skip_probe",default=False,flag_value=True)
 @click.option("--skip-remote","__skip_remote",default=False,flag_value=True)
-def register_by_probe(target,probe,__skip_probe,__skip_remote):
-    dev = tools.get_target(target)
+@click.option("--skip-probe","__skip_probe",default=False,flag_value=True)
+@click.option("--spec","__specs",default=[],multiple=True)
+def register_raw(target,__skip_remote,__specs,__skip_probe):
+    options = tools.get_specs(__specs)
+    dev =  _dsc.get_target(target,options)    
     if not dev:
-        fatal("Can't find target",target)
-    if not dev.get_chipid:
-        fatal("Target does not support probes!")
-    
-    # start temporary probe
-    if not __skip_probe:
-        tp = start_temporary_probe(target,probe) 
-    chipid = dev.get_chipid()
-    # stop temporary probe
-    if not __skip_probe:
-        stop_temporary_probe(tp)
+        fatal("No such target!")
+   
+    probe = options.get("probe")
+    if probe:
+        chipid,err = dev.do_get_chipid(probe,__skip_probe)
+        if err:
+            fatal(err)
+    else:
+        # open register.vm
+        reg = fs.get_json(fs.path(dev.path,"register.vm"))
+        info("Burning bootloader...")
+        res, out = dev.do_burn_vm(reg,options,info)
+        if not res:
+            fatal("Can't burn bootloader! -->",out)
+        if dev.reset_after_register:
+            info("Please reset the device!")
+            sleep((dev.reset_time or 3000)/1000)
+        if dev.sw_reset_after_register is True:
+            dev.reset()
+        res,chipid = _extract_chipid_from_serial(dev)
+        if not res:
+            fatal(chipid)
+
     if not chipid:
-        fatal("Can' retrieve chip id!")
-    info("Chip Id retrieved:",chipid)
+        fatal("Can't retrieve chip id!")
+    info("Chip id retrieved:",chipid)
     if not __skip_remote:
         dinfo = {
             "on_chip_id": chipid,
@@ -380,7 +395,7 @@ def register_by_probe(target,probe,__skip_probe,__skip_remote):
 
 @device.command(help="Virtualize a device.")
 @click.argument("vmuid")
-@click.option("--spec","__specs",default="",multiple=True)
+@click.option("--spec","__specs",default=[],multiple=True)
 def virtualize_raw(vmuid,__specs):
     vms = tools.get_vm_by_prefix(vmuid)
     if len(vms)==0:
@@ -390,38 +405,12 @@ def virtualize_raw(vmuid,__specs):
     vmfile = vms[0]
     vm = fs.get_json(vmfile)
     # manage specs
-    options = {}
-    for spec in __specs:
-        pc = spec.find(":")
-        if pc<0:
-            fatal("invalid spec format. Give key:value")
-        options[spec[:pc]]=spec[pc+1:]
-    for dkey,dinfo in _dsc.device_cls.items():
-        if vm["dev_type"]!=dinfo["target"]:
-            continue
-        cls = dinfo["cls"]
-        dev = cls(dinfo,options)
-        break
-    else:
+    options = tools.get_specs(__specs)
+    dev =  _dsc.get_target(vm["dev_type"],options)    
+    if not dev:
         fatal("No such target!",vm["dev_type"])
-    # TODO: call virtualization    
     info("Starting Virtualization...")
-    if isinstance(vm["bin"],str):
-        vmbin=bytearray(base64.standard_b64decode(vm["bin"]))
-        if options.get("probe"):
-            tp = start_temporary_probe(dinfo["target"],options.get("probe"))
-            res,out = dev.burn_with_probe(vmbin)
-            stop_temporary_probe(tp)
-        else:
-            res,out = dev.burn(vmbin,info)
-    else:
-        vmbin=[ base64.standard_b64decode(x) for x in vm["bin"]]
-        if options.get("probe"):
-            tp = start_temporary_probe(dinfo["target"],options.get("probe"))
-            res,out = dev.burn_with_probe(vmbin)
-            stop_temporary_probe(tp)
-        else:
-            res,out = dev.burn(vmbin,info)
+    res,out = dev.do_burn_vm(vm,options,info)
     if not res:
         fatal("Error in virtualization",out)
     else:
@@ -597,4 +586,60 @@ Supported devices can be filtered by type with the :option:`--type type` option 
         log_json(jst)
 
 
+@device.group(help="Manage device configurations manually.")
+def db():
+    pass
+
+@db.command("list")
+@click.option("--filter-target",default="",type=str,help="list only matching target")
+def _db_list(filter_target):
+    db = fs.get_yaml(fs.path(env.cfg,"devices.yaml"),failsafe=True)
+    
+    if not env.human:
+        if not filter_target:
+            log_json(db)
+        else:
+            log_json({k:v for k,v in db.items() if v["target"]==filter_target})
+        return
+
+    table = []
+    for devid, devinfo in db.items():
+        if filter_target and devinfo["target"]!=filter_target:
+            continue
+        table.append([devid,devinfo["target"],devinfo.get("port","---"),devinfo.get("disk","---"),devinfo.get("probe","---"),devinfo.get("chipid","---")])
+
+    log_table(table,headers = ["name","target","port","disk","probe","chip id"])
+
+@db.command("put")
+@click.argument("target")
+@click.argument("name")
+@click.option("--spec","__specs",default=[],multiple=True)
+def _db_put(target,name,__specs):
+    db = fs.get_yaml(fs.path(env.cfg,"devices.yaml"),failsafe=True)
+    options = tools.get_specs(__specs)
+    dinfo = db.get(name,{})
+    db[name]={
+        "target":target,
+        "name":name,
+        "port":options.get("port",dinfo.get("port")),
+        "disk":options.get("disk",dinfo.get("disk")),
+        "probe":options.get("probe",dinfo.get("probe")),
+        "chipid":options.get("chipid",dinfo.get("chipid"))
+    }
+    if dinfo:
+        info("Updating device...")
+    else:
+        info("Saving device...")
+    fs.set_yaml(db,fs.path(env.cfg,"devices.yaml"))
+
+@db.command("remove")
+@click.argument("name")
+def _db_remove(name):
+    db = fs.get_yaml(fs.path(env.cfg,"devices.yaml"),failsafe=True)
+    dinfo = db.pop(name,None)
+    if dinfo:
+        info("Removing device...")
+    else:
+        info("Nothing to remove")
+    fs.set_yaml(db,fs.path(env.cfg,"devices.yaml"))
 
