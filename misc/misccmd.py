@@ -169,7 +169,6 @@ It takes the following options (one at a time):
         try:
             res = zget(url=env.api.user+"/messages",params={"from":last_msg,"version":env.var.version})
             rj = res.json()
-            log_json(rj)
             if rj["status"]=="success":
                 msg_list = rj["data"]["list"]+msg_list
                 if env.human:
