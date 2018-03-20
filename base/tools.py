@@ -190,7 +190,10 @@ class Tools():
             pc = spec.find(":")
             if pc<0:
                 fatal("invalid spec format. Give key:value")
-            options[spec[:pc]]=spec[pc+1:]
+            thespec = spec[pc+1:]
+            if thespec=="null":
+                thespec=None
+            options[spec[:pc]]=thespec
         return options
 
     def get_target(self,target,options={}):

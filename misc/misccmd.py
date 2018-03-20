@@ -113,7 +113,8 @@ It takes the following options (one at a time):
                 "chipid":vm["on_chip_id"],
                 "name":vm["name"],
                 "desc":vm.get("desc",""),
-                "rtos":vm["rtos"]
+                "rtos":vm["rtos"],
+                "patch":vm["patch"]
             })
         if env.human:
             table = []

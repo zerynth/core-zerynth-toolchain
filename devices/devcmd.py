@@ -309,15 +309,15 @@ The option :option:`--skip_burn` avoid flashing the device with the registering 
         "type": tgt.target,
         "category": tgt.family_name
     }
-    _register_device(dinfo)
+    remote_uid = _register_device(dinfo)
     tgt = tgt.to_dict()
     tgt["chipid"]=chipid
-    tgt["remote_id"]=rj["data"]["uid"]
+    tgt["remote_id"]=remote_uid
     env.put_dev(tgt,linked=tgt["sid"]=="no_sid")
     if alter_ego:
         alter_ego = alter_ego.to_dict()
         alter_ego["chipid"]=chipid
-        alter_ego["remote_id"]=rj["data"]["uid"]
+        alter_ego["remote_id"]=remote_uid
         env.put_dev(alter_ego)
 
 
@@ -334,6 +334,7 @@ def _register_device(dinfo):
         rj = res.json()
         if rj["status"] == "success":
             info("Device",dinfo.get("name",""),"registered with uid:", rj["data"]["uid"])
+            return rj["data"]["uid"]
         else:
             fatal("Remote device registration failed with:", rj["message"])
     except Exception as e:
@@ -585,6 +586,13 @@ Supported devices can be filtered by type with the :option:`--type type` option 
     elif single:
         log_json(jst)
 
+@device.command(help="List of serial ports and disk devices")
+def ports_and_disks():
+    res = {
+            "disks":_dsc.devsrc.find_all_mount_points(),
+            "ports":_dsc.devsrc.find_all_serial_ports()
+    }
+    log_json(res)
 
 @device.group(help="Manage device configurations manually.")
 def db():

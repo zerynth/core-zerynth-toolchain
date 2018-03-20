@@ -12,8 +12,8 @@ _interfaces = fs.get_yaml(fs.path(fs.dirname(__file__),"probes.yaml"),failsafe=T
 def probe():
     pass
 
-@probe.command(help="List available probes")
-def list():
+@probe.command("list",help="List available probes")
+def probe_list():
     if env.human:
         table = []
         for intf,iinfo in _interfaces.items():

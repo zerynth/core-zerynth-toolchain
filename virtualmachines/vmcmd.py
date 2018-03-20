@@ -130,7 +130,8 @@ def create_by_uid(dev_uid,version,rtos,feat,name,patch):
 
 @vm.command("list", help="List all owned virtual machines")
 @click.option("--from","_from",default=0,help="skip the first n virtual machines")
-def __list(_from):
+@click.option("--dev_uid","_dev_uid",default=None,help="ask for specific device")
+def __list(_from,_dev_uid):
     """ 
 .. _ztc-cmd-vm-list:
 
@@ -152,6 +153,7 @@ Additional options can be provided to filter the returned virtual machine set:
     try:
         prms = {"from":_from}
         prms["version"]=env.var.version
+        prms["dev_uid"]=_dev_uid
         res = zget(url=env.api.vm,params=prms)
         rj = res.json()
         if rj["status"]=="success":
