@@ -614,9 +614,9 @@ def _db_list(filter_target):
     for devid, devinfo in db.items():
         if filter_target and devinfo["target"]!=filter_target:
             continue
-        table.append([devid,devinfo["target"],devinfo.get("port","---"),devinfo.get("disk","---"),devinfo.get("probe","---"),devinfo.get("chipid","---")])
+        table.append([devid,devinfo["target"],devinfo.get("port","---"),devinfo.get("disk","---"),devinfo.get("probe","---"),devinfo.get("chipid","---"),devinfo.get("remote_id","---")])
 
-    log_table(table,headers = ["name","target","port","disk","probe","chip id"])
+    log_table(table,headers = ["name","target","port","disk","probe","chip id","remote id"])
 
 @db.command("put")
 @click.argument("target")
@@ -632,7 +632,8 @@ def _db_put(target,name,__specs):
         "port":options.get("port",dinfo.get("port")),
         "disk":options.get("disk",dinfo.get("disk")),
         "probe":options.get("probe",dinfo.get("probe")),
-        "chipid":options.get("chipid",dinfo.get("chipid"))
+        "chipid":options.get("chipid",dinfo.get("chipid")),
+        "remote_id":options.get("remote_id",dinfo.get("remote_id"))
     }
     if dinfo:
         info("Updating device...")

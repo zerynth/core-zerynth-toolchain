@@ -219,8 +219,12 @@ def uplink_raw(target,bytecode,loop,__specs):
 def uplink_by_probe(target,probe,linked_bytecode,address):
     dev = get_device_by_target(target,{},skip_reset=True)
     tp = start_temporary_probe(target,probe)
-    dev.burn_with_probe(fs.readfile(linked_bytecode,"b"),offset=address or dev.bytecode_offset)
+    res,out = dev.burn_with_probe(fs.readfile(linked_bytecode,"b"),offset=address or dev.bytecode_offset)
     stop_temporary_probe(tp)
+    if res:
+        info("Uplink done")
+    else:
+        fatal("Uplink failed:",out)
 
 def _uplink_dev(dev,bytecode,loop):
     try:
@@ -348,7 +352,8 @@ def _uplink_dev(dev,bytecode,loop):
 @click.option("--vm","vm_ota",default=0, type=int,help="Select OTA VM index")
 @click.option("--bc","bc_ota",default=0, type=int,help="Select OTA VM Bytecode index")
 @click.option("--file",default="", type=str,help="Save binary to specified file")
-def link(vmuid,bytecode,include_vm,vm_ota,bc_ota,file,otavm):
+@click.option("--bin",default=False,flag_value=True,help="Save in binary format")
+def link(vmuid,bytecode,include_vm,vm_ota,bc_ota,file,otavm,bin):
     """
 .. _ztc-cmd-link:
 
@@ -458,7 +463,10 @@ For example, assuming a project has been compiled to the bytecode file :samp:`pr
             "vmuid":vmuid
         }
         if file:
-            fs.set_json(res,file)
+            if bin:
+                fs.write_file(thebin,file)
+            else:
+                fs.set_json(res,file)
         else:
             log_json(res)
     else:

@@ -51,7 +51,11 @@ class Discover():
                     sys.path.pop()
                     self.device_cls[bj["path"]+"::"+bcls]=bjc
                     if "target" in bj:
-                        self.targets[bj["target"]]=bjc
+                        if "jtag_class" in bj:
+                            if bj["jtag_class"]==bcls:
+                                self.targets[bj["target"]]=bjc
+                        else:
+                            self.targets[bj["target"]]=bjc
                 except Exception as e:
                     warning(e)
 

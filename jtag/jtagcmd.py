@@ -122,8 +122,11 @@ def inspect(target,probe):
     if not vmuid:
         fatal("Can' retrieve vm uid!")
 
-    info("chip id:",chipid)
-    info(" vm uid:",vmuid)
+    if env.human:
+        info("chip id:",chipid)
+        info(" vm uid:",vmuid)
+    else:
+        log_json({"chipid":chipid,"vmuid":vmuid})
 
 
 

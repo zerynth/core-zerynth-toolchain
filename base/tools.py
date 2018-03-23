@@ -199,13 +199,7 @@ class Tools():
     def get_target(self,target,options={}):
         import devices
         _dsc = devices.Discover()
-        for dkey,dinfo in _dsc.device_cls.items():
-            if target!=dinfo["target"]:
-                continue
-            cls = dinfo["cls"]
-            dev = cls(dinfo,options)
-            return dev
-        return None
+        return _dsc.get_target(target,options)
 
     def get_modules(self):
         res = {}

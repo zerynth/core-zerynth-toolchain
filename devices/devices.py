@@ -47,6 +47,90 @@ class Device():
 
     def virtualize(self,bin):
         pass
+    
+    def burn_with_probe(self,bin,offset=0):
+        #TODO: add support for multifile vms
+        offs = offset if isinstance(offset,str) else hex(offset)
+        fname = fs.get_tempfile(bin)
+        try:
+            pb  = Probe()
+            pb.connect()
+            pb.send("program "+fname+" verify reset "+offs)
+            now = time.time()
+            wait_verification = False
+            while time.time()-now<10:
+                lines = pb.read_lines()
+                for line in lines:
+                    if line.startswith("wrote 0 "):
+                        return False,"0 bytes written!"
+                    if line.startswith("wrote"):
+                        wait_verification=True
+                    if wait_verification and line.startswith("** Verified OK"):
+                        return True, ""
+                    if wait_verification and line.startswith("** Verified Failed"):
+                        return False, "Verification failed"
+            return False,"timeout"
+        except Exception as e:
+            return False, str(e)
+        finally:
+            fs.del_tempfile(fname)
+
+    def get_chipid(self):
+        try:
+            pb = Probe()
+            pb.connect()
+            pb.send(self.jtag_chipid_command)
+            # pb.send("halt; mdw 0x1fff7a10; mdw 0x1fff7a14; mdw 0x1fff7a18")
+            lines = pb.read_lines(timeout=0.5)
+            ids = []
+            for line in lines:
+                # if ":" not in line or not line.startswith("0x1fff7"):
+                if ":" not in line or not line.startswith(self.jtag_chipid_prefix):
+                    continue
+                fld = line.split(":")
+                ids.append(fld[1].strip())
+            # if len(ids)!=3:
+            if len(ids)!=self.jtag_chipid_len:
+                warning("Probe result too short!")
+                return None
+            chipid = "".join([id[::-1] for id in ids])
+            return chipid
+        except Exception as e:
+            warning(e)
+            return None
+    
+    def get_vmuid(self):
+        pb = Probe()
+        pb.connect()
+        cmd="reset halt;"
+        addr = self.vmstore_offset
+        cmd+="; ".join(["mdw "+hex(int(addr,16)+i) for i in range(0,32,4)])
+        # halt and read 8 words
+        pb.send(cmd)
+        lines = pb.read_lines(timeout=0.5)
+        ids = []
+        for line in lines:
+            if ":" not in line or not line.startswith("0x"):
+                continue
+            fld = line.split(":")
+            ids.append(fld[1].strip())
+        if len(ids)!=8:
+            warning("Probe result too short!",len(ids),ids)
+            return None
+        # first word is length
+        vmlen = int(ids[0],16)
+        # recover all the other bytes
+        bt = bytearray()
+        for id in ids[1:]:
+            bp = bytearray()
+            for i in range(0,8,2):
+                bb = int(id[i:i+2],16)
+                # temporary append
+                bp.append(bb)
+            # extend reversed
+            bt.extend(bp[::-1])
+        vmuid = bt[0:vmlen].decode("utf-8")
+        return vmuid
 
     def do_burn_vm(self,vm,options={},outfn=None):
         try:
@@ -54,7 +138,7 @@ class Device():
                 vmbin=bytearray(base64.standard_b64decode(vm["bin"]))
                 if options.get("probe"):
                     tp = start_temporary_probe(self.target,options.get("probe"))
-                    res,out = self.burn_with_probe(vmbin)
+                    res,out = self.burn_with_probe(vmbin,vm["map"]["vm"][0])
                     stop_temporary_probe(tp)
                 else:
                     res,out = self.burn(vmbin,outfn)

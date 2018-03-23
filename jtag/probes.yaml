@@ -9,4 +9,6 @@ atmel_ice:
 jlink:
     script: jlink.cfg
     name: SEGGER JLink
-
+stlink:
+    script: stlink.cfg
+    name: ST Link
