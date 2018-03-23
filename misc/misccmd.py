@@ -93,6 +93,7 @@ It takes the following options (one at a time):
             vv= vmc[1]
             # ik = ZpmVersion(vv)   # vm version
             #if ik<im
+            log(vv)
             if compare_versions(vv,env.var.version) != 0:
                 # skip versions lower than min_dep
                 continue

@@ -174,12 +174,13 @@ class symtable():
     def add(self, name, size, addr, sect):
         #info("<<adding",name,size,addr,sect)
         if name.startswith("."):
-            #info("--",name)
+            debug("--",name,size,addr)
             self.sections[name]=[name,int(size,16),addr,0]
         else:
             if sect=="*COM*":
                 sect=".bss"
             self.table[name]=(name,int(size,16),addr,sect)
+            debug(sect,name,size,int(size,16))
             self.sections[sect][1]+=int(size,16)
             self.sections[sect][3]+=1
     def getfrom(self,sect):
@@ -219,12 +220,18 @@ class gcc():
         # search for compiler libraries in ../lib
         libpath = None
         libfiles = fs.all_files(fs.path(fs.dirname(self.gcc),"..","lib"))
+        libgcc = []
         for libfile in libfiles:
             if fs.basename(libfile)=="libgcc.a":
-                libpath = fs.dirname(libfile)
-                break
-        else:
+                libgcc.append(libfile) 
+        if not libgcc:    
             fatal("Can't find libgcc!")
+        for libfile in libgcc:
+            # select thumb libgcc if existing
+            libpath = fs.dirname(libfile)
+            if "thumb" in libfile:
+                break
+        debug("libgcc:",libpath)
         self.libpath = libpath
 
     def run_command(self,cmd, args):
@@ -311,7 +318,8 @@ class gcc():
                 #print(">>",line,"<<")
                 mth = catcher.match(line)
                 if mth:
-                    # info("matched\n",mth.group(5),mth.group(4))
+                    #info("matched\n",mth.group(5),mth.group(4))
+                    debug(line)
                     ret.add(mth.group(5),mth.group(4),mth.group(1),mth.group(3))
                 else:
                     pass
