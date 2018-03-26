@@ -1,3 +1,20 @@
+"""
+.. _ztc-cmd-probe:
+
+******
+Probes
+******
+
+The ZTC has support for JTAG/SWD probes. All steps of the Zerynth workflow (registration, virtualization, uplinking) can be made faster by using probes.
+
+Probes are managed through `OpenOCD <http://openocd.org/>`_ , in particular the `GNU MCU Eclipse distribution <https://gnu-mcu-eclipse.github.io/openocd>`_ .
+OpenOCD is automatically installed by Zerynth but in some systems it may require some additional manual steps. In particular, in Linux systems, UDEV rules must be 
+updated in order to allow access to the probe by non-root users: additional information can be found `here <https://gnu-mcu-eclipse.github.io/openocd/install/>`_ .
+
+Probes are handled automatically in ZTC by all commands that can use probes. The following commands are available for advanced usage.
+
+    """
+
 from base import *
 from .jtag import Probe
 import click
@@ -15,6 +32,19 @@ def probe():
 
 @probe.command("list",help="List available probes")
 def probe_list():
+    """
+.. _ztc-cmd-probe-list:
+
+Available Probes
+----------------
+
+The command: ::
+
+    ztc probe list
+
+prints the list of supported probes. In particular, the short name of the probe is used to identify the probe in all commands that may need one.
+
+    """
     if env.human:
         table = []
         for intf,iinfo in _interfaces.items():
@@ -102,6 +132,20 @@ def send(commands):
 @click.argument("target")
 @click.argument("probe")
 def inspect(target,probe):
+    """
+.. _ztc-cmd-probe-inspect:
+
+Inspect device
+--------------
+
+The command: ::
+
+    ztc probe target probe
+
+queries the device identified by :samp:`target` by means of the probe :samp:`probe` in order to extract the device chip identifier
+and the virtual machine identifier.
+
+    """
     dev = tools.get_target(target)
     if not dev:
         fatal("Can't find target",target)
@@ -138,57 +182,57 @@ def interface_to_script(interface):
 
 ############### GDBGUI
 
-@cli.group("debugger",help="Debugging sessions")
-def debugger():
-    pass
+# @cli.group("debugger",help="Debugging sessions")
+# def debugger():
+#     pass
 
 
-@debugger.command()
-@click.argument("target")
-def start(target):
-    dev = tools.get_target(target)
-    if not dev:
-        fatal("Can't find device!")
-    gdbgui = tools["gdbgui"]
-    gdb = tools[dev.cc]["gdb"]
-    log(gdb)
-    gdb="/home/giacomo/Downloads/gcc-arm-none-eabi-7-2017-q4-major/bin/arm-none-eabi-gdb"
-    sys.path = ["/home/giacomo/.zerynth2_test/sys/gdbgui"]+sys.path
-    from gdbgui.backend import main
-    sys.argv = ["",gdbgui,"-g",gdb]
-    main()
-    # e,out,_ = proc.runcmd("python",gdbgui,"-g",gdb,"--hide_gdbgui_upgrades","-n",outfn=info,shell=True)
-    # if e:
-    #     fatal("GDB exited with:",out)
-    # else:
-    #     info("Debug session closed")
+# @debugger.command()
+# @click.argument("target")
+# def start(target):
+#     dev = tools.get_target(target)
+#     if not dev:
+#         fatal("Can't find device!")
+#     gdbgui = tools["gdbgui"]
+#     gdb = tools[dev.cc]["gdb"]
+#     log(gdb)
+#     gdb="/home/giacomo/Downloads/gcc-arm-none-eabi-7-2017-q4-major/bin/arm-none-eabi-gdb"
+#     sys.path = ["/home/giacomo/.zerynth2_test/sys/gdbgui"]+sys.path
+#     from gdbgui.backend import main
+#     sys.argv = ["",gdbgui,"-g",gdb]
+#     main()
+#     # e,out,_ = proc.runcmd("python",gdbgui,"-g",gdb,"--hide_gdbgui_upgrades","-n",outfn=info,shell=True)
+#     # if e:
+#     #     fatal("GDB exited with:",out)
+#     # else:
+#     #     info("Debug session closed")
      
 
 
-@debugger.command()
-def stop():
-    try: 
-        #retrieve main page
-        rr = requests.get("http://127.0.0.1:5000/")
-    except:
-        warning("Can't connect to gdbgui!")
-        return
-    #search for csrf_token
-    matcher = re.compile(".*\"csrf_token\":\s*\"([0-9a-z]+)\".*")
-    lines = rr.text.split("\n")
-    for line in lines:
-        mm = matcher.match(line)
-        if mm:
-            csrf_token = mm.group(1)
-            break
-    else:
-        fatal("Somethin wrong while retrieving gdbgui info")
+# @debugger.command()
+# def stop():
+#     try: 
+#         #retrieve main page
+#         rr = requests.get("http://127.0.0.1:5000/")
+#     except:
+#         warning("Can't connect to gdbgui!")
+#         return
+#     #search for csrf_token
+#     matcher = re.compile(".*\"csrf_token\":\s*\"([0-9a-z]+)\".*")
+#     lines = rr.text.split("\n")
+#     for line in lines:
+#         mm = matcher.match(line)
+#         if mm:
+#             csrf_token = mm.group(1)
+#             break
+#     else:
+#         fatal("Somethin wrong while retrieving gdbgui info")
 
-    #save cookie
-    jar = rr.cookies
-    #request shutdown with GET: this saves the csrf token in the session: https://github.com/cs01/gdbgui/blob/master/gdbgui/backend.py#L489
-    rr = requests.get("http://127.0.0.1:5000/shutdown",params={"csrf_token":csrf_token},cookies=jar)
-    #now POST a shutdown
-    rr = requests.post("http://127.0.0.1:5000/_shutdown",params={"csrf_token":csrf_token},headers={"x-csrftoken":csrf_token},cookies=jar)
-    info("Done")
+#     #save cookie
+#     jar = rr.cookies
+#     #request shutdown with GET: this saves the csrf token in the session: https://github.com/cs01/gdbgui/blob/master/gdbgui/backend.py#L489
+#     rr = requests.get("http://127.0.0.1:5000/shutdown",params={"csrf_token":csrf_token},cookies=jar)
+#     #now POST a shutdown
+#     rr = requests.post("http://127.0.0.1:5000/_shutdown",params={"csrf_token":csrf_token},headers={"x-csrftoken":csrf_token},cookies=jar)
+#     info("Done")
 

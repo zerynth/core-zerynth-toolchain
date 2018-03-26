@@ -196,12 +196,27 @@ The :command:`uplink` may the additional :option:`--loop times` option that spec
     dev = get_device(alias,loop)
     _uplink_dev(dev,bytecode,loop)
 
-@cli.command(help="Uplink bytecode to a device. \n\n Arguments: \n\n ALIAS: device alias. \n\n BYTECODE: path to a bytecode file.")
+@cli.command(help="Uplink bytecode to a configured device")
 @click.argument("target")
 @click.argument("bytecode",type=click.Path())
 @click.option("--loop",default=5,type=click.IntRange(1,20),help="number of retries during device discovery.")
 @click.option("--spec","__specs",default="",multiple=True)
 def uplink_raw(target,bytecode,loop,__specs):
+    """
+.. _ztc-cmd-uplink-raw:
+
+Uplink (raw)
+============
+
+It is possible to perform an uplink against a configured device by specifying th relevant device parameters as in the :ref:`register raw <ztc-cmd-device-register-raw>` command, by specifying the :samp:`port` parameter.
+
+The command: ::
+
+    ztc uplink_raw target bytecode --spec port:the_port
+
+performs an uplink on the device of type :samp:`target` using the bytecode file at :samp:`bytecode` using the serial prot :samp:`port`.
+    
+    """
     options = {}
     for spec in __specs:
         pc = spec.find(":")
@@ -217,6 +232,22 @@ def uplink_raw(target,bytecode,loop,__specs):
 @click.argument("linked_bytecode",type=click.Path())
 @click.option("--address",default="")
 def uplink_by_probe(target,probe,linked_bytecode,address):
+    """
+.. _ztc-cmd-uplink-by-probe:
+
+Uplink by probe
+===============
+
+It is possible to perform an uplink against a configured device by using a probe. Contrary to other uplink commands that require a bytecode file argument, the :samp:`uplink_by_probe` command requires a linked bytecode file argument (obtained with the :ref:`link <ztc-cmd-link>` command).
+
+The command: ::
+
+    ztc uplink_by_probe target probe linked_bytecode
+
+perform an uplink on the device type :samp:`target` using probe :samp:`probe` to transfer the :samp:`linked_bytecode` file to the running VM.
+It is possible to change the address where the bytecode will be flashed by specifying the :option:`--address` option followed by the hexadecimal representation of the address (useful for OTA VMs scenarios)
+    
+    """
     dev = get_device_by_target(target,{},skip_reset=True)
     tp = start_temporary_probe(target,probe)
     res,out = dev.burn_with_probe(fs.readfile(linked_bytecode,"b"),offset=address or dev.bytecode_offset)

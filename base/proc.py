@@ -39,7 +39,7 @@ class prc():
                 cmd = " ".join(self.escape(cmd))
             torun = shlex.split(cmd) #posix=not env.is_windows()
             #TODO: consider swicth to Python 3.5 for subprocess.run
-            print(torun)
+            # print(torun)
             try:
                 p=subprocess.Popen(torun,universal_newlines=True,stderr=subprocess.STDOUT,startupinfo=self.startupnfo,stdout=subprocess.PIPE,shell=shell)
             except FileNotFoundError:
