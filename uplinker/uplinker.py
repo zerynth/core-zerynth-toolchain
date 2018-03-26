@@ -476,7 +476,7 @@ For example, assuming a project has been compiled to the bytecode file :samp:`pr
         vmbin = bytearray(base64.standard_b64decode(vm["bin"]))
         _vmstart = int(vm["map"]["vm"][vm_ota],16)
         vmsize = len(vmbin)
-        gapzone = _romstart-_vmstart+vmsize
+        gapzone = _romstart-_vmstart-vmsize
         vmbin.extend(b'\xff'*gapzone)
         vmbin.extend(thebin)
         thebin = vmbin
