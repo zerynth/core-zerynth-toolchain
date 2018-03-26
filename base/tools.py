@@ -29,7 +29,7 @@ class Tools():
                 toolname = pkg.get("tool")
                 pkg = pkg["sys"]
             except Exception as e:
-                warning("Can't load tool",tooldir)
+                warning("Can't load tool",tooldir,e)
                 continue
             if toolname:
                 self.tools[toolname]={}
