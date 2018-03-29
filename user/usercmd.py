@@ -180,18 +180,17 @@ the user profile is retrieved and displayed. The user profile consists of the fo
     * Company
     * Website
 
-* Subscription Info
+# * Subscription Info
 
-    * Subscription type
-    * Date of subscription expiration
-    * List of roles
-    * List of active repositories
+#     * Subscription type
+#     * Date of subscription expiration
+#     * List of roles
+#     * List of active repositories
 
 * Asset and Purchase History list 
 
     * List of account linked assets
-    * List of bought virtual machine packs
-
+    * List of bought virtual machines
 
 The profile  command can be used to change mutable generic info with the following syntax: ::
 
@@ -244,61 +243,35 @@ where :samp:`options` is a list of one or more of the following options:
                         rj["data"]["website"]
                     ])
                     log()
-                    info("General Info")
+                    info("General Info\n")
                     log_table(table,headers=["Username","Email","Name","Surname","Age","Country","Company","Job","Website"])
                     
                     table = []
-                    if rj["data"]["subscription"] != "free" and not rj["data"]["sub_id"]:
-                        sub_type = rj["data"]["subscription"]+ " - expiring"
-                    elif rj["data"]["trial_period"]:
-                        sub_type = rj["data"]["subscription"]+ " - trial period"
-                    else:
-                        sub_type = rj["data"]["subscription"]
                     table.append([
-                        sub_type,
-                        rj["data"]["pro"],
                         rj["data"]["roles"],
                         rj["data"]["repositories"]
                     ])
                     
                     log()
-                    info("Account info")
-                    log_table(table,headers=["Subscription","Pro Expiry","Roles","Repositories"])
+                    info("Account info\n")
+                    log_table(table,headers=["Roles","Repositories"])
 
                     table = []
-                    freeassets = rj["data"]["assets"].get("free",[])
-                    for asset in freeassets:
-                        table.append([asset["target"],asset["current"],rj["data"]["free_limit"]])
-                    log()
-                    info("Free Asset")
-                    log_table(table,headers=["target","used","max"])
-
-                    table = []
-                    vmassets = rj["data"]["assets"].get("vm",[])
+                    vmassets = rj["data"]["assets"]["list"]
                     for asset in vmassets:
-                        targets = {}
-                        for target in asset["targets"]:
-                            targets.update({target["target"]:target["current"]})
-                        table.append([asset["rtos"],asset["current"],asset["limit"],targets])
+                        table.append([asset["rtos"],asset["value"],asset["total"],"Premium" if asset["pro"] else "Starter",asset["target"],asset["description"]])
                     log()
-                    info("Assets")
-                    log_table(table,headers=["rtos","used","max","targets"])
+                    info("Assets\n")
+                    log_table(table,headers=["Rtos","Available","Total","Type","Target","Description"])
 
                     table = []
                     history = rj["data"].get("history",[])
                     for purchase in history:
                         table.append([purchase["item"],purchase["date"],"%0.2f $" % purchase["price"],purchase["order"]])
                     log()
-                    info("Purchase History")
+                    info("Purchase History\n")
                     log_table(table,headers=["Item","Date","Price","Order"])
 
-                    # table = []
-                    # badges = rj["data"].get("badges",[])
-                    # for bb in badges:
-                    #     table.append([bb["name"],bb["description"]])
-                    # log()
-                    # info("Earned Badges")
-                    # log_table(table,headers=["Badges","Description"])
                 else:
                     log_json(rj["data"])
             elif rj["code"]==403:

@@ -93,7 +93,7 @@ It takes the following options (one at a time):
             vv= vmc[1]
             # ik = ZpmVersion(vv)   # vm version
             #if ik<im
-            if compare_versions(vv,env.min_vm_dep) < 0:
+            if compare_versions(vv,env.var.version) != 0:
                 # skip versions lower than min_dep
                 continue
             # load vm
@@ -113,7 +113,8 @@ It takes the following options (one at a time):
                 "chipid":vm["on_chip_id"],
                 "name":vm["name"],
                 "desc":vm.get("desc",""),
-                "rtos":vm["rtos"]
+                "rtos":vm["rtos"],
+                "patch":vm["patch"]
             })
         if env.human:
             table = []
@@ -166,9 +167,8 @@ It takes the following options (one at a time):
             msg_list = []
         last_msg = msg_list[0]["visibleFrom"] if msg_list else ""
         try:
-            res = zget(url=env.api.user+"/messages",params={"from":last_msg})
+            res = zget(url=env.api.user+"/messages",params={"from":last_msg,"version":env.var.version})
             rj = res.json()
-            log_json(rj)
             if rj["status"]=="success":
                 msg_list = rj["data"]["list"]+msg_list
                 if env.human:

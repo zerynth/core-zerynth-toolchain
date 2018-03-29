@@ -311,7 +311,7 @@ class gcc():
                 #print(">>",line,"<<")
                 mth = catcher.match(line)
                 if mth:
-                    #info("matched\n",mth.group(5),mth.group(4))
+                    # info("matched\n",mth.group(5),mth.group(4))
                     ret.add(mth.group(5),mth.group(4),mth.group(1),mth.group(3))
                 else:
                     pass

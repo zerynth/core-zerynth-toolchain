@@ -48,6 +48,25 @@ def get_device(alias,loop):
     dev = devs[hh]
     return dev
 
+
+def get_device_by_target(target,options):
+    info("Searching for device",target)
+    _dsc = devices.Discover()
+    for dkey,dinfo in _dsc.device_cls.items():
+        if target!=dinfo["target"]:
+            continue
+        cls = dinfo["cls"]
+        dev = cls(dinfo,options)
+        if dev.uplink_reset is True:
+            info("Please reset the device!")
+            sleep(dev.reset_time/1000)
+        elif dev.uplink_reset == "reset":
+            dev.reset()
+        return dev
+    else:
+        fatal("No such target!",target)
+
+
 def probing(ch,devtarget, adjust_timeouts=True):
     # PROBING
     starttime = time.perf_counter()
@@ -79,8 +98,8 @@ def probing(ch,devtarget, adjust_timeouts=True):
     # im = ZpmVersion(env.min_vm_dep)                             # minimum vm version compatible with current ztc
     # ik = ZpmVersion(version)                                    # vm version
 
-    if compare_versions(version,env.min_vm_dep) < 0:
-        fatal("VM version [",version,"] is not compatible with this uplinker! Virtualize again with a newer VM...")
+    # if compare_versions(version,env.var.version) != 0:
+    #     fatal("VM version [",version,"] is not compatible with this uplinker! Virtualize again with a newer VM...")
 
     if target!=devtarget:
         fatal("Wrong VM: uplinking for",devtarget,"and found",target,"instead")
@@ -176,12 +195,30 @@ The :command:`uplink` may the additional :option:`--loop times` option that spec
 
 
     """
+    dev = get_device(alias,loop)
+    _uplink_dev(dev,bytecode,loop)
+
+@cli.command(help="Uplink bytecode to a device. \n\n Arguments: \n\n ALIAS: device alias. \n\n BYTECODE: path to a bytecode file.")
+@click.argument("target")
+@click.argument("bytecode",type=click.Path())
+@click.option("--loop",default=5,type=click.IntRange(1,20),help="number of retries during device discovery.")
+@click.option("--spec","__specs",default="",multiple=True)
+def uplink_raw(target,bytecode,loop,__specs):
+    options = {}
+    for spec in __specs:
+        pc = spec.find(":")
+        if pc<0:
+            fatal("invalid spec format. Give key:value")
+        options[spec[:pc]]=spec[pc+1:]
+    dev = get_device_by_target(target,options) 
+    _uplink_dev(dev,bytecode,loop)
+
+def _uplink_dev(dev,bytecode,loop):
     try:
         bf = fs.get_json(bytecode)
     except:
         fatal("Can't open file",bytecode)
 
-    dev = get_device(alias,loop)
     vm_chunk = dev.get("vm_chunk",4096)
     vm_mini_chunk = dev.get("vm_mini_chunk",4096)
     vm_fragmented_upload = dev.get("vm_fragmented_upload",None)
@@ -394,7 +431,7 @@ For example, assuming a project has been compiled to the bytecode file :samp:`pr
         vmbin = bytearray(base64.standard_b64decode(vm["bin"]))
         _vmstart = int(vm["map"]["vm"][vm_ota],16)
         vmsize = len(vmbin)
-        gapzone = _romstart-_vmstart+vmsize
+        gapzone = _romstart-_vmstart-vmsize
         vmbin.extend(b'\xff'*gapzone)
         vmbin.extend(thebin)
         thebin = vmbin
@@ -419,6 +456,7 @@ For example, assuming a project has been compiled to the bytecode file :samp:`pr
         if file:
             fs.write_file(thebin,file)
             info("File",file,"saved")
+
 
 
 def ota_prepare_vm(vm):

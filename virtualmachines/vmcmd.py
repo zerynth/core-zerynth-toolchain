@@ -47,9 +47,10 @@ def vm():
 @click.argument("alias")
 @click.argument("version")
 @click.argument("rtos")
+@click.argument("patch")
 @click.option("--feat", multiple=True, type=str,help="add extra features to the requested virtual machine (multi-value option)")
 @click.option("--name", default="",help="Virtual machine name")
-def create(alias,version,rtos,feat,name):
+def create(alias,version,rtos,feat,name,patch):
     """ 
 
 .. _ztc-cmd-vm-create:
@@ -61,9 +62,9 @@ Virtual machine can be created with custom features for a specific device. Creat
 
 The command: ::
 
-    ztc vm create alias version rtos
+    ztc vm create alias version rtos patch
 
-executes a REST call to the Zerynth backend asking for the creation of a virtual machine for the registered device with alias :samp:`alias`. The created virtual machine will run on the RTOS specified by :samp:`rtos` using the virtual machine release version :samp:`version`.
+executes a REST call to the Zerynth backend asking for the creation of a virtual machine for the registered device with alias :samp:`alias`. The created virtual machine will run on the RTOS specified by :samp:`rtos` using the virtual machine release version :samp:`version` at patch :samp:`patch`.
 
 It is also possible to specify the additional option :option:`--feat feature` to customize the virtual machine with :samp:`feature`. Some features are available for pro accounts only. Multiple features can be specified repeating the option.
 
@@ -78,21 +79,26 @@ If virtual machine creation ends succesfully, the virtual machine binary is also
     dev=dev[0]
     if not dev.remote_id:
         fatal("Device",dev.alias,"not registered")
-
     vminfo = {
         "name":name or (dev.name+" "+version),
         "dev_uid":dev.remote_id,
         "version": version,
         "rtos": rtos,
+        "patch":patch,
         "features": feat
         }
-    info("Creating vm for device",dev.alias)
+    _vm_create(vminfo)
+
+
+
+def _vm_create(vminfo):
+    info("Creating vm for device",vminfo["dev_uid"])
     try:
         res = zpost(url=env.api.vm, data=vminfo,timeout=20)
         rj = res.json()
         if rj["status"] == "success":
             vminfo["uid"]=rj["data"]["uid"]
-            info("VM",name,"created with uid:", vminfo["uid"])
+            info("VM",vminfo["name"],"created with uid:", vminfo["uid"])
             download_vm(vminfo["uid"])
         else:
             critical("Error while creating vm:", rj["message"])
@@ -101,49 +107,31 @@ If virtual machine creation ends succesfully, the virtual machine binary is also
     except Exception as e:
         critical("Can't create vm", exc=e)
 
+@vm.command(help="Request virtual machine creation given device uid")
+@click.argument("dev_uid")
+@click.argument("version")
+@click.argument("rtos")
+@click.argument("patch")
+@click.option("--feat", multiple=True, type=str,help="add extra features to the requested virtual machine (multi-value option)")
+@click.option("--name", default="",help="Virtual machine name")
+def create_by_uid(dev_uid,version,rtos,feat,name,patch):
+    vminfo = {
+        "name": "dev:"+dev_uid,
+        "dev_uid":dev_uid,
+        "version": version,
+        "rtos": rtos,
+        "patch":patch,
+        "features": feat
+        }
+    _vm_create(vminfo)
 
-# @vm.command(help="Download a virtual machine. \n\n Arguments: \n\n UID: uid of the virtual machine. \n\n VERSION: version of the z-virtual machine.")
-# @click.argument("uid")
-# @click.argument("version")
-# def download(uid,version):
-#     """ 
-# .. _ztc-cmd-vm-download:
 
-# Download a Virtual Machine
-# --------------------------
-
-# Once created, virtual machines can be downloaded multiple times and added to the local virtual machine storage.
-
-# This command is used to download an existing Zerynth Virtual Machine from the command line with this syntax: ::
-
-#     Syntax:   ./ztc vm download uid version
-#     Example:  ./ztc vm download 3Ss_HOgpQGW7oKtYmNESPQ r1.0.0
-
-# The uid of an already compiled and available virtual machine can be found under .Zerynth/vms folder or
-# executing the :func:`list` function described in the next section.
-
-# This command take as input the following arguments:
-#     * **uid** (str) --> the uid of the virtual machine (**required**)
-#     * **version** (str) --> the version of the virtual machine (**required**)
-
-# **Errors**:
-#     * Missing required data
-#     * Wrong uid for the virtual machine
-
-# .. note:: The version argument of this command must following the standard versioning nomenclature.
-#           Available Versions: "r1.0.0", "r1.0.1"
-
-#     """
-#     try:
-#         download_vm(uid,version)
-#     except Exception as e:
-#         critical("Can't download vm", exc=e)
 
 
 @vm.command("list", help="List all owned virtual machines")
 @click.option("--from","_from",default=0,help="skip the first n virtual machines")
-@click.option("--core_dep",default=None,help="show virtual machines compatible with core_dep")
-def __list(_from,core_dep):
+@click.option("--dev_uid","_dev_uid",default=None,help="ask for specific device")
+def __list(_from, _dev_uid):
     """ 
 .. _ztc-cmd-vm-list:
 
@@ -159,21 +147,24 @@ The retrieved list contains at most 50 virtual machines.
 Additional options can be provided to filter the returned virtual machine set:
 
 * :option:`--from n`, skip the first :samp:`n` virtual machines
-* :option:`--core_dep version`, returns only the virtual machines compatible with Zerynth version :samp:`version`.
+* :option:`--dev_uid`, ask vm list for a specific device
 
     """
     table=[]
     try:
-        prms = {"from":_from}
-        if core_dep: prms["core_dep"]=core_dep
+        prms = {
+            "from":_from,
+            "dev_uid": _dev_uid
+        }
+        prms["version"]=env.var.version
         res = zget(url=env.api.vm,params=prms)
         rj = res.json()
         if rj["status"]=="success":
             if env.human:
                 for k in rj["data"]["list"]:
-                    table.append([_from,k["uid"],k["name"],k["core_dep"],k["version"],k["dev_type"],k["rtos"],k["features"]])
+                    table.append([_from,k["uid"],k["name"],k["version"],k["patch"],k["dev_type"],k["rtos"],k["features"]])
                     _from += 1
-                log_table(table,headers=["Number","UID","Name","Core Dep","Version","Dev Type","Rtos","Features"])
+                log_table(table,headers=["Number","UID","Name","Version","Patch","Dev Type","Rtos","Features"])
             else:
                 log_json(rj["data"])                
         else:
@@ -204,34 +195,20 @@ For the device target, a list of possible virtual machine configurations is retu
     """
     table=[]
     try:
-        res = zget(url=env.api.vmlist+"/"+target)
+        res = zget(url=env.api.vmlist+"/"+target+"/"+env.var.version)
         rj = res.json()
         if rj["status"]=="success":
-            vmt = {}
-            for k in rj["data"]:
-                ik = k                                          # vm version
-                im = env.min_vm_dep                             # minimum vm version compatible with current ztc
-                ic = rj["data"][k][0].get("core_dep","r2.0.0")  # core_dep: minimum version of ztc compatible with vm
-                zv = env.var.version                            # current ztc version
-                # if ik<im:
-                if compare_versions(ik,im) < 0:
-                    # skip versions lower than min_dep
-                    continue
-                # if ic>zv:
-                if compare_versions(ic,zv) < 0:
-                    # skip versions higher than current ztc
-                    continue
-                if k not in vmt:
-                    vmt[k]=[]
-                for vm in rj["data"][k]:
-                    vmt[k].append(vm)
             if env.human:
-                for k in vmt:
-                    for vm in vmt[k]:
-                       table.append([k,vm["title"],vm["description"],vm["rtos"],vm["features"],vm["pro"]])
-                log_table(table,headers=["Version","Title","Description","Rtos","Features","Pro"])
+                vmt = rj["data"]["vms"]
+                for patch in rj["data"]["patches"]:
+                    if patch not in vmt:
+                        #skip 
+                        continue
+                    for vm in vmt[patch]:
+                        table.append([vm["title"],vm["description"],vm["rtos"],vm["features"],"Premium" if vm["pro"] else "Starter",env.var.version,patch])
+                log_table(table,headers=["Title","Description","Rtos","Features","Type","Version","Patch"])
             else:
-                log_json(vmt)
+                log_json(rj["data"])
         else:
             fatal("Can't get vm list",rj["message"])
     except Exception as e:
