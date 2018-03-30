@@ -55,7 +55,7 @@ class Device():
         try:
             pb  = Probe()
             pb.connect()
-            pb.send("program "+fname+" verify reset "+offs)
+            pb.send("program "+fs.wpath(fname)+" verify reset "+offs)
             now = time.time()
             wait_verification = False
             while time.time()-now<self.get("jtag_timeout",10):
@@ -69,6 +69,8 @@ class Device():
                         return True, ""
                     if wait_verification and line.startswith("** Verified Failed"):
                         return False, "Verification failed"
+                    if "** Programming Failed **" in line:
+                        return False, "Programming failed"
             return False,"timeout"
         except Exception as e:
             return False, str(e)
@@ -133,6 +135,8 @@ class Device():
         return vmuid
 
     def do_burn_vm(self,vm,options={},outfn=None):
+        if not self.jtag_capable and options.get("probe"):
+            return False, "Target does not support probes!"
         try:
             if isinstance(vm["bin"],str):
                 vmbin=bytearray(base64.standard_b64decode(vm["bin"]))
@@ -155,8 +159,8 @@ class Device():
             return False, str(e)
 
     def do_get_chipid(self,probe,skip_probe=False):
-        if not self.get_chipid:
-            return False, "Target does not support registration by probe!"
+        if not self.jtag_capable:
+            return False, "Target does not support probes!"
         try:
             # start temporary probe
             if not skip_probe:

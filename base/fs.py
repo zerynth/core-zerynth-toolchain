@@ -217,6 +217,9 @@ class zfs():
         self.check_path([path, os.path.relpath(path,parent)])
         return os.path.relpath(path,parent)
 
+    def wpath(self,path):
+        return path.replace(os.path.sep,"/")
+
     def homedir(self):
         return self.apath(os.path.expanduser("~"))
 

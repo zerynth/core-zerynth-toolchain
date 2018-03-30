@@ -249,6 +249,8 @@ It is possible to change the address where the bytecode will be flashed by speci
     
     """
     dev = get_device_by_target(target,{},skip_reset=True)
+    if not dev.jtag_capable:
+        fatal("Target does not support probes!")
     tp = start_temporary_probe(target,probe)
     res,out = dev.burn_with_probe(fs.readfile(linked_bytecode,"b"),offset=address or dev.bytecode_offset)
     stop_temporary_probe(tp)
