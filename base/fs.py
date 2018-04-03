@@ -65,7 +65,7 @@ class zfs():
     def set_yaml(self,ym,dst):
         self.check_path(dst)
         with open(dst,"w",encoding="utf8") as ff:
-            yaml.dump(ym,ff,indent=4,encoding="utf-8",explicit_start=True,explicit_end=True,default_flow_style=False,allow_unicode=True)
+            yaml.dump(ym,ff,indent=4,encoding="utf-8",explicit_start=True,explicit_end=True,default_flow_style=None,allow_unicode=True)
 
 
     def get_json(self,src,strict=True):

@@ -23,7 +23,8 @@ import datetime
 import json
 import sys
 import base64
-
+import re
+import struct
 
 def download_vm(uid):
     res = zget(url=env.api.vm+"/"+uid)
@@ -291,6 +292,558 @@ Additional options can be provided:
                 fs.write_file(base64.standard_b64decode(bb), fs.path(vmpath, "reg_"+target+"_part_"+str(count)+".bin"))
     except Exception as e:
         fatal("Generic Error", e)
+
+
+
+################# CUSTOM VMs
+
+@vm.group(help="Manage custom virtual machines.")
+def custom():
+    pass
+
+
+@custom.command("create")
+@click.argument("target")
+@click.argument("short_name")
+@click.argument("outdir")
+def _custom_template(target,short_name,outdir):
+    dev = tools.get_target(target)
+    if not dev:
+        fatal("Target does not exists!")
+    if not dev.customizable:
+        fatal("Target does not support custom VMs!")
+    if short_name.count("_")>1:
+        fatal("Too many underscores in the given short_name!")
+    if len(short_name)>31:
+        fatal("short_name too long! max 31 ascii chars allowed...")
+    tdir = fs.path(env.devices,target)
+    ddir = fs.path(env.cvm,short_name)
+    fs.copytree(tdir,ddir)
+    djf = fs.path(ddir,"device.json") 
+    yjf = fs.path(ddir,"template.yml")
+    pjf = fs.path(ddir,short_name+".py")
+    dj = fs.get_json(djf)
+    #update device.json fields
+    djname = short_name+"Device" 
+    oldname = dj["virtualizable"]
+    dj["target"]=short_name
+    dj["classes"]=[short_name+"."+djname]
+    dj["virtualizable"]=djname
+    dj["jtag_class"]=djname
+    
+    tmpl = fs.get_yaml(yjf)
+    # add device info to template
+    tmpl["device"]=dj
+
+    # rename device class
+    fs.move(fs.path(ddir,target+".py"),pjf)
+    txt = fs.readfile(pjf)
+    txt = txt.replace(oldname,djname)
+    fs.write_file(txt,pjf)
+    # update device.json
+    fs.set_json(dj,djf)
+    # update base template
+    fs.set_yaml(tmpl,yjf)
+
+    # save template in outdir for compilation
+    fs.set_yaml(tmpl,fs.path(outdir,short_name+".yml"))
+
+        
+@custom.command("compile")
+@click.argument("template")
+def _custom_compile(template):
+    tmpl = fs.get_yaml(template)
+    short_name = tmpl["short_name"]
+    cvm_dir = fs.path(env.cvm,short_name)
+    if not fs.exists(cvm_dir):
+        fatal("Custom device does not exist yet! Run the create command first...")
+    cvm_tmpl = fs.path(cvm_dir,short_name+".yml")
+    cvm_port = fs.path(cvm_dir,"port.yml")
+    cvm_bin = fs.path(cvm_dir,"port.bin")
+    cvm_dev = fs.path(cvm_dir,"device.json")
+    
+    # generate cvm files:
+    # - yaml original template
+    # - yaml file for compiler
+    # - binary cvminfo
+
+    info("Saving binary template @",cvm_bin)
+    _custom_generate(tmpl,cvm_port,cvm_bin)
+    info("Saving original template @",cvm_tmpl)
+    fs.copyfile(template,cvm_tmpl) 
+    info("Saving device info @",cvm_dev)
+    fs.set_json(tmpl["device"],cvm_dev)
+    info("Activating custom vm")
+    fs.set_json({},fs.path(cvm_dir,"active"))
+    info("Done")
+
+
+
+@custom.command("list")
+def _custom_list():
+    lst = []
+    for d in fs.dirs(env.cvm):
+        ff = fs.path(d,"active")
+        if fs.exists(ff):
+            lst.append({
+                "target":fs.basename(d)
+            })
+    log_json(lst)
+            
+##################
+
+_classes = {
+    "D":0x0000,
+    "A":0x0100,
+    "ADC":0x0100,
+    "SPI":0x0200,
+    "I2C":0x0300,
+    "PWM":0x0400,
+    "ICU":0x0500,
+    "CAN":0x0600,
+    "SER":0x0700,
+    "DAC":0x0800,
+    "LED":0x0900,
+    "BTN":0x0A00
+}
+
+_classes_id = {
+    0x01: "ADC",
+    0x02: "SPI",
+    0x03: "I2C",
+    0x04: "PWMD",
+    0x05: "ICUD",
+    0x06: "CAN",
+    0x07: "SERIAL",
+    0x08: "DAC",
+    0x09: "LED",
+    0x0A: "BTN",
+    0x0D: "HTM",
+    0x0E: "RTC"
+    }
+
+_flags = {
+    "SPI":1<<0x02,
+    "I2C":1<<0x03,
+    "SER":1<<0x07,
+    "CAN":1<<0x06,
+    "PWM":1<<0x04,
+    "ICU":1<<0x05,
+    "ADC":1<<0x01,
+    "DAC":1<<0x08,
+    "EXT":1<<0x00
+}
+
+_prphs = {
+    "SER":0x700,
+    "SPI":0x0200,
+    "I2C":0x0300,
+    "ADC":0x0100,
+    "PWMD":0x0400,
+    "ICUD":0x0500,
+    "CAN":0x0600,
+    "SD":0x0C00,
+    "RTC":0x2000
+}
+
+_names = {
+    "SPI":["MOSI","MISO","SCLK"],
+    "I2C":["SDA","SCL"],
+    "SER":["RX","TX"],
+    "CAN":["CANRX","CANTX"],
+    "PWM":["PWM"],
+    "ICU":["ICU"],
+    "ADC":["A"],
+    "DAC":["DAC"],
+    "BTN":["BTN"],
+    "LED":["LED"]
+}
+
+_s_classes = {
+    "ADC": "_analogclass",
+    "SPI": "_spiclass",
+    "I2C": "_i2cclass",
+    "PWM": "_pwmclass",
+    "ICU": "_icuclass",
+    "CAN": "_canclass",
+    "DAC": "_dacclass",
+    "LED": "_ledclass",
+    "BTN": "_btnclass"
+}
+
+_ports = {
+    "PA":0,
+    "PB":1,
+    "PC":2,
+    "PD":3,
+    "PE":4,
+    "PF":5,
+    "PG":6,
+    "PH":7
+}
+
+_psplitter = re.compile("([A-Z]+)([0-9]+)")
+
+def get_pin_class(pinname):
+    mth = _psplitter.match(pinname)
+    if not mth:
+        return ""
+    pin = mth.group(1)
+    num = int(mth.group(2))
+    for cls,cls_names in _names.items():
+        if pin in cls_names:
+            return cls
+
+    return ""
+
+def get_prph(prph):
+    if prph.startswith("I2C"):
+        return prph[0:3],int(prph[3:])
+    mth = _psplitter.match(prph)
+    if not mth:
+        return "",-1
+    return mth.group(1),int(mth.group(2))
+
+def _get_sorted_classes(tbl,cls):
+    if cls in ["SPI","I2C","SER"]:
+        ret = []
+        if cls=="SER":
+            n = len(tbl)//2
+            for i in range(n):
+                ret.append("RX"+str(i))
+                ret.append("TX"+str(i))
+        elif cls=="SPI":
+            n = len(tbl)//3
+            for i in range(n):
+                ret.append("MOSI"+str(i))
+                ret.append("MISO"+str(i))
+                ret.append("SCLK"+str(i))
+        elif cls=="I2C":
+            n = len(tbl)//2
+            for i in range(n):
+                ret.append("SDA"+str(i))
+                ret.append("SCL"+str(i))
+        return ret
+    else:
+        return sorted(tbl)
+
+def _get_pin_code(pin):
+    mth = _psplitter.match(pin)
+    if not mth:
+        return -1
+    pin = mth.group(1)
+    num = int(mth.group(2))
+    if pin=="RX":
+        return 0x0700+2*num
+    elif pin=="TX":
+        return 0x0701+2*num
+    elif pin=="SDA":
+        return 0x0300+2*num
+    elif pin=="SCL":
+        return 0x0301+2*num
+    elif pin=="MOSI":
+        return 0x0200+3*num
+    elif pin=="MISO":
+        return 0x0201+3*num
+    elif pin=="SCLK":
+        return 0x0202+3*num
+    return -1
+
+def _pad_to(bb,pad=16):
+    if len(bb)%pad==0:
+        return bb
+    padding = pad - len(bb)%pad
+    bb.extend(b'\x00'*padding)
+    return bb
+
+
+# @custom.command("compile")
+# @click.argument("template")
+# @click.argument("outdir")
+def _custom_generate(tmpl,ymlfile,binfile):
+    short_name = tmpl["short_name"]
+    port = {}
+    pinmap = tmpl["pinmap"]
+    pinclasses = tmpl["pinclasses"]
+    peripherals = tmpl["peripherals"]
+    
+    pin_names = ["D"+str(i) for i in range(0,256)]
+    npins = len(pinmap)
+    cls_table = {}
+    prph_table = {}
+    vbl_table = {}
+    prphs = set()
+
+    for i in range(npins):
+        pin = "D"+str(i)
+        pindata = pinmap.get(pin)
+        if not pindata or len(pindata)!=2:
+            fatal("Missing pinmap for pin", pin)
+        pindata.append(set([1])) # prepare space for flags: add ext
+        
+        
+    # search pin attributes
+    # fill pinmap with pin classes
+    # create pinclasses lists
+    for pc, pv in pinclasses.items():
+        cls = get_pin_class(pc)
+        if not cls:
+            fatal("Bad pin name in pinclasses section:",pc)
+        
+        # build class tables
+        if cls not in cls_table:
+            cls_table[cls]={}
+        
+        if pc in cls_table[cls]:
+            fatal("Duplicate pin!",pc)
+        
+        if isinstance(pv,str):
+            thepin = pv
+            thepindata = [pv, 0, 0, 0]
+        elif isinstance(pv,list):
+            pv.extend( (4-len(pv))*[0])  
+            thepindata = pv
+            thepin = pv[0]
+        else:
+            fatal("Bad format: expected list or string at",pc)
+
+        # add pinflags
+        if cls in _flags:
+            pinmap.get(thepin)[2].add(_flags[cls])
+        # add pindata to classes
+        cls_table[cls][pc]=thepindata
+
+    for prph, prph_info in peripherals.items():
+        prp, num = get_prph(prph)
+        if num<0:
+            fatal("unknown perpheral",prph)
+        if prp not in prph_table:
+            prph_table[prp]={}
+            vbl_table[prp]=set()
+        prph_table[prp][num]=prph_info["hw"]
+        prphs.add(prph)
+        if prp=="SERIAL":
+            vbl_table[prp].add((num,prph_info["rx"],prph_info["tx"]))
+        elif prp=="SPI":
+            vbl_table[prp].add((num,prph_info["mosi"],prph_info["miso"],prph_info["sclk"]))
+        elif prp=="I2C":
+            vbl_table[prp].add((num,prph_info["sda"],prph_info["scl"]))
+        else:
+            vbl_table[prp].add(num)
+
+    # add implicit peripherals
+
+    if "A0" in pinclasses:
+        prph_table["ADC"]=1
+        prphs.add("ADC0")
+    if "PWM0" in pinclasses:
+        prph_table["PWMD"]=1
+        prphs.add("PWMD0")
+    if "ICU0" in pinclasses:
+        prph_table["ICUD"]=1
+        prphs.add("ICUD0")
+    if "DAC0" in pinclasses:
+        prph_table["DAC"]=1
+        prphs.add("DAC0")
+
+
+    # generate port.yml ~ port.def
+   
+    prphs = list(prphs)
+    prphs.sort()
+
+    port["defines"]={
+        "LAYOUT":  tmpl.get("layout",short_name),
+        "BOARD":short_name,
+        "CDEFS": tmpl.get("cmacros",[])
+    }
+    names = set()
+    for pin in pinmap:
+        names.add(pin)
+    for pin in pinclasses:
+        names.add(pin)
+    for prph in prphs:
+        names.add(prph)
+    port["peripherals"]=[x for x in prphs]
+    port["names"]=list(names)
+    pinout = {}
+    for pin in pinmap:
+        pinout[pin]={}
+        for pc, pv in pinclasses.items():
+            if isinstance(pv,list):
+                pv=pv[0]
+            if pv==pin:
+                mth = _psplitter.match(pc)
+                pinout[pin][mth.group(1)]=pc
+                if mth.group(1)=="A":
+                    pinout[pc]={"ADC":pc}
+
+    port["pinout"]=pinout
+                
+
+    # generate port.bin
+
+    header = bytearray()
+    body = bytearray()
+
+    # c prefix is for PinClass* structures
+    # m prefix is for vhal_prph_map structures
+    # v prefix is for vbl structures
+
+    # set offsets to 0
+    c_offsets = [0]*16
+    # set table sizes to 0
+    c_sizes = [0]*16
+    # set offsets to 0
+    m_offsets = [0]*16
+    # set table sizes to 0
+    m_sizes = [0]*16
+    # set offsets to 0
+    v_offsets = [0]*16
+    # set table sizes to 0
+    v_sizes = [0]*16
+
+    # generate binary pinmap
+    bmap = bytearray()
+    for pin in pin_names:
+        if pin not in pinmap:
+            break
+        pindata = pinmap[pin]
+        pp = _ports[pindata[0]]
+        pn = pindata[1]
+        pf = sum(pindata[2])
+        bmap.extend(struct.pack("<B",pp)+struct.pack("<B",pn)+struct.pack("<H",pf))
+
+    
+    # generate peripheras maps and classes
+    mmap = {}
+    cmap = {}
+    for cid in sorted(_classes_id):
+        cname = _classes_id[cid]
+        if cname not in prph_table:
+            # not defined
+            continue
+        cdata = prph_table[cname]
+        if isinstance(cdata,int):
+            cdata = {0:1}
+        bbmap = bytearray()
+        for k in sorted(cdata):
+            bbmap.extend(struct.pack("<B",cdata[k]))
+        mmap[cid] = bbmap
+        m_sizes[cid] = len(cdata)
+
+        # ugly, but necessary: convert long prph to short prph
+        if cname in ["PWMD","ICUD","SERIAL"]:
+            cname = cname[0:3]
+        if cname not in cls_table:
+            #skip peripherals without pins: HTM,RTC,...
+            continue
+        # set classes
+        tbl = cls_table[cname]
+        cmap[cid]=bytearray()
+        for pn in _get_sorted_classes(tbl, cname):
+            pdata = tbl[pn]
+            pdata[0]=int(pdata[0][1:]) #strip the D
+            cmap[cid].extend(struct.pack("<4B",*pdata))
+        c_sizes[cid] = len(tbl) 
+
+    # generate vbl maps; TODO: make it general when more vbl maps will be needed
+    vmap={}
+    for mn,mt in [(0x07,"SERIAL"),(0x03,"I2C"),(0x02,"SPI")]:
+        lst = sorted(vbl_table[mt])
+        v_sizes[mn]=len(lst)
+        vmap[mn]=bytearray()
+        for pdata in lst:
+            for pd in pdata:
+                if isinstance(pd,int):
+                    #skip index
+                    continue
+                vmap[mn].extend(struct.pack("<H",_get_pin_code(pd)))
+            if mt=="SPI":
+                #add 0 padding for SPI: TODO remove when not more needed
+                vmap[mn].extend(b'\x00\x00')
+
+
+    
+    #build the full cvm structure 
+
+    #begin with pinmap
+    c_offsets[0]=0
+    c_sizes[0]=len(pinmap)  # NUM_PINS
+    body.extend(bmap)
+    _pad_to(body)
+
+    # now fill with classes
+    for cid in sorted(_classes_id):
+        cname = _classes_id[cid]
+        if cname not in prph_table:
+            # not defined, set to 0
+            continue
+        if cid not in cmap:
+            continue
+        c_offsets[cid]=len(body)
+        body.extend(cmap[cid])
+        _pad_to(body)
+
+    # now fill prph maps
+    for cid in sorted(_classes_id):
+        cname = _classes_id[cid]
+        if cname not in prph_table:
+            # not defined, set to 0
+            continue
+        m_offsets[cid]=len(body)
+        body.extend(mmap[cid])
+        _pad_to(body)
+
+    # now fill vbl maps
+    for mn in [0x07,0x03,0x02]:
+        v_offsets[mn] = len(body)
+        body.extend(vmap[mn])
+        _pad_to(body)
+
+
+    # set header parameters
+    header.extend(struct.pack("<H",len(body))) #size
+    header.extend(struct.pack("<H",1)) #version
+    # set offsets
+    header.extend(struct.pack("<16H",*c_offsets))
+    header.extend(struct.pack("<16H",*m_offsets))
+    header.extend(struct.pack("<16H",*v_offsets))
+    # set sizes
+    header.extend(struct.pack("<16B",*c_sizes))
+    header.extend(struct.pack("<16B",*m_sizes))
+    header.extend(struct.pack("<16B",*v_sizes))
+    #set target name
+    header.extend(struct.pack("32s",short_name.encode("ascii")))
+    #set target size
+    header.extend(struct.pack("<H",len(short_name)))
+    #add padding
+    header.extend(struct.pack("<10B",*([0]*10)))
+
+
+
+    bin = header+body
+
+    debug("Header size:         ",len(header),hex(len(header)))
+    debug("Header.size:         ",hex(struct.unpack("<H",header[0:2])[0]))
+    debug("Header.version:      ",hex(struct.unpack("<H",header[2:4])[0]))
+    debug("Header.c_offsets:    ",[ hex(x) for x in struct.unpack("<16H",header[4:4+32])])
+    debug("Header.c_sizes:      ",[ hex(x) for x in struct.unpack("<16B",header[4+96:4+112])])
+    debug("Header.m_offsets:    ",[ hex(x) for x in struct.unpack("<16H",header[4+32:4+64])])
+    debug("Header.m_sizes:      ",[ hex(x) for x in struct.unpack("<16B",header[4+112:4+128])])
+    debug("Header.v_offsets:    ",[ hex(x) for x in struct.unpack("<16H",header[4+64:4+96])])
+    debug("Header.v_sizes:      ",[ hex(x) for x in struct.unpack("<16B",header[4+128:4+144])])
+    debug("Header.target:       ",struct.unpack("32s",header[4+144:4+176])[0])
+    debug("Header.target_size:  ",struct.unpack("<H",header[4+176:4+178])[0])
+
+    # ymlfile = fs.path(outdir,"port.yml")
+    # binfile = fs.path(outdir,"port.bin")
+
+    fs.set_yaml(port,ymlfile)
+    fs.write_file(bin,binfile)
+    
+
+
 
 
 

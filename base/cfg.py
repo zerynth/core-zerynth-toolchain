@@ -259,6 +259,7 @@ def init_cfg():
     env.vms       = fs.path(env.home,"vms")
     env.edb       = fs.path(env.home,"cfg","edb")
     env.zdb       = fs.path(env.home,"cfg","zdb")
+    env.cvm       = fs.path(env.home,"cfg","cvm")
     
 
     # load configuration

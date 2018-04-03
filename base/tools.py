@@ -183,6 +183,19 @@ class Tools():
                 yield bj
             except Exception as e:
                 warning(e)
+        #load custom devices
+        cdirs = fs.dirs(env.cvm)
+        for cdir in cdirs:
+            if not fs.exists(fs.path(cdir,"active")):
+                #not compiled yet, skip
+                continue
+            try:
+                bj = fs.get_json(fs.path(cdir,"device.json"))
+                bj["path"] = cdir
+                yield bj
+            except Exception as e:
+                warning(e)
+
    
     def get_specs(self,specs):
         options = {}

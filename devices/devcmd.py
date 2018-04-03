@@ -751,7 +751,8 @@ inserts or modifies the configured device :samp:`device_name` in the database. T
         "disk":options.get("disk",dinfo.get("disk")),
         "probe":options.get("probe",dinfo.get("probe")),
         "chipid":options.get("chipid",dinfo.get("chipid")),
-        "remote_id":options.get("remote_id",dinfo.get("remote_id"))
+        "remote_id":options.get("remote_id",dinfo.get("remote_id")),
+        "custom":options.get("custom",dinfo.get("custom"))
     }
     if dinfo:
         info("Updating device...")
@@ -782,4 +783,6 @@ removes the device :samp:`device_name` from the configured devices.
     else:
         info("Nothing to remove")
     fs.set_yaml(db,fs.path(env.cfg,"devices.yaml"))
+
+
 

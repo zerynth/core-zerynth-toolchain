@@ -218,7 +218,8 @@ class Device():
                 "DAC":0x0800,
                 "LED":0x0900,
                 "BTN":0x0A00
-            }
+            } 
+
             vcls = {
                "SPI":["MOSI","MISO","SCLK"],
                 "I2C":["SDA","SCL"],
@@ -264,6 +265,12 @@ class Device():
             raise e
 
     def __get_specs(self):
+        portfile = fs.path(self.path,"port.yml")
+        if fs.exists(portfile):
+            tmpl = fs.get_yaml(portfile)
+            return tmpl["defines"],tmpl["peripherals"],tmpl["pinout"]
+
+        # failsafe on port.def
         portfile = fs.path(self.path,"port","port.def")
 
         with open(portfile,"r") as ff:
@@ -364,7 +371,6 @@ class Device():
             "LAYOUT": vlayout,
             "CDEFS": cdefs
         }
-
         return (defines,vprph,pinout)
 
 class Board(Device):
