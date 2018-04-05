@@ -63,9 +63,13 @@ class zfs():
                 raise e
 
     def set_yaml(self,ym,dst):
-        self.check_path(dst)
-        with open(dst,"w",encoding="utf8") as ff:
-            yaml.dump(ym,ff,indent=4,encoding="utf-8",explicit_start=True,explicit_end=True,default_flow_style=None,allow_unicode=True)
+        if dst:
+            self.check_path(dst)
+            with open(dst,"w",encoding="utf8") as ff:
+                yaml.dump(ym,ff,indent=4,encoding="utf-8",explicit_start=True,explicit_end=True,default_flow_style=None,allow_unicode=True)
+        else:
+            return yaml.dump(ym,indent=4,encoding="utf-8",explicit_start=True,explicit_end=True,default_flow_style=None,allow_unicode=True).decode("utf-8")
+
 
 
     def get_json(self,src,strict=True):
@@ -169,11 +173,11 @@ class zfs():
         obj.add(original,arcname=archive)
 
 
-    def __zipdir(self,path, zip, fn, rmpath):
+    def __zipdir(self,path, zip, fn, rmpath,root_filter="/."):
         self.check_path(path)
         for root, dirs, files in os.walk(path):
             for file in files:
-                if "/." in root:
+                if root_filter in root:
                     continue
                 elif file.startswith("."):
                     continue
@@ -181,10 +185,13 @@ class zfs():
                 fn(zip,os.path.join(root, file),os.path.join(root.replace(rmpath,"").strip("/"),file))
 
 
-    def tarxz(self,src,dst):
+    def tarxz(self,src,dst,filter=None):
         self.check_path([src,dst])
         tar = tarfile.open(dst,"w:xz",preset=9)
-        self.__zipdir(src,tar,self.__tarfn,src)
+        if filter:
+            self.__zipdir(src,tar,self.__tarfn,src,root_filter=filter)
+        else:
+            self.__zipdir(src,tar,self.__tarfn,src)
         tar.close()
 
 

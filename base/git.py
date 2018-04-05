@@ -270,7 +270,8 @@ class Git():
     
     def git_clone_from_url(self,url,user,password,path):
         pos = url.find(":") #http(s):
-        url = url[:pos+3]+user+":"+password+"@"+url[pos+3:]
+        if user and password:
+            url = url[:pos+3]+user+":"+password+"@"+url[pos+3:]
         info("Cloning",url)
         try:
             repo = pygit2.clone_repository(url,path)

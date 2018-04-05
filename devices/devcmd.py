@@ -315,7 +315,7 @@ The option :option:`--skip_burn` avoid flashing the device with the registering 
     dinfo = {
         "name": tgt.custom_name or tgt.name,
         "on_chip_id": chipid,
-        "type": tgt.target,
+        "type": tgt.original_target or tgt.target,  #custom devices are registered as the original_target!
         "category": tgt.family_name
     }
     remote_uid = _register_device(dinfo)
@@ -436,7 +436,7 @@ It is necessary to provide at least one device parameter and the registration wi
     if not __skip_remote:
         dinfo = {
             "on_chip_id": chipid,
-            "type": target
+            "type": dev.original_target or target
         }
         _register_device(dinfo)
     
@@ -486,10 +486,11 @@ The virtualization process is automated, no user interaction is required.
             fatal("VM",vmuid,"does not exist")
     vm = fs.get_json(vms[vmuid])
     info("Starting Virtualization...")
-    if isinstance(vm["bin"],str):
-        res,out = tgt.burn(bytearray(base64.standard_b64decode(vm["bin"])),info)
-    else:
-        res,out = tgt.burn([ base64.standard_b64decode(x) for x in vm["bin"]],info)
+    res,out = tgt.do_burn_vm(vm,{},info)
+    # if isinstance(vm["bin"],str):
+    #     res,out = tgt.burn(bytearray(base64.standard_b64decode(vm["bin"])),info)
+    # else:
+    #     res,out = tgt.burn([ base64.standard_b64decode(x) for x in vm["bin"]],info)
     if not res:
         fatal("Error in virtualization",out)
     else:

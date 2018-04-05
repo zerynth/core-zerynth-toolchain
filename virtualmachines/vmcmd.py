@@ -26,12 +26,19 @@ import base64
 import re
 import struct
 
-def download_vm(uid):
+def download_vm(uid,dev_type=None):
     res = zget(url=env.api.vm+"/"+uid)
     rj = res.json()
     if rj["status"]=="success":
         vmd = rj["data"]
-        vmpath = fs.path(env.vms, vmd["dev_type"],vmd["on_chip_id"])
+        if not dev_type:
+            vmpath = fs.path(env.vms, vmd["dev_type"],vmd["on_chip_id"])
+        else:
+            vmpath = fs.path(env.vms, dev_type, vmd["on_chip_id"])
+            #update vm to custom device type
+            vmd["original_type"]=vmd["dev_type"]
+            vmd["dev_type"]=dev_type
+
         fs.makedirs(vmpath)
         vmname = uid+"_"+vmd["version"]+"_"+vmd["hash_features"]+"_"+vmd["rtos"]+".vm"
         fs.set_json(vmd, fs.path(vmpath,vmname))
@@ -51,7 +58,8 @@ def vm():
 @click.argument("patch")
 @click.option("--feat", multiple=True, type=str,help="add extra features to the requested virtual machine (multi-value option)")
 @click.option("--name", default="",help="Virtual machine name")
-def create(alias,version,rtos,feat,name,patch):
+@click.option("--custom_target", default="",help="Original target for custom vms")
+def create(alias,version,rtos,feat,name,patch,custom_target):
     """ 
 
 .. _ztc-cmd-vm-create:
@@ -88,11 +96,11 @@ If virtual machine creation ends succesfully, the virtual machine binary is also
         "patch":patch,
         "features": feat
         }
-    _vm_create(vminfo)
+    _vm_create(vminfo,custom_target=None if not custom_target else custom_target)
 
 
 
-def _vm_create(vminfo):
+def _vm_create(vminfo,custom_target=None):
     info("Creating vm for device",vminfo["dev_uid"])
     try:
         res = zpost(url=env.api.vm, data=vminfo,timeout=20)
@@ -100,7 +108,7 @@ def _vm_create(vminfo):
         if rj["status"] == "success":
             vminfo["uid"]=rj["data"]["uid"]
             info("VM",vminfo["name"],"created with uid:", vminfo["uid"])
-            download_vm(vminfo["uid"])
+            download_vm(vminfo["uid"],custom_target)
         else:
             critical("Error while creating vm:", rj["message"])
     except TimeoutException as e:
@@ -115,7 +123,8 @@ def _vm_create(vminfo):
 @click.argument("patch")
 @click.option("--feat", multiple=True, type=str,help="add extra features to the requested virtual machine (multi-value option)")
 @click.option("--name", default="",help="Virtual machine name")
-def create_by_uid(dev_uid,version,rtos,feat,name,patch):
+@click.option("--custom_target", default="",help="Original target for custom vms")
+def create_by_uid(dev_uid,version,rtos,feat,name,patch,custom_target):
     vminfo = {
         "name": "dev:"+dev_uid,
         "dev_uid":dev_uid,
@@ -124,7 +133,7 @@ def create_by_uid(dev_uid,version,rtos,feat,name,patch):
         "patch":patch,
         "features": feat
         }
-    _vm_create(vminfo)
+    _vm_create(vminfo,custom_target=None if not custom_target else custom_target)
 
 
 
@@ -305,8 +314,8 @@ def custom():
 @custom.command("create")
 @click.argument("target")
 @click.argument("short_name")
-@click.argument("outdir")
-def _custom_template(target,short_name,outdir):
+@click.option("--name",default="",help="Set custom device name")
+def _custom_create(target,short_name,name):
     dev = tools.get_target(target)
     if not dev:
         fatal("Target does not exists!")
@@ -319,41 +328,61 @@ def _custom_template(target,short_name,outdir):
     tdir = fs.path(env.devices,target)
     ddir = fs.path(env.cvm,short_name)
     fs.copytree(tdir,ddir)
+    #remove unneeded
+    fs.rmtree(fs.path(ddir,"docs"))
+    fs.rmtree(fs.path(ddir,"__pycache__"))
+    fs.rmtree(fs.path(ddir,".git"))
+    fs.rm_file(fs.path(ddir,"package.json"))
+
     djf = fs.path(ddir,"device.json") 
     yjf = fs.path(ddir,"template.yml")
+    cjf = fs.path(ddir,short_name+".yml")
     pjf = fs.path(ddir,short_name+".py")
     dj = fs.get_json(djf)
     #update device.json fields
     djname = short_name+"Device" 
     oldname = dj["virtualizable"]
+    oldtarget = dj["target"]
     dj["target"]=short_name
     dj["classes"]=[short_name+"."+djname]
     dj["virtualizable"]=djname
     dj["jtag_class"]=djname
-    
-    tmpl = fs.get_yaml(yjf)
+   
+    # create new template by concatenating files
+    # this is because yaml.dump does not mantain the order of keys
+    ytmpl = fs.readfile(yjf)
+    ytmpl = ytmpl.replace("XXXX_short_name_XXXX",short_name)
+    tmpl = {}
     # add device info to template
     tmpl["device"]=dj
+    tmpl["device"]["original_target"]=oldtarget
+    if name:
+        tmpl["device"]["name"]=name
+    # remove customizable property: on first compile "customized" will be added
+    del tmpl["device"]["customizable"]
+    tmpstr = fs.set_yaml(tmpl,None)  # dump to string 
+    #remove start and end
+    tmpstr = tmpstr.replace("---\n","").replace("...\n","")
+    #concat to template
+    ytmpl=ytmpl+"\n"+tmpstr
 
     # rename device class
     fs.move(fs.path(ddir,target+".py"),pjf)
-    txt = fs.readfile(pjf)
-    txt = txt.replace(oldname,djname)
-    fs.write_file(txt,pjf)
+    djs = fs.readfile(pjf)
+    djs = djs.replace(oldname,djname)
+    fs.write_file(djs,pjf)
+    
     # update device.json
     fs.set_json(dj,djf)
-    # update base template
-    fs.set_yaml(tmpl,yjf)
 
-    # save template in outdir for compilation
-    fs.set_yaml(tmpl,fs.path(outdir,short_name+".yml"))
+    # save template
+    fs.write_file(ytmpl,cjf)
+    info("Custom device created at",ddir)
 
         
 @custom.command("compile")
-@click.argument("template")
-def _custom_compile(template):
-    tmpl = fs.get_yaml(template)
-    short_name = tmpl["short_name"]
+@click.argument("short_name")
+def _custom_compile(short_name):
     cvm_dir = fs.path(env.cvm,short_name)
     if not fs.exists(cvm_dir):
         fatal("Custom device does not exist yet! Run the create command first...")
@@ -367,28 +396,110 @@ def _custom_compile(template):
     # - yaml file for compiler
     # - binary cvminfo
 
+    tmpl = fs.get_yaml(cvm_tmpl)
+    tmpl["device"]["customized"]=True
     info("Saving binary template @",cvm_bin)
     _custom_generate(tmpl,cvm_port,cvm_bin)
-    info("Saving original template @",cvm_tmpl)
-    fs.copyfile(template,cvm_tmpl) 
     info("Saving device info @",cvm_dev)
     fs.set_json(tmpl["device"],cvm_dev)
     info("Activating custom vm")
-    fs.set_json({},fs.path(cvm_dir,"active"))
+    fs.set_json({"short_name":short_name},fs.path(cvm_dir,"active"))
     info("Done")
 
+@custom.command("remove")
+@click.argument("short_name")
+def _custom_remove(short_name):
+    cvmdir = fs.path(env.cvm,short_name)
+    fs.rmtree(cvmdir)
 
+
+
+@custom.command("export")
+@click.argument("short_name")
+@click.argument("destination")
+def _custom_export(short_name,destination):
+    cvmdir = fs.path(env.cvm,short_name)
+    active = fs.path(cvmdir,"active")
+    if not fs.exists(cvmdir):
+        fatal("Custom VM does not exist!")
+    if not fs.exists(active):
+        fatal("Can't export, VM has not been compiled yet!")
+    #remove pycache
+    fs.rmtree(fs.path(cvmdir,"__pycache__"))
+
+    if destination.startswith("https://github.com"):
+        fatal("Github export not yet supported!")
+    else:
+        if not fs.exists(destination):
+            fatal("Destination folder",destination,"does not exist!")
+        outfile = fs.path(destination,short_name+".tar.xz")
+        fs.tarxz(cvmdir,outfile,filter="/.git")
+        info("Custom VM exported at",outfile)
+
+
+@custom.command("import")
+@click.argument("source")
+def _custom_import(source):
+    if source.startswith("https://github.com"):
+        tmpdir = fs.get_tempdir()
+        git.git_clone_from_url(source,None,None,tmpdir)
+        try:
+            active=fs.path(tmpdir,"active")
+            active = fs.get_json(active)
+            short_name = active["short_name"]
+            cvmdir = fs.path(env.cvm,short_name)
+            fs.copytree(tmpdir,cvmdir)
+        except Exception as e:
+            fatal("repository seems corrupted:",e)
+        finally:
+            fs.del_tempdir(tmpdir)
+    else:
+        #import from archive
+        tmpdir = fs.get_tempdir()
+        try:
+            fs.untarxz(source,tmpdir)
+            active=fs.path(tmpdir,"active")
+            active = fs.get_json(active)
+            short_name = active["short_name"]
+            cvmdir = fs.path(env.cvm,short_name)
+            fs.copytree(tmpdir,cvmdir)
+        except Exception as e:
+            fatal("file seems corrupted:",e)
+        finally:
+            fs.del_tempdir(tmpdir)
+        
+@custom.command("original")
+def _custom_list_original():
+    lst = []
+
+    for dev in tools.get_devices():
+        if dev.get("customizable") and dev["path"].startswith(env.devices):
+            lst.append(dev)
+            if env.human:
+                log(dev["target"])
+    if not env.human:
+        log_json(lst)
 
 @custom.command("list")
 def _custom_list():
     lst = []
     for d in fs.dirs(env.cvm):
         ff = fs.path(d,"active")
-        if fs.exists(ff):
+        try:
+            tmpl = fs.get_yaml(fs.path(d,fs.basename(d)+".yml"))
             lst.append({
-                "target":fs.basename(d)
+                "target":tmpl["short_name"],
+                "original_target":tmpl["device"]["original_target"],
+                "name":tmpl["device"]["name"],
+                "chip":tmpl["device"]["chip_model"],
+                "active":fs.exists(ff)
             })
-    log_json(lst)
+            if env.human:
+                log(d)
+        except Exception as e:
+            warning("Can't read",d,e)
+    if not env.human:
+        log_json(lst)
             
 ##################
 
@@ -620,7 +731,7 @@ def _custom_generate(tmpl,ymlfile,binfile):
         if prp not in prph_table:
             prph_table[prp]={}
             vbl_table[prp]=set()
-        prph_table[prp][num]=prph_info["hw"]
+        prph_table[prp][num]=prph_info["hw"]-1 #minus one to start from 0: old legacy from viper
         prphs.add(prph)
         if prp=="SERIAL":
             vbl_table[prp].add((num,prph_info["rx"],prph_info["tx"]))
@@ -720,17 +831,16 @@ def _custom_generate(tmpl,ymlfile,binfile):
     cmap = {}
     for cid in sorted(_classes_id):
         cname = _classes_id[cid]
-        if cname not in prph_table:
-            # not defined
-            continue
-        cdata = prph_table[cname]
-        if isinstance(cdata,int):
-            cdata = {0:1}
-        bbmap = bytearray()
-        for k in sorted(cdata):
-            bbmap.extend(struct.pack("<B",cdata[k]))
-        mmap[cid] = bbmap
-        m_sizes[cid] = len(cdata)
+        # if the peripheral has a map, generate it
+        if cname in prph_table:
+            cdata = prph_table[cname]
+            if isinstance(cdata,int):
+                cdata = {0:1}
+            bbmap = bytearray()
+            for k in sorted(cdata):
+                bbmap.extend(struct.pack("<B",cdata[k]))
+            mmap[cid] = bbmap
+            m_sizes[cid] = len(cdata)
 
         # ugly, but necessary: convert long prph to short prph
         if cname in ["PWMD","ICUD","SERIAL"]:
@@ -762,8 +872,6 @@ def _custom_generate(tmpl,ymlfile,binfile):
             if mt=="SPI":
                 #add 0 padding for SPI: TODO remove when not more needed
                 vmap[mn].extend(b'\x00\x00')
-
-
     
     #build the full cvm structure 
 

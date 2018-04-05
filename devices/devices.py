@@ -137,6 +137,10 @@ class Device():
     def do_burn_vm(self,vm,options={},outfn=None):
         if not self.jtag_capable and options.get("probe"):
             return False, "Target does not support probes!"
+        portbin = None
+        if self.customized:
+            portfile = fs.path(self.path,"port.bin")
+            portbin = fs.readfile(portfile,"b")
         try:
             if isinstance(vm["bin"],str):
                 vmbin=bytearray(base64.standard_b64decode(vm["bin"]))
@@ -145,7 +149,10 @@ class Device():
                     res,out = self.burn_with_probe(vmbin,vm["map"]["vm"][0])
                     stop_temporary_probe(tp)
                 else:
-                    res,out = self.burn(vmbin,outfn)
+                    if portbin:
+                        res,out = self.burn_custom(vmbin,portbin,outfn)
+                    else:
+                        res,out = self.burn(vmbin,outfn)
             else:
                 vmbin=[ base64.standard_b64decode(x) for x in vm["bin"]]
                 if options.get("probe"):
@@ -153,7 +160,10 @@ class Device():
                     res,out = self.burn_with_probe(vmbin)
                     stop_temporary_probe(tp)
                 else:
-                    res,out = self.burn(vmbin,outfn)
+                    if portbin:
+                        res,out = self.burn_custom(vmbin,portbin,outfn)
+                    else:
+                        res,out = self.burn(vmbin,outfn)
             return res,out
         except Exception as e:
             return False, str(e)
