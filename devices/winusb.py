@@ -3,6 +3,7 @@ import re
 import win32com.client
 import pythoncom
 from .wmi import WMI
+import serial.tools.list_ports
 
 class WinUsb():
 	def __init__(self):
@@ -152,4 +153,16 @@ class WinUsb():
 					if sid in physical_disk.PNPDeviceID:
 						return logical_disk.DeviceID
 		return ""
-	
+
+	def find_all_serial_ports(self):
+		ports = list(serial.tools.list_ports.comports())
+		return list([port[0] for port in ports])
+
+	def find_all_mount_points(self):
+		mnt = set()
+		for physical_disk in self.wmi.Win32_DiskDrive (InterfaceType="USB"):
+			for partition in physical_disk.associators ("Win32_DiskDriveToDiskPartition"):
+				for logical_disk in partition.associators ("Win32_LogicalDiskToPartition"):
+						mnt.add(logical_disk.DeviceID)
+		return list(mnt)
+

@@ -193,9 +193,14 @@ class Compiler():
 
 
     def addCThings(self,natives,files,vbls,opts,fbase=""):
-        #print("addCThings:",natives,files,vbls,opts,fbase)
+        # print("addCThings:",natives,files,vbls,opts,fbase)
         for file in files:
             #file.replace("/",os.path.sep);
+            if "#csrc" in file:
+                #absolute path given, point to stdlib
+                file = fs.path(env.stdlib,file.replace(fbase,"").replace("#","")[1:])
+                # warning(file, file.replace("fbase","")[1:])
+
             if file.endswith("*"):
                 pt = fs.dirname(file)
                 afile = fs.glob(pt,"*.c")   
@@ -226,7 +231,9 @@ class Compiler():
             else:
                 self.cdefines.add(vbl)
         for opt in opts:
-            if opt.startswith("-I"):
+            if opt.startswith("-I#"):
+                self.cincpaths.add(os.path.realpath(fs.path(env.stdlib,opt[3:])))
+            elif opt.startswith("-I"):
                 self.cincpaths.add(os.path.realpath(opt[2:].replace("...",fbase)))
         if isinstance(natives,str):
             if natives not in self.cnatives:

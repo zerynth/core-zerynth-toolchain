@@ -29,7 +29,7 @@ class Tools():
                 toolname = pkg.get("tool")
                 pkg = pkg["sys"]
             except Exception as e:
-                warning("Can't load tool",tooldir)
+                warning("Can't load tool",tooldir,e)
                 continue
             if toolname:
                 self.tools[toolname]={}
@@ -45,6 +45,12 @@ class Tools():
             else:
                 warning("Can't load tool info",tooldir,err=True)
         #print(self.tools)
+
+    def get_tool_dir(self,toolname):
+        for tooldir in fs.dirs(env.sys):
+            if fs.basename(tooldir)==toolname:
+                return tooldir
+        return None
 
     def __getattr__(self,attr):
         if attr in self.tools:
@@ -177,6 +183,36 @@ class Tools():
                 yield bj
             except Exception as e:
                 warning(e)
+        #load custom devices
+        cdirs = fs.dirs(env.cvm)
+        for cdir in cdirs:
+            if not fs.exists(fs.path(cdir,"active")):
+                #not compiled yet, skip
+                continue
+            try:
+                bj = fs.get_json(fs.path(cdir,"device.json"))
+                bj["path"] = cdir
+                yield bj
+            except Exception as e:
+                warning(e)
+
+   
+    def get_specs(self,specs):
+        options = {}
+        for spec in specs:
+            pc = spec.find(":")
+            if pc<0:
+                fatal("invalid spec format. Give key:value")
+            thespec = spec[pc+1:]
+            if thespec=="null":
+                thespec=None
+            options[spec[:pc]]=thespec
+        return options
+
+    def get_target(self,target,options={}):
+        import devices
+        _dsc = devices.Discover()
+        return _dsc.get_target(target,options)
 
     def get_modules(self):
         res = {}

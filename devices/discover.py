@@ -31,9 +31,11 @@ class Discover():
     def get_targets(self):
         return self.targets
 
-    def get_target(self,target):
-        tgt = self.targets[target]
-        return tgt["cls"](tgt,{}) 
+    def get_target(self,target,options={}):
+        tgt = self.targets.get(target)
+        if not tgt:
+            return None
+        return tgt["cls"](tgt,options) 
 
     def load_devices(self):
         bdirs = fs.dirs(env.devices)
@@ -49,7 +51,11 @@ class Discover():
                     sys.path.pop()
                     self.device_cls[bj["path"]+"::"+bcls]=bjc
                     if "target" in bj:
-                        self.targets[bj["target"]]=bjc
+                        if "jtag_class" in bj:
+                            if bj["jtag_class"]==bcls:
+                                self.targets[bj["target"]]=bjc
+                        else:
+                            self.targets[bj["target"]]=bjc
                 except Exception as e:
                     warning(e)
 

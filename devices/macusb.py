@@ -18,6 +18,39 @@ class MacUsb():
 		self.re_node = re.compile('.*"(idVendor|idProduct|USB Serial Number|USB Product Name|IODialinDevice|BSD Name)"\s+=\s+(.*)')
 		self.nodes = []
 
+	def find_all_serial_ports(self):
+		ports = set()
+		matcher = re.compile("/dev/tty\.(.+)")
+		devs = fs.files("/dev")
+		for dev in devs:
+			if matcher.match(dev):
+				ports.add(dev)
+		return list(ports)
+
+	def find_all_mount_points(self):
+		mnt = set()
+		skip_mounts = ["/private"]
+		e,out,err = proc.run("mount -v")
+		if not e:
+			lines = out.split("\n")
+			for line in lines:
+				if line.startswith("/"):
+					flds = line.split(" ")
+					if len(flds)<4 or any([ flds[2].startswith(s) for s in skip_mounts]) or flds[2]=="/":
+						continue
+					if flds[1]=="on" and flds[3].startswith("("):
+						mnt.add(flds[2])
+					else:
+						# merge path with spaces -_-
+						try:
+							p = flds.index("(")
+							path = " ".join(flds[2:p])
+							mnt.add(path)
+						except Exception as e:
+							continue
+
+		return list(mnt)
+
 	def find_mount_point(self,disk):
 		try:
 			code,out,_ = proc.run("/usr/sbin/diskutil info "+disk)
@@ -90,5 +123,6 @@ class MacUsb():
 			if "sid" not in node: continue
 			self.nodes.append(node)
 		return self.nodes
+
 
 
