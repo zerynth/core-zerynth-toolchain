@@ -158,6 +158,10 @@ class Environment():
         self._dbs.execute("delete from aliases where alias=?",(dev.alias,))
         self._dbs.commit()
 
+    def clean_db(self):
+        self._dbs.execute("delete from aliases")
+        self._dbs.commit()
+
     def get_all_dev(self):
         for row in self._dbs.execute("select * from aliases"):
             yield Var({"alias":row[0],"uid":row[1],"target":row[2],"name":row[3],"chipid":row[4],"remote_id":row[5],"classname":row[6]})
