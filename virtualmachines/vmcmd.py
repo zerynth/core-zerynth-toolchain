@@ -412,7 +412,7 @@ The custom VMs are entirely local and not saved on Zerynth servers. For this rea
     #remove start and end
     tmpstr = tmpstr.replace("---\n","").replace("...\n","")
     #concat to template
-    ytmpl=ytmpl+"\n"+tmpstr
+    ytmpl=ytmpl+"\n"+tmpstr+"    vids: []\n    pids: []"
 
     # rename device class
     fs.move(fs.path(ddir,target+".py"),pjf)

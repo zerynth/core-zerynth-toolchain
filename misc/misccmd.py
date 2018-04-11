@@ -199,7 +199,8 @@ It takes the following options (one at a time):
 @cli.command("clean",help="Clean up old installations and temp files")
 @click.option("--tmp",default=False,flag_value =True,help="clear temporary folder")
 @click.option("--inst",multiple=True,type=str,help="delete previous installed version (can be repeated multiple times)")
-def __clean(tmp,inst):
+@click.option("--db",default=False,flag_value =True,help="forget all devices")
+def __clean(tmp,inst,db):
     """ 
 Clean
 ----_
@@ -220,3 +221,7 @@ The :command:`clean` command behave differently based on the following options:
             info("Removing installation",ii)
             fs.rmtree(env.dist_dir(ii))
             info("Ok")
+    if db:
+        info("Forgetting all devices...")
+        env.clean_db()
+        info("Ok")
