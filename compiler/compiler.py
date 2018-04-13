@@ -37,7 +37,7 @@ class Compiler():
     PREPROCESS = 0
     COMPILE = 1
 
-    def __init__(self, inputfile, target, syspath=[],cdefines={},mode=COMPILE,localmods={}):
+    def __init__(self, inputfile, target, syspath=[],cdefines=[],mode=COMPILE,localmods={}):
         # build syspath
         self.syspath = []
         # add current mainfile dir
@@ -55,7 +55,7 @@ class Compiler():
         self.syspath.append(fs.path(env.libs,"official","zerynth"))
         #for zd in fs.dirs(fs.path(env.libs,"official","zerynth")):
         #    self.syspath.append(zd)
-        
+        self.file_options = {}
         self.localmods = localmods
         self.mainfile = inputfile
         self.phase = 0
@@ -76,7 +76,9 @@ class Compiler():
             self.builtins_module = "__builtins__"
             
             self.prepdefines.update(self.board.defines)
-            self.prepdefines.update(cdefines)
+            if "CDEFS" not in self.prepdefines:
+                self.prepdefines["CDEFS"] = []
+            self.prepdefines["CDEFS"].extend(list(cdefines))
 
             self.astp = AstPreprocessor(self.board.allnames,self.board.pinmap,self.prepdefines,self.prepcfiles)
             self.scopes = {}
@@ -269,10 +271,85 @@ class Compiler():
             return None
         return modpath
 
+    def readfile(self,file,module=None):
+
+        # load file options if present
+        if file==self.mainfile:
+            optfile = fs.path(fs.dirname(file),fs.basename(file).replace(".py",".yml"))
+        else:
+            optfile = fs.path(fs.dirname(file),fs.basename(file).replace(".py",".yml"))
+        print(optfile)
+        if fs.exists(optfile):
+            try:
+                opts = fs.get_yaml(optfile)
+            except Exception as e:
+                raise CSyntaxError(0,0,optfile,"Something wrong in config file "+optfile)
+            if "config" in opts:
+                for opt in opts["config"]:
+                    self.prepdefines["CDEFS"].append(opt)
+            if module:
+                self.file_options[module]={
+                    "py":file,
+                    "yml":optfile,
+                    "cfg":opts
+                }
+                     
+        preg = re.compile("\s*(#+-)(if|else|endif)\s*([a-zA-Z0-9_]*)(?:\s+in\s+([A-Z_]+)){0,1}")
+        stack = []
+        modprg = fs.readfile(file)
+        lines = modprg.split("\n")
+        result = []
+        keepline = True
+        for nline,line in enumerate(lines):
+            mth = preg.match(line)
+            if mth:
+                lvl = len(mth.group(1))-2  # level of nesting strating from 0
+                op = mth.group(2)
+                cmacro = mth.group(3)
+                cset = mth.group(4)
+                if not cset: cset= "CDEFS"
+                #print("Matched:",lvl,op,cmacro,cset,stack,keepline)
+                #check lvl
+                if op=="if":
+                    if len(stack)!=lvl:
+                        raise CSyntaxError(nline,0,file,"Bad preprocessor nesting! Expected "+str(len(stack))+" but found "+str(lvl) )
+                    if not cmacro:
+                        raise CSyntaxError(nline,0,file,"Bad preprocessor: missing -if argument")
+                        
+                    kl = cmacro in self.prepdefines.get(cset,[])
+                    kl = all(stack) and kl
+                    keepline = kl
+                    stack.append(kl)
+                elif op=="else":
+                    if len(stack)!=lvl+1:
+                        raise CSyntaxError(nline,0,file,"Bad preprocessor else! Probably missing some endif")
+                    if all(stack[:-1]):
+                        keepline=not stack[-1]
+                        stack[-1]=keepline
+
+                else:
+                    ## endif
+                    if len(stack)!=lvl+1:
+                        raise CSyntaxError(nline,0,file,"Bad preprocessor endif! Check nesting")
+                    stack.pop()
+                    keepline = True if not stack else stack[-1]
+            else:
+                if keepline:
+                    result.append(line)
+
+        modprog = "\n".join(result)
+        if "_" not in file:
+            log(modprog)
+        return modprog
+
+            
+
+
+
     def find_imports(self):
         ## Preload builtins to get all __defines
         astp = AstPreprocessor({},{},self.prepdefines,self.prepcfiles,just_imports=True)
-        modprg = fs.readfile(self.mainfile)
+        modprg = self.readfile(self.mainfile)
         tree = ast.parse(modprg)
         astp.visit(tree)
         res = {}
@@ -295,7 +372,7 @@ class Compiler():
         
         if mfile!=None:
             info("Compiling module:",name,"@",mfile)
-            modprg = fs.readfile(mfile)
+            modprg = self.readfile(mfile,name)
             if name!=self.builtins_module:
                 # add builtins to each module
                 modprg = "import "+self.builtins_module+"\n"+modprg
@@ -322,12 +399,26 @@ class Compiler():
         else:
             raise CModuleNotFound(line,0,filename,name)
 
+    def parse_config(self):
+        ## Preload builtins to get all __defines
+        mf = self.searchModule(self.builtins_module)
+        if mf is None:
+            fatal("Can't find builtins module")
+        modprg = self.readfile(mf,self.builtins_module)
+        tree = ast.parse(modprg)
+        self.astp.visit(tree)
+        
+        self.newPhase()
+        self.compileModule(self.mainfile)
+        return self.file_options,self.prepdefines
+
+
     def compile(self):
         ## Preload builtins to get all __defines
         mf = self.searchModule(self.builtins_module)
         if mf is None:
             fatal("Can't find builtins module")
-        modprg = fs.readfile(mf)
+        modprg = self.readfile(mf,self.builtins_module)
         tree = ast.parse(modprg)
         self.astp.visit(tree)
 

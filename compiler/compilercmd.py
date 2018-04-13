@@ -43,7 +43,8 @@ import click
 @click.option("--proj","-P",default=[],multiple=True,help="include project as library (multi-value option)")
 @click.option("--define","-D",default=[],multiple=True,help="additional C macro definition (multi-value option)")
 @click.option("--imports","-m",flag_value=True,default=False,help="only generate the list of imported modules")
-def compile(project,target,output,include,define,imports,proj):
+@click.option("--config","-cfg",flag_value=True,default=False,help="only generate the configuration table")
+def compile(project,target,output,include,define,imports,proj,config):
     if project.endswith(".py"):
         mainfile=project
         project=fs.dirname(project)
@@ -64,13 +65,28 @@ def compile(project,target,output,include,define,imports,proj):
         if pmod not in prjs:
             prjs[pmod]=[]
         prjs[pmod].append(p)
+    
+    ## parse configuration and set defines
+    define = set(define)  # remove duplicates
+    conf = fs.path(project,"project.yml")
+    if fs.exists(conf):
+        pconf = fs.get_yaml(conf)
+        if "config" in pconf:
+            # parse the option key
+            for opt in pconf["config"]:
+                define.add(opt)
+
     #TODO: check target is valid
     compiler = Compiler(mainfile,target,include,define,localmods=prjs)
     try:
-        if not imports:
+        if not imports and not config:
             binary, reprs = compiler.compile()
         else:
-            modules, notfound = compiler.find_imports()
+            if imports:
+                modules, notfound = compiler.find_imports()
+            else:
+                conf,prep = compiler.parse_config()
+            
     except CModuleNotFound as e:
         fatal("Can't find module","["+e.module+"]","imported by","["+e.filename+"]","at line",e.line)
     except CNativeNotFound as e:
@@ -92,7 +108,7 @@ def compile(project,target,output,include,define,imports,proj):
     except Exception as e:
         critical("Unexpected exception",exc=e)
 
-    if not imports:
+    if not imports and not config:
         if not output:
             output=fs.path(project,"main.vbo")
         else:
@@ -107,13 +123,16 @@ def compile(project,target,output,include,define,imports,proj):
         fs.set_json(binary,output)
         info("Compilation Ok")
     else:
-        if env.human:
-            table = []
-            for k,v in modules.items():
-                table.append([k,v])
-            log_table(table,headers=["File","Module"])
+        if imports:
+            if env.human:
+                table = []
+                for k,v in modules.items():
+                    table.append([k,v])
+                log_table(table,headers=["File","Module"])
+            else:
+                log_json([modules,list(notfound)])
         else:
-            log_json([modules,list(notfound)])
+            log_json([conf,prep])
 
 
 

@@ -30,6 +30,35 @@ The :command:`uplink` may the additional :option:`--loop times` option that spec
 
 
     
+.. _ztc-cmd-uplink-raw:
+
+Uplink (raw)
+============
+
+It is possible to perform an uplink against a configured device by specifying th relevant device parameters as in the :ref:`register raw <ztc-cmd-device-register-raw>` command, by specifying the :samp:`port` parameter.
+
+The command: ::
+
+    ztc uplink_raw target bytecode --spec port:the_port
+
+performs an uplink on the device of type :samp:`target` using the bytecode file at :samp:`bytecode` using the serial prot :samp:`port`.
+    
+    
+.. _ztc-cmd-uplink-by-probe:
+
+Uplink by probe
+===============
+
+It is possible to perform an uplink against a configured device by using a probe. Contrary to other uplink commands that require a bytecode file argument, the :samp:`uplink_by_probe` command requires a linked bytecode file argument (obtained with the :ref:`link <ztc-cmd-link>` command).
+
+The command: ::
+
+    ztc uplink_by_probe target probe linked_bytecode
+
+perform an uplink on the device type :samp:`target` using probe :samp:`probe` to transfer the :samp:`linked_bytecode` file to the running VM.
+It is possible to change the address where the bytecode will be flashed by specifying the :option:`--address` option followed by the hexadecimal representation of the address (useful for OTA VMs scenarios)
+    
+    
 .. _ztc-cmd-link:
 
 Link

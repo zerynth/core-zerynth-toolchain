@@ -52,7 +52,15 @@ class Relocator():
             #logger.info("Relocation: %s",output)
             undf = output.count("undefined reference")
             if undf > 0:
-                warning("There are",undf,"missing symbols! This VM does not support the requested features!")
+                lines = output.split("\n")
+                undefs = []
+                umth = re.compile(".*undefined reference to (.+).*")
+
+                for line in lines:
+                    mth = umth.match(line)
+                    if mth:
+                        undefs.append(mth.group(1).replace("`","").replace("'",""))
+                warning("There are",undf,"missing symbols! This VM does not support the requested features!",undefs)
             else:
                 fatal("Relocation error",output)
         sym = cc.symbol_table(lfile)
@@ -254,7 +262,10 @@ class Relocator():
             #logger.debug("cnatives: %i symbols: %i",len(self.upl.cnatives),len(vcobj.symbols))
             rlct = self.device.relocator
             for nn in cnatives:
-                addr = vcobj.symbols[nn]
+                try:
+                    addr = vcobj.symbols[nn]
+                except Exception as e:
+                    fatal("Missing symbols!",nn)
                 #print(nn,hex(addr))
                 #logger.info("%s => %s",tohex(addr), nn)
                 # WARNING!!! +1 because it's thumb instructions! (maybe we should add thumb in arch)

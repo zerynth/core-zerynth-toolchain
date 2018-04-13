@@ -82,18 +82,17 @@ the user profile is retrieved and displayed. The user profile consists of the fo
     * Company
     * Website
 
-* Subscription Info
+# * Subscription Info
 
-    * Subscription type
-    * Date of subscription expiration
-    * List of roles
-    * List of active repositories
+#     * Subscription type
+#     * Date of subscription expiration
+#     * List of roles
+#     * List of active repositories
 
 * Asset and Purchase History list 
 
     * List of account linked assets
-    * List of bought virtual machine packs
-
+    * List of bought virtual machines
 
 The profile  command can be used to change mutable generic info with the following syntax: ::
 
