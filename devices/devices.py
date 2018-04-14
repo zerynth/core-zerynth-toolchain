@@ -1,7 +1,9 @@
 from base import *
 import re
+import base64
+from jtag import *
 
-__all__=["Device","UsbToSerial","JTag","Board"]
+__all__=["Device","Board"]
 
 class Device():
     def __init__(self,info={},dev={}):
@@ -45,6 +47,144 @@ class Device():
 
     def virtualize(self,bin):
         pass
+    
+    def burn_with_probe(self,bin,offset=0):
+        #TODO: add support for multifile vms
+        offs = offset if isinstance(offset,str) else hex(offset)
+        fname = fs.get_tempfile(bin)
+        try:
+            pb  = Probe()
+            pb.connect()
+            pb.send("program "+fs.wpath(fname)+" verify reset "+offs)
+            now = time.time()
+            wait_verification = False
+            while time.time()-now<self.get("jtag_timeout",10):
+                lines = pb.read_lines()
+                for line in lines:
+                    if line.startswith("wrote 0 "):
+                        return False,"0 bytes written!"
+                    if line.startswith("wrote"):
+                        wait_verification=True
+                    if wait_verification and line.startswith("** Verified OK"):
+                        return True, ""
+                    if wait_verification and line.startswith("** Verified Failed"):
+                        return False, "Verification failed"
+                    if "** Programming Failed **" in line:
+                        return False, "Programming failed"
+            return False,"timeout"
+        except Exception as e:
+            return False, str(e)
+        finally:
+            fs.del_tempfile(fname)
+
+    def get_chipid(self):
+        try:
+            pb = Probe()
+            pb.connect()
+            pb.send(self.jtag_chipid_command)
+            # pb.send("halt; mdw 0x1fff7a10; mdw 0x1fff7a14; mdw 0x1fff7a18")
+            lines = pb.read_lines(timeout=0.5)
+            ids = []
+            for line in lines:
+                # if ":" not in line or not line.startswith("0x1fff7"):
+                if ":" not in line or not line.startswith(self.jtag_chipid_prefix):
+                    continue
+                fld = line.split(":")
+                ids.append(fld[1].strip())
+            # if len(ids)!=3:
+            if len(ids)!=self.jtag_chipid_len:
+                warning("Probe result too short!")
+                return None
+            chipid = "".join([id[::-1] for id in ids])
+            return chipid
+        except Exception as e:
+            warning(e)
+            return None
+    
+    def get_vmuid(self):
+        pb = Probe()
+        pb.connect()
+        cmd="reset halt;"
+        addr = self.vmstore_offset
+        cmd+="; ".join(["mdw "+hex(int(addr,16)+i) for i in range(0,32,4)])
+        # halt and read 8 words
+        pb.send(cmd)
+        lines = pb.read_lines(timeout=0.5)
+        ids = []
+        for line in lines:
+            if ":" not in line or not line.startswith("0x"):
+                continue
+            fld = line.split(":")
+            ids.append(fld[1].strip())
+        if len(ids)!=8:
+            warning("Probe result too short!",len(ids),ids)
+            return None
+        # first word is length
+        vmlen = int(ids[0],16)
+        # recover all the other bytes
+        bt = bytearray()
+        for id in ids[1:]:
+            bp = bytearray()
+            for i in range(0,8,2):
+                bb = int(id[i:i+2],16)
+                # temporary append
+                bp.append(bb)
+            # extend reversed
+            bt.extend(bp[::-1])
+        vmuid = bt[0:vmlen].decode("utf-8")
+        return vmuid
+
+    def do_burn_vm(self,vm,options={},outfn=None):
+        if not self.jtag_capable and options.get("probe"):
+            return False, "Target does not support probes!"
+        portbin = None
+        if self.customized:
+            portfile = fs.path(self.path,"port.bin")
+            portbin = fs.readfile(portfile,"b")
+        try:
+            if isinstance(vm["bin"],str):
+                vmbin=bytearray(base64.standard_b64decode(vm["bin"]))
+                if options.get("probe"):
+                    tp = start_temporary_probe(self.target,options.get("probe"))
+                    res,out = self.burn_with_probe(vmbin,vm["map"]["vm"][0])
+                    stop_temporary_probe(tp)
+                else:
+                    if portbin:
+                        res,out = self.burn_custom(vmbin,portbin,outfn)
+                    else:
+                        res,out = self.burn(vmbin,outfn)
+            else:
+                vmbin=[ base64.standard_b64decode(x) for x in vm["bin"]]
+                if options.get("probe"):
+                    tp = start_temporary_probe(self.target,options.get("probe"))
+                    res,out = self.burn_with_probe(vmbin)
+                    stop_temporary_probe(tp)
+                else:
+                    if portbin:
+                        res,out = self.burn_custom(vmbin,portbin,outfn)
+                    else:
+                        res,out = self.burn(vmbin,outfn)
+            return res,out
+        except Exception as e:
+            return False, str(e)
+
+    def do_get_chipid(self,probe,skip_probe=False):
+        if not self.jtag_capable:
+            return False, "Target does not support probes!"
+        try:
+            # start temporary probe
+            if not skip_probe:
+                tp = start_temporary_probe(self.target,probe) 
+            chipid = self.get_chipid()
+            # stop temporary probe
+            if not skip_probe:
+                stop_temporary_probe(tp)
+            if not chipid:
+                return None,"Can't retrieve chip id"
+            return chipid,""
+        except Exception as e:
+            warning(e)
+            return None,"Can't retrieve chip id"
 
     def reset(self):
         pass
@@ -88,7 +228,8 @@ class Device():
                 "DAC":0x0800,
                 "LED":0x0900,
                 "BTN":0x0A00
-            }
+            } 
+
             vcls = {
                "SPI":["MOSI","MISO","SCLK"],
                 "I2C":["SDA","SCL"],
@@ -134,6 +275,12 @@ class Device():
             raise e
 
     def __get_specs(self):
+        portfile = fs.path(self.path,"port.yml")
+        if fs.exists(portfile):
+            tmpl = fs.get_yaml(portfile)
+            return tmpl["defines"],tmpl["peripherals"],tmpl["pinout"]
+
+        # failsafe on port.def
         portfile = fs.path(self.path,"port","port.def")
 
         with open(portfile,"r") as ff:
@@ -234,17 +381,7 @@ class Device():
             "LAYOUT": vlayout,
             "CDEFS": cdefs
         }
-
         return (defines,vprph,pinout)
-
-
-class UsbToSerial(Device):
-    def __init__(self,info={},dev={}):
-        super().__init__(info,dev)
-
-class JTag(Device):
-    def __init__(self,info={},dev={}):
-        super().__init__(info,dev)
 
 class Board(Device):
     def __init__(self,info={},dev={}):

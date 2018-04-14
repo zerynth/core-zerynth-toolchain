@@ -20,16 +20,16 @@ class prc():
             self.startupnfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
             self.startupnfo.wShowWindow = subprocess.SW_HIDE
 
-    def runcmd(self,cmd,*args,outfn=None):
+    def runcmd(self,cmd,*args,outfn=None,shell=False):
         cmdval = tools[cmd]
         if cmdval is None:
             return 1,"","" #TODO: raise proper exception
-        return self.run(cmdval,*args,outfn=outfn)
+        return self.run(cmdval,*args,outfn=outfn,shell=shell)
 
     def escape(self,args):
         return ["\""+x+"\"" for x in args]
 
-    def run(self,cmd,*args,outfn=None):
+    def run(self,cmd,*args,outfn=None,shell=False):
         try:
             if isinstance(cmd,str):
                 cmd = "\""+cmd+"\""
@@ -39,8 +39,9 @@ class prc():
                 cmd = " ".join(self.escape(cmd))
             torun = shlex.split(cmd) #posix=not env.is_windows()
             #TODO: consider swicth to Python 3.5 for subprocess.run
+            # print(torun)
             try:
-                p=subprocess.Popen(torun,universal_newlines=True,stderr=subprocess.STDOUT,startupinfo=self.startupnfo,stdout=subprocess.PIPE)
+                p=subprocess.Popen(torun,universal_newlines=True,stderr=subprocess.STDOUT,startupinfo=self.startupnfo,stdout=subprocess.PIPE,shell=shell)
             except FileNotFoundError:
                 p=subprocess.Popen(torun,universal_newlines=True,stderr=subprocess.STDOUT,startupinfo=self.startupnfo,stdout=subprocess.PIPE,shell=True)
             lines=[]

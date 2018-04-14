@@ -81,8 +81,10 @@ class Relocator():
             cobj = bytes()
 
         _textstart = _romstart+len(header)+len(pyobjs)
+        debug("textstart",hex(_textstart))
         #info("Relocation Info: memstart %x romstart %x",_memstart,_romstart)
         _textstart=self.align_to(_textstart,16)#+(16-(_textstart%16))
+        debug("textstart",hex(_textstart))
 
         if cobj:
             tmpdir = fs.get_tempdir()
@@ -208,7 +210,35 @@ class Relocator():
 
                 debug("ram data size",hex(hsize))
                 debug("binary data size",len(cbin))
+            else:
+                # no rodata_in_ram
+                #adjust padding
+                cbin = bytearray()
+                cbin.extend(vcobj.get_section(".text"))
+                if vcobj.rodata_start():
+                    #pad
+                    cbin.extend(b'\x00'*(vcobj.rodata_start()-vcobj.text_end()))
+                    debug("padding text",(vcobj.rodata_start()-vcobj.text_end()))
+                cbin.extend(vcobj.get_section(".rodata"))
+                if vcobj.romdata_start():
+                    #has romadata
+                    if vcobj.rodata_start():
+                        #has rodata
+                        cbin.extend(b'\x00'*(vcobj.romdata_start()-vcobj.rodata_end()))
+                        debug("padding rodata",(vcobj.romdata_start()-vcobj.rodata_end()))
+                    else:
+                        #no rodata
+                        cbin.extend(b'\x00'*(vcobj.romdata_start()-vcobj.text_end()))
+                        debug("padding rodata2")
+
+                debug(hex(len(cbin)))
+                cbin.extend(vcobj.get_section(".data"))
+                debug("data_start",hex(data_start))
                 
+
+
+
+
             # padding pyobjs
             pdsz = _textstart-_romstart-len(header)-len(pyobjs)
             for i in range(0,pdsz):

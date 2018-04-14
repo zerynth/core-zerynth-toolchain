@@ -7,6 +7,7 @@ import time
 import re
 import struct
 import base64
+from jtag import *
 
 def get_device(alias,loop):
     _dsc = devices.Discover()
@@ -49,22 +50,19 @@ def get_device(alias,loop):
     return dev
 
 
-def get_device_by_target(target,options):
+def get_device_by_target(target,options,skip_reset=False):
     info("Searching for device",target)
-    _dsc = devices.Discover()
-    for dkey,dinfo in _dsc.device_cls.items():
-        if target!=dinfo["target"]:
-            continue
-        cls = dinfo["cls"]
-        dev = cls(dinfo,options)
+    dev = tools.get_target(target,options)
+    if not dev:
+        fatal("No such target!",target)
+
+    if not skip_reset:
         if dev.uplink_reset is True:
             info("Please reset the device!")
             sleep(dev.reset_time/1000)
         elif dev.uplink_reset == "reset":
             dev.reset()
-        return dev
-    else:
-        fatal("No such target!",target)
+    return dev
 
 
 def probing(ch,devtarget, adjust_timeouts=True):
@@ -198,12 +196,27 @@ The :command:`uplink` may the additional :option:`--loop times` option that spec
     dev = get_device(alias,loop)
     _uplink_dev(dev,bytecode,loop)
 
-@cli.command(help="Uplink bytecode to a device. \n\n Arguments: \n\n ALIAS: device alias. \n\n BYTECODE: path to a bytecode file.")
+@cli.command(help="Uplink bytecode to a configured device")
 @click.argument("target")
 @click.argument("bytecode",type=click.Path())
 @click.option("--loop",default=5,type=click.IntRange(1,20),help="number of retries during device discovery.")
 @click.option("--spec","__specs",default="",multiple=True)
 def uplink_raw(target,bytecode,loop,__specs):
+    """
+.. _ztc-cmd-uplink-raw:
+
+Uplink (raw)
+============
+
+It is possible to perform an uplink against a configured device by specifying th relevant device parameters as in the :ref:`register raw <ztc-cmd-device-register-raw>` command, by specifying the :samp:`port` parameter.
+
+The command: ::
+
+    ztc uplink_raw target bytecode --spec port:the_port
+
+performs an uplink on the device of type :samp:`target` using the bytecode file at :samp:`bytecode` using the serial prot :samp:`port`.
+    
+    """
     options = {}
     for spec in __specs:
         pc = spec.find(":")
@@ -212,6 +225,39 @@ def uplink_raw(target,bytecode,loop,__specs):
         options[spec[:pc]]=spec[pc+1:]
     dev = get_device_by_target(target,options) 
     _uplink_dev(dev,bytecode,loop)
+
+@cli.command(help="Uplink bytecode to a device using a probe.")
+@click.argument("target")
+@click.argument("probe")
+@click.argument("linked_bytecode",type=click.Path())
+@click.option("--address",default="")
+def uplink_by_probe(target,probe,linked_bytecode,address):
+    """
+.. _ztc-cmd-uplink-by-probe:
+
+Uplink by probe
+===============
+
+It is possible to perform an uplink against a configured device by using a probe. Contrary to other uplink commands that require a bytecode file argument, the :samp:`uplink_by_probe` command requires a linked bytecode file argument (obtained with the :ref:`link <ztc-cmd-link>` command).
+
+The command: ::
+
+    ztc uplink_by_probe target probe linked_bytecode
+
+perform an uplink on the device type :samp:`target` using probe :samp:`probe` to transfer the :samp:`linked_bytecode` file to the running VM.
+It is possible to change the address where the bytecode will be flashed by specifying the :option:`--address` option followed by the hexadecimal representation of the address (useful for OTA VMs scenarios)
+    
+    """
+    dev = get_device_by_target(target,{},skip_reset=True)
+    if not dev.jtag_capable:
+        fatal("Target does not support probes!")
+    tp = start_temporary_probe(target,probe)
+    res,out = dev.burn_with_probe(fs.readfile(linked_bytecode,"b"),offset=address or dev.bytecode_offset)
+    stop_temporary_probe(tp)
+    if res:
+        info("Uplink done")
+    else:
+        fatal("Uplink failed:",out)
 
 def _uplink_dev(dev,bytecode,loop):
     try:
@@ -339,7 +385,8 @@ def _uplink_dev(dev,bytecode,loop):
 @click.option("--vm","vm_ota",default=0, type=int,help="Select OTA VM index")
 @click.option("--bc","bc_ota",default=0, type=int,help="Select OTA VM Bytecode index")
 @click.option("--file",default="", type=str,help="Save binary to specified file")
-def link(vmuid,bytecode,include_vm,vm_ota,bc_ota,file,otavm):
+@click.option("--bin",default=False,flag_value=True,help="Save in binary format")
+def link(vmuid,bytecode,include_vm,vm_ota,bc_ota,file,otavm,bin):
     """
 .. _ztc-cmd-link:
 
@@ -449,7 +496,10 @@ For example, assuming a project has been compiled to the bytecode file :samp:`pr
             "vmuid":vmuid
         }
         if file:
-            fs.set_json(res,file)
+            if bin:
+                fs.write_file(thebin,file)
+            else:
+                fs.set_json(res,file)
         else:
             log_json(res)
     else:

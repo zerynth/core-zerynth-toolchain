@@ -24,14 +24,23 @@ When a new device is connected, some steps must be taken in order to make it abl
 4. The device must be :ref:`virtualized <ztc-cmd-device-virtualize>, namely a suited virtual machine must be loaded on the device microcontroller
 
 
+Sometimes the device automatic recognition is not enough to gather all the device parameters or to allow the usage of JTAG/SWD probes. In such cases additional commands have been introduced in order to manually specify the additional parameters. A separate database of devices with advanced configurations is maintained.  
+
 List of device commands:
 
 * :ref:`discover <ztc-cmd-device-discover>`
 * :ref:`alias put <ztc-cmd-device-alias_put>`
 * :ref:`register <ztc-cmd-device-register>`
+* :ref:`register by uid <ztc-cmd-device-register-by-uid>`
+* :ref:`register raw <ztc-cmd-device-register-raw>`
 * :ref:`virtualize <ztc-cmd-device-virtualize>`
+* :ref:`virtualize raw <ztc-cmd-device-virtualize-raw>`
 * :ref:`supported <ztc-cmd-device-supported>`
 * :ref:`open <ztc-cmd-device-open>`
+* :ref:`open raw <ztc-cmd-device-open-raw>`
+* :ref:`db list <ztc-cmd-device-db-list>`
+* :ref:`db put <ztc-cmd-device-db-put>`
+* :ref:`db remove <ztc-cmd-device-db-remove>`
 
 
 The list of supported devices is available :ref:`here <doc-supported-boards>`
@@ -39,6 +48,7 @@ The list of supported devices is available :ref:`here <doc-supported-boards>`
     """
 from base import *
 from .discover import *
+from jtag import *
 import click
 import re
 import base64
@@ -203,6 +213,29 @@ def _target_exists(target):
             return True
     return False
 
+
+def _extract_chipid_from_serial(tgt):
+    conn = ConnectionInfo()
+    conn.set_serial(tgt.port,**tgt.connection)
+    ch = Channel(conn)
+    try:
+        ch.open(timeout=2)
+    except:
+        return False, "Can't open serial port!"
+    lines = []
+    for x in range(30):
+        line=ch.readline()
+        lines.append(line.strip("\n"))
+    ch.close()
+    cnt = [lines.count(x) for x in lines]
+    pos = cnt.index(max(cnt))
+    
+    if pos>=0 and cnt[pos]>3 and len(lines[pos])>=8:
+        return True,lines[pos]
+    else:
+        return False, "Can't find chipid"
+
+
 @device.command(help="Register a new device. \n\n Arguments: \n\n ALIAS: device alias")
 @click.argument("alias")
 @click.option("--skip_burn",flag_value=True, default=False,help="bootloader is not flashed on the device (must be flashed manually!)")
@@ -247,11 +280,7 @@ The option :option:`--skip_burn` avoid flashing the device with the registering 
     # burn register.vm
     if not skip_burn:
         info("Burning bootloader...")
-        if isinstance(reg["bin"],str):
-            res,out = tgt.burn(bytearray(base64.standard_b64decode(reg["bin"])),info)
-        else:
-            res,out = tgt.burn([ base64.standard_b64decode(x) for x in reg["bin"]],info)
-        
+        res,out = tgt.do_burn_vm(reg,outfn=info)
         if not res:
             fatal("Can't burn bootloader! -->",out)
     else:
@@ -280,41 +309,24 @@ The option :option:`--skip_burn` avoid flashing the device with the registering 
     if tgt.sw_reset_after_register is True:
         tgt.reset()
 
-    conn = ConnectionInfo()
-    conn.set_serial(tgt.port,**tgt.connection)
-    ch = Channel(conn)
-    try:
-        ch.open(timeout=2)
-    except:
-        fatal("Can't open serial port!")
-    lines = []
-    for x in range(30):
-        line=ch.readline()
-        lines.append(line.strip("\n"))
-    ch.close()
-    cnt = [lines.count(x) for x in lines]
-    pos = cnt.index(max(cnt))
-    
-    if pos>=0 and cnt[pos]>3 and len(lines[pos])>=8:
-        info("Found chipid:",lines[pos])
-    else:
-        fatal("Can't find chipid")
-    chipid=lines[pos]
+    res,chipid = _extract_chipid_from_serial(tgt)
+    if not res:
+        fatal(chipid)
     dinfo = {
         "name": tgt.custom_name or tgt.name,
         "on_chip_id": chipid,
-        "type": tgt.target,
+        "type": tgt.original_target or tgt.target,  #custom devices are registered as the original_target!
         "category": tgt.family_name
     }
-    rj = _register_device(dinfo)
+    remote_uid = _register_device(dinfo)
     tgt = tgt.to_dict()
     tgt["chipid"]=chipid
-    tgt["remote_id"]=rj["data"]["uid"]
+    tgt["remote_id"]=remote_uid
     env.put_dev(tgt,linked=tgt["sid"]=="no_sid")
     if alter_ego:
         alter_ego = alter_ego.to_dict()
         alter_ego["chipid"]=chipid
-        alter_ego["remote_id"]=rj["data"]["uid"]
+        alter_ego["remote_id"]=remote_uid
         env.put_dev(alter_ego)
 
 
@@ -331,7 +343,7 @@ def _register_device(dinfo):
         rj = res.json()
         if rj["status"] == "success":
             info("Device",dinfo.get("name",""),"registered with uid:", rj["data"]["uid"])
-            return rj
+            return rj["data"]["uid"]
         else:
             fatal("Remote device registration failed with:", rj["message"])
     except Exception as e:
@@ -342,50 +354,93 @@ def _register_device(dinfo):
 @click.argument("chipid")
 @click.argument("target")
 def register_by_uid(chipid,target):
+    """ 
+.. _ztc-cmd-device-register-by-uid:
+
+Device Registration by UID
+--------------------------
+
+If the microcontroller unique identifier is already known (i.e. obtained with a JTAG probe), the device can be registered skipping the registration firmware flashing phase.
+
+Device registration is performed by issuing the command: ::
+
+    ztc device register_by_uid chipid target
+
+where :samp:`chipid` is the microcontroller unique identifier  and :samp:`target` is the type of the device being registered. A list of available targets can be obtained  with the ref:`supported <ztc-cmd-device-supported>`.
+
+Upon successful registration the device is assigned an UID by the backend.
+
+    """
     dinfo = {
         "on_chip_id": chipid,
         "type": target
     }
     _register_device(dinfo)
+
+@device.command(help="Register a new device giving target details")
+@click.argument("target")
+@click.option("--skip-remote","__skip_remote",default=False,flag_value=True)
+@click.option("--skip-probe","__skip_probe",default=False,flag_value=True)
+@click.option("--spec","__specs",default=[],multiple=True)
+def register_raw(target,__skip_remote,__specs,__skip_probe):
+    """ 
+.. _ztc-cmd-device-register-raw:
+
+Device Raw Registration
+-----------------------
+
+Sometimes it is useful to manually provide the device parameters for registration. The parameters that can be provided are:
+
+* :samp:`port`, the serial port exposed by the device
+* :samp:`disk`, the mass storage path provided by the device
+* :samp:`probe`, the type of JTAG/SWD probe to use during registering
+
+The above parameters must be specified using the :option:`--spec` option followed by the pair parameter name and value separated by a colon (see the example below).
+
+Device registration is performed by issuing the command: ::
+
+    ztc device register_raw target --spec port:the_port --spec disk:the_disk --spec probe:the_probe
+
+It is necessary to provide at least one device parameter and the registration will be attempted gibing priority to the probe parameter. Registration by probe is very fast (and recommended for production scenarios) beacuse the registration firmware is not required.
+
+    """
+    options = tools.get_specs(__specs)
+    dev =  _dsc.get_target(target,options)    
+    if not dev:
+        fatal("No such target!")
+   
+    probe = options.get("probe")
+    if probe:
+        chipid,err = dev.do_get_chipid(probe,__skip_probe)
+        if err:
+            fatal(err)
+    else:
+        # open register.vm
+        reg = fs.get_json(fs.path(dev.path,"register.vm"))
+        info("Burning bootloader...")
+        res, out = dev.do_burn_vm(reg,options,info)
+        if not res:
+            fatal("Can't burn bootloader! -->",out)
+        if dev.reset_after_register:
+            info("Please reset the device!")
+            sleep((dev.reset_time or 3000)/1000)
+        if dev.sw_reset_after_register is True:
+            dev.reset()
+        res,chipid = _extract_chipid_from_serial(dev)
+        if not res:
+            fatal(chipid)
+
+    if not chipid:
+        fatal("Can't retrieve chip id!")
+    info("Chip id retrieved:",chipid)
+    if not __skip_remote:
+        dinfo = {
+            "on_chip_id": chipid,
+            "type": dev.original_target or target
+        }
+        _register_device(dinfo)
     
 
-@device.command(help="Virtualize a device.")
-@click.argument("vmuid")
-@click.option("--spec","__specs",default="",multiple=True)
-def virtualize_raw(vmuid,__specs):
-    vms = tools.get_vm_by_prefix(vmuid)
-    if len(vms)==0:
-        fatal("No such VM uid")
-    if len(vms)>1:
-        fatal("Ambiguous VM uid:",vms[:10])
-    vmfile = vms[0]
-    vm = fs.get_json(vmfile)
-    # manage specs
-    options = {}
-    for spec in __specs:
-        pc = spec.find(":")
-        if pc<0:
-            fatal("invalid spec format. Give key:value")
-        options[spec[:pc]]=spec[pc+1:]
-    for dkey,dinfo in _dsc.device_cls.items():
-        if vm["dev_type"]!=dinfo["target"]:
-            continue
-        cls = dinfo["cls"]
-        dev = cls(dinfo,options)
-        break
-    else:
-        fatal("No such target!",vm["dev_type"])
-    # TODO: call virtualization    
-    info("Starting Virtualization...")
-    if isinstance(vm["bin"],str):
-        res,out = dev.burn(bytearray(base64.standard_b64decode(vm["bin"])),info)
-    else:
-        res,out = dev.burn([ base64.standard_b64decode(x) for x in vm["bin"]],info)
-    if not res:
-        fatal("Error in virtualization",out)
-    else:
-        info("Virtualization Ok")
-    
 
     
 
@@ -431,16 +486,59 @@ The virtualization process is automated, no user interaction is required.
             fatal("VM",vmuid,"does not exist")
     vm = fs.get_json(vms[vmuid])
     info("Starting Virtualization...")
-    if isinstance(vm["bin"],str):
-        res,out = tgt.burn(bytearray(base64.standard_b64decode(vm["bin"])),info)
-    else:
-        res,out = tgt.burn([ base64.standard_b64decode(x) for x in vm["bin"]],info)
+    res,out = tgt.do_burn_vm(vm,{},info)
+    # if isinstance(vm["bin"],str):
+    #     res,out = tgt.burn(bytearray(base64.standard_b64decode(vm["bin"])),info)
+    # else:
+    #     res,out = tgt.burn([ base64.standard_b64decode(x) for x in vm["bin"]],info)
     if not res:
         fatal("Error in virtualization",out)
     else:
         info("Virtualization Ok")
 
 
+@device.command(help="Virtualize a device providing manual parameters.")
+@click.argument("vmuid")
+@click.option("--spec","__specs",default=[],multiple=True)
+def virtualize_raw(vmuid,__specs):
+    """ 
+.. _ztc-cmd-device-virtualize-raw:
+
+Raw Virtualization
+------------------
+
+Device virtualization consists in flashing a Zerynth virtual machine on a registered device. One or more virtual machines for a device can be obtained with specific ZTC :ref:`commands <ztc-cmd-vm-create>`.
+
+Sometimes it is useful to manually provide the device parameters for virtualization. The parameters that can be provided are the same of the :ref:`register_raw <ztc-device-register-raw>` command.
+
+Virtualization is started by: ::
+
+    ztc device virtualize vmuid --spec port:the_port --spec disk:the_disk --spec  probe:the_probe
+
+where :samp:`vmuid` is the unique identifier of the chosen vm. :samp:`vmuid` can be typed partially, ZTC will try to match it against known identifiers. :samp:`vmuid` is obtained during virtual machine :ref:`creation <ztc-cmd-vm-create>`.
+
+The virtualization by probe has priority over the other device parameters and is recommended for production scenarios.
+
+    """
+    vms = tools.get_vm_by_prefix(vmuid)
+    if len(vms)==0:
+        fatal("No such VM uid")
+    if len(vms)>1:
+        fatal("Ambiguous VM uid:",vms[:10])
+    vmfile = vms[0]
+    vm = fs.get_json(vmfile)
+    # manage specs
+    options = tools.get_specs(__specs)
+    dev =  _dsc.get_target(vm["dev_type"],options)    
+    if not dev:
+        fatal("No such target!",vm["dev_type"])
+    info("Starting Virtualization...")
+    res,out = dev.do_burn_vm(vm,options,info)
+    if not res:
+        fatal("Error in virtualization",out)
+    else:
+        info("Virtualization Ok")
+    
 
 
 @device.command(help="Open device serial. \n\n Arguments: \n\n ALIAS: device alias.")
@@ -493,6 +591,23 @@ tries to open the default serial port with the correct parameters for the device
 @click.option("--dsrdtr","__dsrdtr", default=False,flag_value=True,help="")
 @click.option("--rtscts","__rtscts", default=False,flag_value=True,help="")
 def open_raw(port,__echo,__baud,__parity,__bits,__stopbits,__dsrdtr,__rtscts):
+    """ 
+.. _ztc-cmd-device-open-raw:
+
+Serial Console (raw)
+--------------------
+
+Each virtual machine provides a default serial port where the output of the program is printed. Such port can be opened in full duplex mode allowing bidirectional communication between the device and the terminal.
+
+it is sometime useful to directly specify the serial port on the command line.
+
+The command: ::
+
+    ztc device open port
+
+tries to open :samp:`port` with the correct parameters for the device. Output from the device is printed to stdout while stdin is redirected to the serial port. Adding the option :option:`--echo` to the command echoes back the characters from stdin to stdout.
+
+    """
     conn = ConnectionInfo()
     options={
         "baudrate":__baud,
@@ -529,11 +644,6 @@ Different versions of the ZTC may have a different set of supported devices. To 
     ztc device supported
 
 and a table of :samp:`target` names and paths to device support packages will be printed.
-Supported devices can be filtered by type with the :option:`--type type` option where :samp:`type` can be one of:
-
-* :samp:`board` for development boards
-* :samp:`jtag` for JTAG tools
-* :samp:`usbtoserial` for USB to Serial converters
 
     """
     table = []
@@ -554,6 +664,126 @@ Supported devices can be filtered by type with the :option:`--type type` option 
         log_table(table,headers=["Target","Path"])
     elif single:
         log_json(jst)
+
+@device.command(help="List of serial ports and disk devices")
+def ports_and_disks():
+    res = {
+            "disks":_dsc.devsrc.find_all_mount_points(),
+            "ports":_dsc.devsrc.find_all_serial_ports()
+    }
+    log_json(res)
+
+@device.group(help="Manage device configurations manually.")
+def db():
+    pass
+
+@db.command("list")
+@click.option("--filter-target",default="",type=str,help="list only matching target")
+def _db_list(filter_target):
+    """
+.. _ztc-cmd-device-db-list:
+
+Configured Devices
+------------------
+
+Manual device configurations can be saved in a local database in order to avoid retyping device parameters every time.
+The command: ::
+
+    ztc device db list
+
+prints the list of configured devices with relevant parameters. By providing the oprion :option:`--filter-target` the list for a specific target can be retrieved.
+
+    """
+    db = fs.get_yaml(fs.path(env.cfg,"devices.yaml"),failsafe=True)
+    
+    if not env.human:
+        if not filter_target:
+            log_json(db)
+        else:
+            log_json({k:v for k,v in db.items() if v["target"]==filter_target})
+        return
+
+    table = []
+    for devid, devinfo in db.items():
+        if filter_target and devinfo["target"]!=filter_target:
+            continue
+        table.append([devid,devinfo["target"],devinfo.get("port","---"),devinfo.get("disk","---"),devinfo.get("probe","---"),devinfo.get("chipid","---"),devinfo.get("remote_id","---")])
+
+    log_table(table,headers = ["name","target","port","disk","probe","chip id","remote id"])
+
+@db.command("put")
+@click.argument("target")
+@click.argument("name")
+@click.option("--spec","__specs",default=[],multiple=True)
+def _db_put(target,name,__specs):
+    """
+.. _ztc-cmd-device-db-put:
+
+Add Configured Devices
+----------------------
+
+Manual device configurations can be saved in a local database in order to avoid retyping device parameters every time.
+The relevant parameter for a device are:
+
+    * :samp:`target`, the device type
+    * :samp:`name`, the device name. It must be unique and human readable
+    * :samp:`port`, the device serial port (may change upon device reset!)
+    * :samp:`disk`, the mass storage path of the device (if exposed)
+    * :samp:`probe`, the JTAG/SWD probe used for device programming
+    * :samp:`chipid`, the device microcontroller unique identifier
+    * :samp:`remote_id`, the device UID assigned by the backend after registation
+
+If the device :samp:`name` is not present in the database, a new device is created; otherwise the existing device is updated with the provided parameters. To unset a parameter pass the "null" value (as a string). If a parameter is not given it is not modified in the database. A parameter is set tonull if not specified upon device creation.
+
+The command: ::
+
+    ztc device db put target device_name --spec port:the_port --spec disk:the_disk --spec probe:the_probe --spec chipid:the_chipid --spec remote_uid:the_remote_uid
+
+inserts or modifies the configured device :samp:`device_name` in the database. The given parameters are updated as well. For the probe parameter, the list of available probes can be obtained with the :ref:`probe list <ztc-cmd-probe-list>` command.
+
+    """
+    db = fs.get_yaml(fs.path(env.cfg,"devices.yaml"),failsafe=True)
+    options = tools.get_specs(__specs)
+    dinfo = db.get(name,{})
+    db[name]={
+        "target":target,
+        "name":name,
+        "port":options.get("port",dinfo.get("port")),
+        "disk":options.get("disk",dinfo.get("disk")),
+        "probe":options.get("probe",dinfo.get("probe")),
+        "chipid":options.get("chipid",dinfo.get("chipid")),
+        "remote_id":options.get("remote_id",dinfo.get("remote_id")),
+        "custom":options.get("custom",dinfo.get("custom"))
+    }
+    if dinfo:
+        info("Updating device...")
+    else:
+        info("Saving device...")
+    fs.set_yaml(db,fs.path(env.cfg,"devices.yaml"))
+
+@db.command("remove")
+@click.argument("name")
+def _db_remove(name):
+    """
+.. _ztc-cmd-device-db-remove:
+
+Remove Configured Devices
+-------------------------
+
+The command: ::
+
+    ztc device db remove device_name
+
+removes the device :samp:`device_name` from the configured devices.
+
+    """
+    db = fs.get_yaml(fs.path(env.cfg,"devices.yaml"),failsafe=True)
+    dinfo = db.pop(name,None)
+    if dinfo:
+        info("Removing device...")
+    else:
+        info("Nothing to remove")
+    fs.set_yaml(db,fs.path(env.cfg,"devices.yaml"))
 
 
 

@@ -269,9 +269,11 @@ class Git():
         info("Ok")
     
     def git_clone_from_url(self,url,user,password,path):
+        orig_url = url
         pos = url.find(":") #http(s):
-        url = url[:pos+3]+user+":"+password+"@"+url[pos+3:]
-        info("Cloning",url)
+        if user and password:
+            url = url[:pos+3]+user+":"+password+"@"+url[pos+3:]
+        info("Cloning",orig_url)
         try:
             repo = pygit2.clone_repository(url,path)
         except Exception as e:
