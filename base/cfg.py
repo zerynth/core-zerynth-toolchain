@@ -161,6 +161,8 @@ class Environment():
     def clean_db(self):
         self._dbs.execute("delete from aliases")
         self._dbs.commit()
+        self._dbs.execute("delete from linked")
+        self._dbs.commit()
 
     def get_all_dev(self):
         for row in self._dbs.execute("select * from aliases"):

@@ -183,6 +183,10 @@ class Discover():
             if obj.sid == "no_sid" or obj.has_linked_devs:
                 # get all registered linked devices
                 devs = env.get_linked_devs(obj.target)
+                if devs and obj.original_target and obj.customized:
+                    for k,d in devs.items():
+                        d.set("original_target", obj.original_target)
+                        d.set("customized", obj.customized)
                 obj.set("linked_devs",{k:d.to_dict() for k,d in devs.items()})
         return ndb
 
