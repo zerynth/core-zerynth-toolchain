@@ -658,7 +658,7 @@ class Compiler():
         self.phase = 4
         info("#"*10,"STEP",self.phase,"- generate binary")
 
-        rt = self.generateBinary(ofilecnt)
+        rt = self.generateBinary(ofilecnt,ofiles)
         return rt
 
 
@@ -693,7 +693,7 @@ class Compiler():
                 res+=struct.pack("=B",0)
         return head+res
 
-    def generateBinary(self,ofile=None):
+    def generateBinary(self,ofile=None,ofiles=None):
         bin = {}
         self.env.buildExceptionTable()
         codereprs = []
@@ -798,7 +798,8 @@ class Compiler():
             "rtable_elements": len(self.resources),
             "header_size": len(buf),
             "version":env.var.version,
-            "target":self.board.target
+            "target":self.board.target,
+            "ofiles": [] if not ofiles else ofiles
         }
 
         bin["header"]=str(base64.standard_b64encode(buf),'utf-8')

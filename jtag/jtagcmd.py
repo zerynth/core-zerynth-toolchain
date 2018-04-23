@@ -232,6 +232,13 @@ def start(target,probe,bytecode):
     if bytecode:
         # read dyn debug info
         bf = fs.get_json(bytecode)
+        if bf["info"].get("ofiles"):
+            for ofile in bf["info"]["ofiles"]:
+                if not fs.exists(ofile):
+                    warning(ofile,"does not exist!")
+                    continue
+                gdbcommands=gdbcommands+"file "+ofile+"\n"
+
         if "dbg" not in bf:
             warning("Bytecode has no debug info!")
         else:
@@ -245,7 +252,8 @@ def start(target,probe,bytecode):
 
     info("Starting GDB...")
     # find appropriate gdb for target
-    gdb="/home/giacomo/Downloads/gcc-arm-none-eabi-7-2017-q4-major/bin/arm-none-eabi-gdb"
+    gdb=tools[dev.cc]["gdb"]
+    #"/home/giacomo/Downloads/gcc-arm-none-eabi-7-2017-q4-major/bin/arm-none-eabi-gdb"
     # alter sys.path for gdbgui dependencies
     sys.path = [fs.path(fs.dirname(__file__),"gdbgui")]+sys.path
 

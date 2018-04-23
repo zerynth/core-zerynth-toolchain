@@ -282,7 +282,7 @@ class gcc():
                 else:
                     nm.append(fs.path(o,fs.basename(fname).replace(".c",".o")))
                     
-            ret, output = self.run_command(self.gcc,self.gccopts+inc+nm+self.defines)
+            ret, output = self.run_command(self.gcc,self.gccopts+inc+nm+self.defines+["-g"])
             #print(output)
             lines = output.split("\n")
             catcher = re.compile("([^:]+):([0-9]+):([0-9]+):[^:]*(warning|error)(.*)")
@@ -355,7 +355,6 @@ class gcc():
         if reloc:
             ldopt.append("-r")
         ldopt.extend(fnames)
-        
         #add libgcc
         if abi:
             ldopt.append("-L")
