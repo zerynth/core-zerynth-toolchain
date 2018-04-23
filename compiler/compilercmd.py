@@ -7,7 +7,7 @@ Compiler
 The ZTC compiler takes a project as input and produces an executable bytecode file ready to be :ref:`uplinked <ztc-cmd-uplink>` on a :ref:`virtualized <ztc-cmd-device-virtualize>`.
 
 The command: ::
-    
+
         ztc compile project target
 
 compiles the source files found at :samp:`project` (the project path) for a device with target :samp:`target`.
@@ -65,12 +65,13 @@ def compile(project,target,output,include,define,imports,proj,config):
         if pmod not in prjs:
             prjs[pmod]=[]
         prjs[pmod].append(p)
-    
+
     ## parse configuration and set defines
     define = set(define)  # remove duplicates
     conf = fs.path(project,"project.yml")
     if fs.exists(conf):
         pconf = fs.get_yaml(conf)
+        if not pconf: pconf={}
         if "config" in pconf:
             # parse the option key
             for opt in pconf["config"]:
@@ -86,7 +87,7 @@ def compile(project,target,output,include,define,imports,proj,config):
                 modules, notfound = compiler.find_imports()
             else:
                 conf,prep = compiler.parse_config()
-            
+
     except CModuleNotFound as e:
         fatal("Can't find module","["+e.module+"]","imported by","["+e.filename+"]","at line",e.line)
     except CNativeNotFound as e:
@@ -132,6 +133,15 @@ def compile(project,target,output,include,define,imports,proj,config):
             else:
                 log_json([modules,list(notfound)])
         else:
+            #fill missing details
+            if "__main__" not in conf:
+                conf["__main__"] = {
+                    "cfg":{
+                        "config":{},
+                        "options":{}
+                    },
+                    "py":mainfile
+                }
             log_json([conf,prep])
 
 

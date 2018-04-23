@@ -41,7 +41,7 @@ class Var():
 
 
 class Environment():
-    
+
     def __init__(self):
         pass
 
@@ -54,7 +54,7 @@ class Environment():
 
     def __getitem__(self,key):
         return getattr(self,key)
-    
+
 
     def load(self,cfgdir):
         try:
@@ -64,14 +64,14 @@ class Environment():
         except Exception as e:
             critical("can't load configuration",exc=e)
 
-    
+
     def load_versions(self,cfgdir):
         try:
             js = fs.get_json(fs.path(cfgdir,"versions.json"))
             self.versions = js
         except:
             self.versions = {self.var.version:["base"]}
-    
+
     def save_versions(self):
         try:
             js = fs.set_json(self.versions,fs.path(self.cfgdir,"versions.json"))
@@ -105,7 +105,7 @@ class Environment():
             self._dbs.execute("CREATE UNIQUE INDEX IF NOT EXISTS linked_a_idx ON linked(alias)")
             self._dbs.execute("CREATE INDEX IF NOT EXISTS linked_t_idx ON linked(target)")
             self._dbs.execute("CREATE INDEX IF NOT EXISTS linked_c_idx ON linked(chipid)")
-            
+
         except Exception as e:
             self._dbs = None
 
@@ -224,7 +224,7 @@ env=Environment()
 #                 docs/
 #                 devices/
 #                 examples/
-                
+
 
 
 def init_cfg():
@@ -260,7 +260,7 @@ def init_cfg():
     env.edb       = fs.path(env.home,"cfg","edb")
     env.zdb       = fs.path(env.home,"cfg","zdb")
     env.cvm       = fs.path(env.home,"cvm")
-    
+
 
     # load configuration
     env.load(env.cfg)
@@ -300,7 +300,7 @@ def init_cfg():
     env.libs      = fs.path(env.home,"dist",version,"libs")
     env.nest      = fs.path(env.home,"dist",version,"nest")
     env.stdlib    = fs.path(env.home,"dist",version,"stdlib")
-    env.vhal      = fs.path(env.home,"dist",version,"vhal") 
+    env.vhal      = fs.path(env.home,"dist",version,"vhal")
     env.studio    = fs.path(env.home,"dist",version,"studio")
     env.docs      = fs.path(env.home,"dist",version,"docs")
     env.examples  = fs.path(env.home,"dist",version,"examples")

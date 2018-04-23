@@ -74,10 +74,12 @@ class Compiler():
                 fatal("Can't load family parameters for",target)
             self.parseNatives()
             self.builtins_module = "__builtins__"
-            
+
             self.prepdefines.update(self.board.defines)
             if "CDEFS" not in self.prepdefines:
                 self.prepdefines["CDEFS"] = []
+            if "CFG" not in self.prepdefines:
+                self.prepdefines["CFG"] = {}
             self.prepdefines["CDEFS"].extend(list(cdefines))
 
             self.astp = AstPreprocessor(self.board.allnames,self.board.pinmap,self.prepdefines,self.prepcfiles)
@@ -107,7 +109,7 @@ class Compiler():
         self.maindir=None
         self.resources={}
 
-    def newPhase(self):    
+    def newPhase(self):
         self.codeobjs = []
         self.modules = {}
         self.bltinfo = {}
@@ -205,7 +207,7 @@ class Compiler():
 
             if file.endswith("*"):
                 pt = fs.dirname(file)
-                afile = fs.glob(pt,"*.c")   
+                afile = fs.glob(pt,"*.c")
             else:
                 afile = [file.replace("\\","/")]
             if afile and afile[0].endswith("cbuild.json"):
@@ -259,7 +261,7 @@ class Compiler():
         #     # local modules
         # else if modname in self.localmods:
         #     # local modules
-            
+
         # search syspath for modname
         for path in self.syspath:
             modpath = fs.path(path,modfile)
@@ -272,29 +274,36 @@ class Compiler():
         return modpath
 
     def readfile(self,file,module=None):
-
         # load file options if present
         if file==self.mainfile:
-            optfile = fs.path(fs.dirname(file),fs.basename(file).replace(".py",".yml"))
+            optfile = fs.path(fs.dirname(file),"project.yml")
         else:
             optfile = fs.path(fs.dirname(file),fs.basename(file).replace(".py",".yml"))
-        print(optfile)
         if fs.exists(optfile):
             try:
                 opts = fs.get_yaml(optfile)
             except Exception as e:
                 raise CSyntaxError(0,0,optfile,"Something wrong in config file "+optfile)
-            if "config" in opts:
-                for opt in opts["config"]:
-                    self.prepdefines["CDEFS"].append(opt)
+            try:
+                if "config" in opts:
+                    for opt,value in opts["config"].items():
+                        if value is not None:  # null values disable the macro
+                            if value is True:  # boolean must be converted to int
+                                self.prepdefines["CFG"][opt]=1
+                            elif value is False:
+                                self.prepdefines["CFG"][opt]=0
+                            else:
+                                self.prepdefines["CFG"][opt]=value
+            except Exception as e:
+                raise CSyntaxError(0,0,optfile,"Something wrong in config file format "+optfile+" :: "+str(e))
             if module:
                 self.file_options[module]={
                     "py":file,
                     "yml":optfile,
                     "cfg":opts
                 }
-                     
-        preg = re.compile("\s*(#+-)(if|else|endif)\s*([a-zA-Z0-9_]*)(?:\s+in\s+([A-Z_]+)){0,1}")
+
+        preg = re.compile("\s*(#+-)(if|else|endif)\s*([a-zA-Z0-9_]*)(?:\s+(>=|<=|==|!=|>|<)\s+([A-Za-z0-9_]+)){0,1}")
         stack = []
         modprg = fs.readfile(file)
         lines = modprg.split("\n")
@@ -306,8 +315,9 @@ class Compiler():
                 lvl = len(mth.group(1))-2  # level of nesting strating from 0
                 op = mth.group(2)
                 cmacro = mth.group(3)
-                cset = mth.group(4)
-                if not cset: cset= "CDEFS"
+                cop = mth.group(4)
+                cval = mth.group(5)
+                vmacro = self.prepdefines.get("CFG",{}).get(cmacro,None)
                 #print("Matched:",lvl,op,cmacro,cset,stack,keepline)
                 #check lvl
                 if op=="if":
@@ -315,8 +325,38 @@ class Compiler():
                         raise CSyntaxError(nline,0,file,"Bad preprocessor nesting! Expected "+str(len(stack))+" but found "+str(lvl) )
                     if not cmacro:
                         raise CSyntaxError(nline,0,file,"Bad preprocessor: missing -if argument")
-                        
-                    kl = cmacro in self.prepdefines.get(cset,[])
+
+                    if cop:
+                        #evaluate expr
+                        try:
+                            cval=int(cval)
+                        except:
+                            #not an integer
+                            try:
+                                cval=float(cval)
+                            except:
+                                #not a float, failsafe to str
+                                pass
+                        try:
+                            if cop=="==":
+                                kl = vmacro==cval
+                            elif cop==">=":
+                                kl = vmacro>=cval
+                            elif cop==">":
+                                kl = vmacro>cval
+                            elif cop=="<=":
+                                kl = vmacro<=cval
+                            elif cop=="<":
+                                kl = vmacro<cval
+                            elif cop=="!=":
+                                kl = vmacro!=cval
+                        except:
+                            #in case of error, failsafe to false (can happen of typeerror)
+                            kl = false
+                    else:
+                        #no expr
+                        kl = vmacro is not None
+
                     kl = all(stack) and kl
                     keepline = kl
                     stack.append(kl)
@@ -338,11 +378,11 @@ class Compiler():
                     result.append(line)
 
         modprog = "\n".join(result)
-        if "_" not in file:
-            log(modprog)
+        # if "zerynth2" not in file:
+        #     log(modprog)
         return modprog
 
-            
+
 
 
 
@@ -369,7 +409,7 @@ class Compiler():
             self.maindir = fs.dirname(mfile)
         else:
             mfile = self.searchModule(name)
-        
+
         if mfile!=None:
             info("Compiling module:",name,"@",mfile)
             modprg = self.readfile(mfile,name)
@@ -381,7 +421,7 @@ class Compiler():
                 tree = ast.parse(modprg)
             except SyntaxError as e:
                 raise CSyntaxError(e.lineno,e.offset,mfile,str(e))
-            
+
             self.astp.curpath = fs.dirname(mfile)
             self.astp.filename = mfile
             tree = self.astp.visit(tree)
@@ -407,7 +447,7 @@ class Compiler():
         modprg = self.readfile(mf,self.builtins_module)
         tree = ast.parse(modprg)
         self.astp.visit(tree)
-        
+
         self.newPhase()
         self.compileModule(self.mainfile)
         return self.file_options,self.prepdefines
@@ -431,9 +471,9 @@ class Compiler():
         self.compileModule(self.mainfile)
         objs_at_0 = len(self.codeobjs)
         mods_at_0 = len(self.modules)
-        
 
-        
+
+
         self.scratch()
         info("#"*10,"STEP",self.phase,"- second pass")
         self.phase = 1
@@ -465,7 +505,7 @@ class Compiler():
         # self.newPhase()
         # self.compileModule(self.mainfile)
         # objs_at_2 = len(self.codeobjs)
-        
+
         # for k,v in self.modules.items():
         #     if v.isJustStop():
         #         self.stripped_modules.add(k);
@@ -489,7 +529,7 @@ class Compiler():
         self.cfiles.update(self.prepcfiles)
         self.cfiles = fs.unique_paths(self.cfiles)
         if self.cfiles:
-            
+
             info("#"*10,"STEP",self.phase,"- C code compilation")
             gccopts = dict(self.board.gccopts)
             if "CDEFS" in self.prepdefines:
@@ -500,13 +540,15 @@ class Compiler():
 
 
             gccopts["defs"].extend(self.cdefines)
+            for k,v in self.prepdefines.get("CFG",{}).items():
+                gccopts["defs"].append(k+"="+str(v))
             gccopts["inc"]=set(self.cincpaths)
             gccopts["inc"].add(fs.path(env.stdlib,"__cdefs"))
             gccopts["inc"].add(fs.path(env.stdlib,"__lang"))
             gccopts["inc"].add(fs.path(env.stdlib,"__common"))
             gccopts["inc"].add(fs.path(self.board.path,"port"))
             gccopts["inc"].add(fs.path(self.board.path,"port","config"))
-            
+
             #TODO: add support for other than gcc
             gcc = cc.gcc(tools[self.board.cc],gccopts)
 
@@ -550,7 +592,7 @@ class Compiler():
                             #TODO: fix exception
                             raise CNativeError(0,0,cfile,"---")
             info("Linking...")
-            obcfile = fs.path(tmpdir,"zerynth.vco") 
+            obcfile = fs.path(tmpdir,"zerynth.vco")
             ofile = fs.path(tmpdir,"zerynth.rlo")
             #ofiles = [os.path.join(tmpdir,get_filename(c).replace(".c",".o")) for c in self.cfiles if "vhal_" not in get_filename(c) and get_filename(c).endswith(".c")]
             rvofiles=[]
@@ -615,7 +657,7 @@ class Compiler():
         #Phase 4: generate binary repr and debug file
         self.phase = 4
         info("#"*10,"STEP",self.phase,"- generate binary")
-        
+
         rt = self.generateBinary(ofilecnt)
         return rt
 
@@ -662,7 +704,7 @@ class Compiler():
             codereprs.append(cr)
 
         # Generate Code Image
-        objbuf = []        
+        objbuf = []
         buf = bytearray()
         lmap = {}
         for co in self.codeobjs:
@@ -681,7 +723,7 @@ class Compiler():
         buf+= (struct.pack("=B", len(self.modules) ))
         #Nobjs
         buf+= (struct.pack("=H", len(objbuf) ))
-        
+
         #Exceptions
         etable,emtable,emtablelen = self.env.getBinaryExceptionTable()
         rtable = self.generateResourceTable()
@@ -698,7 +740,7 @@ class Compiler():
         buf+=struct.pack("=I",0)
 
         cobsz = 4*len(objbuf)+(len(buf)+4)+(len(etable)*8+emtablelen)+4*len(self.cnatives)
-        
+
         #res_table
         if rtable:
             buf+=struct.pack("=I",cobsz)
@@ -714,7 +756,7 @@ class Compiler():
             cobsztable.append(cobsz)
             cobsz+=len(cob)
         pyobjtableend = len(buf)
-        
+
         #add space for c natives addresses
         for i in range(0,len(self.cnatives)):
             buf+=(struct.pack("=I", i ))
@@ -740,7 +782,7 @@ class Compiler():
                     pckd+=1
                     ssz-=1
         etableend = len(buf)
-        
+
         #resource table
         buf+=rtable
 

@@ -24,7 +24,7 @@ class Device():
         if "cls" in x:
             del x["cls"]
         return x
-        
+
     def __getitem__(self,key):
         return self.__getattr__(key)
 
@@ -47,7 +47,7 @@ class Device():
 
     def virtualize(self,bin):
         pass
-    
+
     def burn_with_probe(self,bin,offset=0):
         #TODO: add support for multifile vms
         offs = offset if isinstance(offset,str) else hex(offset)
@@ -100,7 +100,7 @@ class Device():
         except Exception as e:
             warning(e)
             return None
-    
+
     def get_vmuid(self):
         pb = Probe()
         pb.connect()
@@ -174,7 +174,7 @@ class Device():
         try:
             # start temporary probe
             if not skip_probe:
-                tp = start_temporary_probe(self.target,probe) 
+                tp = start_temporary_probe(self.target,probe)
             chipid = self.get_chipid()
             # stop temporary probe
             if not skip_probe:
@@ -228,7 +228,7 @@ class Device():
                 "DAC":0x0800,
                 "LED":0x0900,
                 "BTN":0x0A00
-            } 
+            }
 
             vcls = {
                "SPI":["MOSI","MISO","SCLK"],
