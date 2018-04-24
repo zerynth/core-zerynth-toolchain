@@ -64,6 +64,7 @@ class Compiler():
         self.target = target
         self.prepcfiles = set()
         self.prepdefines = {}
+        self.has_options = False
         discover = Discover()
         if self.target!="no_device": ## no_device is passed only when no code generation is needed!
             if self.target not in discover.get_targets():
@@ -294,6 +295,8 @@ class Compiler():
                                 self.prepdefines["CFG"][opt]=0
                             else:
                                 self.prepdefines["CFG"][opt]=value
+                if "options" in opts:
+                    self.has_options = True
             except Exception as e:
                 raise CSyntaxError(0,0,optfile,"Something wrong in config file format "+optfile+" :: "+str(e))
             if module:
@@ -303,7 +306,7 @@ class Compiler():
                     "cfg":opts
                 }
 
-        preg = re.compile("\s*(#+-)(if|else|endif)\s*([a-zA-Z0-9_]*)(?:\s+(>=|<=|==|!=|>|<)\s+([A-Za-z0-9_]+)){0,1}")
+        preg = re.compile("\s*(#+-)(if|else|endif)\s*(!{0,1}[a-zA-Z0-9_]*)(?:\s+(>=|<=|==|!=|>|<)\s+([A-Za-z0-9_]+)){0,1}")
         stack = []
         modprg = fs.readfile(file)
         lines = modprg.split("\n")
@@ -315,6 +318,10 @@ class Compiler():
                 lvl = len(mth.group(1))-2  # level of nesting strating from 0
                 op = mth.group(2)
                 cmacro = mth.group(3)
+                negated=False
+                if cmacro.startswith("!"):
+                    cmacro = cmacro[1:]
+                    negated=True
                 cop = mth.group(4)
                 cval = mth.group(5)
                 vmacro = self.prepdefines.get("CFG",{}).get(cmacro,None)
@@ -327,6 +334,8 @@ class Compiler():
                         raise CSyntaxError(nline,0,file,"Bad preprocessor: missing -if argument")
 
                     if cop:
+                        if negated:
+                            raise CSyntaxError(nline,0,file,"Bad preprocessor: can't use (!) operator with values")
                         #evaluate expr
                         try:
                             cval=int(cval)
@@ -355,7 +364,10 @@ class Compiler():
                             kl = false
                     else:
                         #no expr
-                        kl = vmacro is not None
+                        if not negated:
+                            kl = vmacro is not None
+                        else:
+                            kl = vmacro is None
 
                     kl = all(stack) and kl
                     keepline = kl
@@ -380,6 +392,7 @@ class Compiler():
         modprog = "\n".join(result)
         # if "zerynth2" not in file:
         #     log(modprog)
+        debug(modprog)
         return modprog
 
 

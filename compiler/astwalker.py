@@ -103,9 +103,9 @@ class AstWalker(ast.NodeVisitor):
             self.code.addCode(self.visit(stmt))
         self.code.addCode(OpCode.STOP())
         # print(self.env)
-        self.atendmodule = True        
+        self.atendmodule = True
         self.generateCodeObjs()
-        if self.scopes: 
+        if self.scopes:
             self.code.finalize(self.env)
         self.popCodeObj()
         self.env.popScope()
@@ -221,7 +221,7 @@ class AstWalker(ast.NodeVisitor):
         for i, key in enumerate(node.keys):
             code.addCode(self.visit(key))
             code.addCode(self.visit(node.values[i]))
-            code.addCode(OpCode.MAP_STORE(0))        
+            code.addCode(OpCode.MAP_STORE(0))
         return code
 
     def visit_Set(self, node):
@@ -372,7 +372,7 @@ class AstWalker(ast.NodeVisitor):
         elif node.value == True:
             return ByteCode().addCode(OpCode.CONST_TRUE())
         elif node.value == False:
-            return ByteCode().addCode(OpCode.CONST_FALSE())        
+            return ByteCode().addCode(OpCode.CONST_FALSE())
         else:
             raise CNameConstantError(node.lineno,node.col_offset,self.filename)
 
@@ -382,7 +382,7 @@ class AstWalker(ast.NodeVisitor):
         valuecode = self.visit(node.value)
         self.env.addNameCode(node.attr)
         self.addUsedName(node.attr)
-        
+
         code.addCode(valuecode)
         if isinstance(node.ctx, ast.Load):
             code.addCode(OpCode.LOAD_ATTR(node.attr))
@@ -426,7 +426,7 @@ class AstWalker(ast.NodeVisitor):
             self.env.putName(x,asGlobal=True)
         #print("@GLOBAL",self.env)
         return ByteCode()
-    
+
     def visit_Nonlocal(self,node):
         self.setup_emitter(node)
         for x in node.names:
@@ -470,7 +470,7 @@ class AstWalker(ast.NodeVisitor):
         code.addCode(OpCode.JUMP("lc_beginfor", code.id))
         code.addLabel("lc_endfor")
         code.addCode(OpCode.POP_BLOCK())
-        code.addLabel("lc_exitfor")        
+        code.addLabel("lc_exitfor")
         return code
 
     def visit_ListComp(self,node):
@@ -487,7 +487,7 @@ class AstWalker(ast.NodeVisitor):
         code.addCode(OpCode.BUILD_DICT(0))
         chs = list(node.generators)
         code.addCode(self.gen_comp(chs,len(chs),node))
-        return code            
+        return code
 
 
     def generic_visit(self, node):
@@ -504,14 +504,14 @@ class AstWalker(ast.NodeVisitor):
         codes_copy = self.codes
         self.codes = []
         for num, vv in enumerate(node.targets):
-            if isinstance(vv,ast.Tuple):    
+            if isinstance(vv,ast.Tuple):
                 for nn in vv.elts:
                     self.visit(nn)
             else:
                 self.visit(vv)
         self.code = code_copy
         self.codes = codes_copy
-        
+
         #evaluate left
         valuecode = self.visit(node.value)
         code = ByteCode(node.lineno, self.prgLine(node.lineno))
@@ -520,17 +520,17 @@ class AstWalker(ast.NodeVisitor):
             code.addCode(OpCode.DUP())
 
         for num, vv in enumerate(node.targets):
-            if isinstance(vv,ast.Tuple):    
+            if isinstance(vv,ast.Tuple):
                 code.addCode(OpCode.UNPACK(len(vv.elts)))
                 for nn in vv.elts:
                     code.addCode(self.visit(nn))
             else:
                 code.addCode(self.visit(vv))
         return code
-    
+
     def visit_AugAssign(self, node):
         self.setup_emitter(node)
-        code = ByteCode(node.lineno,self.prgLine(node.lineno))        
+        code = ByteCode(node.lineno,self.prgLine(node.lineno))
 
         code.addLabel("aug_assign")
         node.target.ctx=ast.Load()
@@ -540,7 +540,7 @@ class AstWalker(ast.NodeVisitor):
             attrname = node.target.attr
             code.swapTwo()
         elif isinstance(node.target,ast.Subscript):
-            code.addCode(OpCode.DUP_TWO())            
+            code.addCode(OpCode.DUP_TWO())
             code.swapTwo()
         elif isinstance(node.target,ast.Name):
             pass
@@ -548,9 +548,9 @@ class AstWalker(ast.NodeVisitor):
             raise CUnsupportedFeatureError(node.lineno,node.col_offset,self.filename,node.target.__class__.__name__)
 
         node.target.ctx=ast.Store()
-        
+
         code.addCode(self.visit(node.value))
-        
+
         self.addINPLACE(node.op,code)
         if isinstance(node.target, ast.Name):
             code.addCode(self.visit(node.target))
@@ -573,7 +573,7 @@ class AstWalker(ast.NodeVisitor):
             else:
                 raise CUnsupportedFeatureError(node.lineno,node.col_offset,self.filename,"del not supported for this type!")
         return code
-    
+
     def visit_If(self, node):
         self.setup_emitter(node)
         code = ByteCode(node.lineno, self.prgLine(node.lineno))
@@ -588,13 +588,13 @@ class AstWalker(ast.NodeVisitor):
             elsecode = self.genCodeList(node.orelse)
             code.addCode(elsecode)
             code.addLabel("endif")
-            #code.addCode(OpCode.NOP())            
+            #code.addCode(OpCode.NOP())
         else:
             code.addCode(OpCode.IF_FALSE("endif", code.id))
             bodycode = self.genCodeList(node.body)
             code.addCode(bodycode)
             code.addLabel("endif")
-            #code.addCode(OpCode.NOP())            
+            #code.addCode(OpCode.NOP())
         return code
 
     def visit_For(self, node):
@@ -671,7 +671,7 @@ class AstWalker(ast.NodeVisitor):
         return code
 
     def isBuiltinFun(self, f):
-        for x in f.decorator_list:            
+        for x in f.decorator_list:
             if isinstance(x,ast.Name) and x.id == "builtin":
                 return True
         return False
@@ -719,11 +719,11 @@ class AstWalker(ast.NodeVisitor):
                 self.addUsedName(b.id)
             elif isinstance(b,ast.Attribute):
                 code.addCode(self.visit_Attribute(b))
-        
+
         self.env.putName(node.name)
         self.env.addNameCode(node.name)
         self.addNameType(node.name,"class")
-        
+
         code.addCode(OpCode.LOOKUP_NAME(self.env.getNameCode(node.name),node.name))
 
         # create new CodeObj for class body because i need code.idx...
@@ -779,7 +779,7 @@ class AstWalker(ast.NodeVisitor):
         self.env.putName(node.name)
         self.addNameType(node.name,"function")
 
-        
+
         #ncodeargs = (len(kwargs)<<8)+len(args)
         nfunargs = (kwdeflen << 8) + len(defs)
 
@@ -793,7 +793,7 @@ class AstWalker(ast.NodeVisitor):
             cidx = self.hooks.decodeCNative(ncfprms[0])
             if cidx<0:
                 raise CUnknownNative(node.lineno,node.col_offset,self.filename,ncfprms[0]+" should be somewhere in "+str(ncfprms[1]))
-        
+
         # create new CodeObj for function body because i need code.idx...
         self.pushCodeObj(node.name, ftype, len(args), len(kwargs), vargs != None,ccode=cidx)
 
@@ -857,7 +857,7 @@ class AstWalker(ast.NodeVisitor):
                 self.code.addCode(fcode)
                 self.code.addRet()
                 self.generateCodeObjs()
-                if self.scopes: 
+                if self.scopes:
                     self.code.finalize(self.env)
                 self.code.eblocks = self.getBlocks()
                 self.popCodeObj()
@@ -883,7 +883,7 @@ class AstWalker(ast.NodeVisitor):
                 for nn in kwargs:
                     self.env.putArg(nn.arg)
                     self.code.addKwArgName(nn.arg)
-                if self.scopes: 
+                if self.scopes:
                     self.code.finalize(self.env)
                 self.popCodeObj()
                 self.env.popScope()
@@ -903,10 +903,10 @@ class AstWalker(ast.NodeVisitor):
                 #print("SCOPE AT END GENERATE",self.env.getScope())
                 self.env.getScope().remember()
                 #print("SCOPE AT END GENERATE AFTER REMEMBER",self.env.getScope())
-                if self.scopes: 
+                if self.scopes:
                     self.code.finalize(self.env)
                 self.popCodeObj()
-                self.env.popScope()            
+                self.env.popScope()
 
     def visit_new_exception(self,node):
         self.setup_emitter(node)
@@ -919,7 +919,7 @@ class AstWalker(ast.NodeVisitor):
             excmsg=node.args[2].s
         else:
             raise CWrongSyntax(node.lineno,node.col_offset,self.filename,"new_exception: need at least 2 arguments and at most 3")
-        
+
         if (not isinstance(node.args[0],ast.Name)) or (not isinstance(node.args[1],ast.Name)):
             raise CWrongSyntax(node.lineno,node.col_offset,self.filename,"new_exception: need names as argument 1 and 2")
         if not self.env.hasException(node.args[1].id):
@@ -933,7 +933,7 @@ class AstWalker(ast.NodeVisitor):
         self.env.addException(node.args[0].id,node.args[1].id,excmsg)
         code.addCode(OpCode.BUILD_EXCEPTION(ename))
         return code
-    
+
     def visit_nameof(self,node):
         self.setup_emitter(node)
         code = ByteCode(node.lineno,self.prgLine(node.lineno))
@@ -967,9 +967,9 @@ class AstWalker(ast.NodeVisitor):
         code = ByteCode(node.lineno,self.prgLine(node.lineno))
         nargs = 2
         if fn =="setattr":
-            nargs=3            
+            nargs=3
         if len(node.args)!=nargs:
-            raise CWrongSyntax(node.lineno,node.col_offset,self.filename,fn+" needs "+str(nargs)+" arguments")            
+            raise CWrongSyntax(node.lineno,node.col_offset,self.filename,fn+" needs "+str(nargs)+" arguments")
         if not isinstance(node.args[1],ast.Str):
             raise CWrongSyntax(node.lineno,node.col_offset,self.filename,fn+" needs a string literal as second argument")
         code.addCode(self.visit(node.func))
@@ -1009,7 +1009,7 @@ class AstWalker(ast.NodeVisitor):
         if isinstance(node.func,ast.Name) and node.func.id=="__nameof":
             return self.visit_nameof(node)
 
-        #normal call            
+        #normal call
         code = ByteCode(node.lineno,self.prgLine(node.lineno))
         code.addCode(self.visit(node.func))
 
@@ -1037,7 +1037,7 @@ class AstWalker(ast.NodeVisitor):
     def visit_Try(self,node):
         self.setup_emitter(node)
         code = ByteCode(node.lineno,self.prgLine(node.lineno))
-        
+
         #setup blocks
         if node.finalbody:
             self.pushBlock()
@@ -1045,14 +1045,14 @@ class AstWalker(ast.NodeVisitor):
         self.pushBlock()
         code.addCode(OpCode.SETUP_EXCEPT("handlers",code.id))
         code.addCode(self.genCodeList(node.body))
-                
+
         code.addCode(OpCode.POP_BLOCK())
         self.popBlock()
         if node.orelse:
             code.addCode(OpCode.JUMP("orelse",code.id))
         else:
             code.addCode(OpCode.JUMP("safe_exit",code.id))
-        
+
         code.addLabel("handlers")
         if node.handlers:
             for i,h in enumerate(node.handlers,1):
@@ -1066,7 +1066,7 @@ class AstWalker(ast.NodeVisitor):
                         code.addCode(self.visit_Name(ast.Name(id=h.name,ctx=ast.Store())))
                     code.addCode(OpCode.DUP())
                     code.addCode(OpCode.CHECK_EXCEPTION(ename))
-                    
+
                         #code.addCode(OpCode.STORE(h.name, self.hooks.getBuiltinCoding))
                     if i == len(node.handlers):
                         code.addCode(OpCode.IF_FALSE("unhandled",code.id))
@@ -1081,21 +1081,21 @@ class AstWalker(ast.NodeVisitor):
             code.addLabel("orelse")
             code.addCode(self.genCodeList(node.orelse))
             code.addCode(OpCode.JUMP("safe_exit",code.id))
-        code.addLabel("unhandled")                
+        code.addLabel("unhandled")
         code.addCode(OpCode.POP_EXCEPT())
         code.addCode(OpCode.JUMP("finally",code.id))
         code.addLabel("safe_exit")
         code.addCode(OpCode.CONST_NONE())
         code.addLabel("finally")
-        if node.finalbody:            
+        if node.finalbody:
             code.addCode(OpCode.POP_BLOCK())
             self.popBlock()
-            code.addCode(self.genCodeList(node.finalbody))        
+            code.addCode(self.genCodeList(node.finalbody))
         code.addCode(OpCode.END_FINALLY())
         self.popBlock()
-        
+
         return code
-    
+
     def visit_Raise(self, node):
         self.setup_emitter(node)
         code = ByteCode(node.lineno,self.prgLine(node.lineno))

@@ -123,6 +123,18 @@ def compile(project,target,output,include,define,imports,proj,config):
         binary["project"]=project
         fs.set_json(binary,output)
         info("Compilation Ok")
+        # write a report on available options
+        if compiler.has_options:
+            warning("This project has configurable options!")
+            for module in compiler.file_options:
+                mod = compiler.file_options[module]
+                if "options" in mod.get("cfg",{}):
+                    warning("Options for module",module," :: ")
+                    for key in mod["cfg"]["options"]:
+                        if key in compiler.prepdefines["CFG"]:
+                            warning(key,"enabled")
+                        else:
+                            warning(key,"disabled")
     else:
         if imports:
             if env.human:
