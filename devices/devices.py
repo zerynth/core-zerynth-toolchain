@@ -186,6 +186,16 @@ class Device():
             warning(e)
             return None,"Can't retrieve chip id"
 
+    def do_erase_flash(self,outfn=None):
+        if not self.flash_erasable:
+            return False, "Target does not support erase flash feature!"
+        try:
+            res,out = self.erase(outfn=outfn)
+            return res,out
+        except Exception as e:
+            warning(e)
+            return None,"Can't erase flash"
+
     def reset(self):
         pass
 
