@@ -69,6 +69,9 @@ class Device():
                         return True, ""
                     if wait_verification and line.startswith("** Verified Failed"):
                         return False, "Verification failed"
+                    if "** Programming Finished **" in line:
+                        # reset countdown
+                        now = time.time()
                     if "** Programming Failed **" in line:
                         return False, "Programming failed"
             return False,"timeout"
