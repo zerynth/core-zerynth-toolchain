@@ -58,7 +58,7 @@ class Device():
             pb.send("program "+fs.wpath(fname)+" verify reset "+offs)
             now = time.time()
             wait_verification = False
-            while time.time()-now<self.get("jtag_timeout",10):
+            while time.time()-now<self.get("jtag_timeout",30):
                 lines = pb.read_lines()
                 for line in lines:
                     if line.startswith("wrote 0 "):
