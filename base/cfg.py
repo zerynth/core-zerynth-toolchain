@@ -72,6 +72,13 @@ class Environment():
         except:
             self.versions = {self.var.version:["base"]}
 
+    def load_skin(self,cfgdir):
+        try:
+            js = fs.get_json(fs.path(cfgdir,"skin.json"))
+            self.skin = js["skin"]
+        except:
+            self.skin=""
+
     def save_versions(self):
         try:
             js = fs.set_json(self.versions,fs.path(self.cfgdir,"versions.json"))
@@ -272,6 +279,7 @@ def init_cfg():
     env.load(env.cfg)
     env.load_dbs(env.cfg,"devices.db")
     env.load_versions(env.cfg)
+    env.load_skin(env.cfg)
     #env.load_zpack_db(env.zdb,"packages.db")
     #env.load_ipack_db(env.idb,"packages.db")
     version = env.var.version
@@ -286,7 +294,7 @@ def init_cfg():
     elif testmode==2:
         # CI
         env.git_url   = os.environ.get("ZERYNTH_GIT_URL","https://test.zerynth.com/git")
-        env.backend   = os.environ.get("ZERYNTH_BACKEND_URL","https://test.zerynth.com/v1")
+        env.backend   = os.environ.get("ZERYNTH_BACKEND_URL","http://localhost/v1")
         env.connector = os.environ.get("ZERYNTH_ADM_URL","https://testapi.zerynth.com:444/v1" )
         env.patchurl  = os.environ.get("ZERYNTH_PATCH_URL","https://test.zerynth.com/installer")
         env.packurl   = os.environ.get("ZERYNTH_PACK_URL","https://test.zerynth.com")
@@ -347,8 +355,7 @@ def init_cfg():
         "community":env.backend+"/community",
         "packages":env.packurl+"/packages",
         "ns":env.backend+"/namespaces",
-        "db":env.packurl+"/repository",
-        "repo":env.packurl,
+        "repo":env.packurl if not env.skin else env.packurl+"/"+env.skin,
         "search": env.backend+"/packages/search",
         "profile": env.backend+"/user/profile",
         "installation": env.backend+"/installations",
