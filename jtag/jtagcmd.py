@@ -247,6 +247,9 @@ def start(target,probe,bytecode):
             fs.write_file(dbgbin,dbgpath)
             gdbcommands=gdbcommands+"add-symbol-file "+dbgpath+" "+bf["dbg"]["address"]+"\n"
 
+    if env.platform.startswith("win"):
+        gdbcommands = gdbcommands.replace('\\','\\\\') #for windows -_-
+
     fs.write_file(gdbcommands,gdbfile)
     print(gdbfile)
 

@@ -86,7 +86,7 @@ class Device():
             pb.connect()
             pb.send(self.jtag_chipid_command)
             # pb.send("halt; mdw 0x1fff7a10; mdw 0x1fff7a14; mdw 0x1fff7a18")
-            lines = pb.read_lines(timeout=0.5)
+            lines = pb.read_lines(timeout=1)
             ids = []
             for line in lines:
                 # if ":" not in line or not line.startswith("0x1fff7"):
@@ -112,7 +112,7 @@ class Device():
         cmd+="; ".join(["mdw "+hex(int(addr,16)+i) for i in range(0,32,4)])
         # halt and read 8 words
         pb.send(cmd)
-        lines = pb.read_lines(timeout=0.5)
+        lines = pb.read_lines(timeout=1)
         ids = []
         for line in lines:
             if ":" not in line or not line.startswith("0x"):
