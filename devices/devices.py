@@ -301,7 +301,7 @@ class Device():
 
         mth_list = re.compile('////(.*): (.*)')
         mth_pin = re.compile('\s*/\*\s*([DA0-9]*)\s.*\*/\s*MAKE_PIN\(')
-        mth_cls = re.compile('.*MAKE_PIN_CLASS\(([0-9]*),')
+        mth_cls = re.compile('.*MAKE_PIN_CLASS\(([0-9]*)\s*,')
         mth_header = re.compile('.*\sconst\s*_(.*)class\[\]\s*STORED')
 
         names = {
