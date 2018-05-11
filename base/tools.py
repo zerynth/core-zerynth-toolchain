@@ -19,7 +19,7 @@ class Tools():
             self.tools["stty"]="/bin/stty -F"
         else:
             self.tools["stty"]="/bin/stty -f"
-    
+
         for tooldir in fs.dirs(env.sys):
             if fs.basename(tooldir) in ["browser","newbrowser","newpython"]:
                 # ignore some sys packages
@@ -107,7 +107,7 @@ class Tools():
                 else:
                     vms[vmuid]=vmf
         return vms
-    
+
     def get_vm_by_prefix(self,vmuid):
         #for root,dirnames,files in os.walk(fs.path(env.vms)):
         res = []
@@ -151,7 +151,7 @@ class Tools():
 
     def _get_examples(self,path):
         return self._parse_order(path)
-        
+
     def get_examples(self):
         exs = {}
         exr = []
@@ -196,7 +196,7 @@ class Tools():
             except Exception as e:
                 warning(e)
 
-   
+
     def get_specs(self,specs):
         options = {}
         for spec in specs:

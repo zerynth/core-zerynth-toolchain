@@ -24,7 +24,7 @@ class Device():
         if "cls" in x:
             del x["cls"]
         return x
-        
+
     def __getitem__(self,key):
         return self.__getattr__(key)
 
@@ -47,7 +47,7 @@ class Device():
 
     def virtualize(self,bin):
         pass
-    
+
     def burn_with_probe(self,bin,offset=0):
         #TODO: add support for multifile vms
         offs = offset if isinstance(offset,str) else hex(offset)
@@ -71,6 +71,9 @@ class Device():
                         return False, "Verification failed"
                     if "** Programming Failed **" in line:
                         return False, "Programming failed"
+                    if "** Programming Finished **" in line:
+                        # restart timeout counter
+                        now = time.time()
             return False,"timeout"
         except Exception as e:
             return False, str(e)
@@ -83,7 +86,7 @@ class Device():
             pb.connect()
             pb.send(self.jtag_chipid_command)
             # pb.send("halt; mdw 0x1fff7a10; mdw 0x1fff7a14; mdw 0x1fff7a18")
-            lines = pb.read_lines(timeout=0.5)
+            lines = pb.read_lines(timeout=1)
             ids = []
             for line in lines:
                 # if ":" not in line or not line.startswith("0x1fff7"):
@@ -100,7 +103,7 @@ class Device():
         except Exception as e:
             warning(e)
             return None
-    
+
     def get_vmuid(self):
         pb = Probe()
         pb.connect()
@@ -109,7 +112,7 @@ class Device():
         cmd+="; ".join(["mdw "+hex(int(addr,16)+i) for i in range(0,32,4)])
         # halt and read 8 words
         pb.send(cmd)
-        lines = pb.read_lines(timeout=0.5)
+        lines = pb.read_lines(timeout=1)
         ids = []
         for line in lines:
             if ":" not in line or not line.startswith("0x"):
@@ -174,7 +177,7 @@ class Device():
         try:
             # start temporary probe
             if not skip_probe:
-                tp = start_temporary_probe(self.target,probe) 
+                tp = start_temporary_probe(self.target,probe)
             chipid = self.get_chipid()
             # stop temporary probe
             if not skip_probe:
@@ -238,7 +241,7 @@ class Device():
                 "DAC":0x0800,
                 "LED":0x0900,
                 "BTN":0x0A00
-            } 
+            }
 
             vcls = {
                "SPI":["MOSI","MISO","SCLK"],

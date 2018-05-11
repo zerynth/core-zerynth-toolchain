@@ -137,12 +137,12 @@ def handshake(ch):
     #     symbols.append(int(line.strip("\n"),16))
 
         #self.log("    vmsym  @"+line.strip("\n"))
-        
+
     line=ch.readline()
     debug(line)
     _memstart = int(line.strip("\n"),16)
     info("    membase  @"+line.strip("\n"))
-    
+
     line=ch.readline()
     debug(line)
     _romstart = int(line.strip("\n"),16)
@@ -166,7 +166,7 @@ def uplink(alias,bytecode,loop):
 Uplink
 ======
 
-Once a Zerynth program is compiled to bytecode it can be executed by transferring such bytecode to a running virtual machine on a device. 
+Once a Zerynth program is compiled to bytecode it can be executed by transferring such bytecode to a running virtual machine on a device.
 This operation is called "uplinking" in the ZTC terminology.
 
 Indeed Zerynth virtual machines act as a bootloader waiting a small amount of time after device reset to check if new bytecode is incoming.
@@ -188,7 +188,7 @@ The uplinking process may require user interaction for manual resetting the devi
 
 Each of the previous phases may fail in different ways and the cause can be determined by inspecting error messages.
 
-The :command:`uplink` may the additional :option:`--loop times` option that specifies the number of retries during the discovery phase (each retry lasts one second). 
+The :command:`uplink` may the additional :option:`--loop times` option that specifies the number of retries during the discovery phase (each retry lasts one second).
 
 
 
@@ -215,7 +215,7 @@ The command: ::
     ztc uplink_raw target bytecode --spec port:the_port
 
 performs an uplink on the device of type :samp:`target` using the bytecode file at :samp:`bytecode` using the serial prot :samp:`port`.
-    
+
     """
     options = {}
     for spec in __specs:
@@ -223,7 +223,7 @@ performs an uplink on the device of type :samp:`target` using the bytecode file 
         if pc<0:
             fatal("invalid spec format. Give key:value")
         options[spec[:pc]]=spec[pc+1:]
-    dev = get_device_by_target(target,options) 
+    dev = get_device_by_target(target,options)
     _uplink_dev(dev,bytecode,loop)
 
 @cli.command(help="Uplink bytecode to a device using a probe.")
@@ -246,7 +246,7 @@ The command: ::
 
 perform an uplink on the device type :samp:`target` using probe :samp:`probe` to transfer the :samp:`linked_bytecode` file to the running VM.
 It is possible to change the address where the bytecode will be flashed by specifying the :option:`--address` option followed by the hexadecimal representation of the address (useful for OTA VMs scenarios)
-    
+
     """
     dev = get_device_by_target(target,{},skip_reset=True)
     if not dev.jtag_capable:
@@ -332,7 +332,7 @@ def _uplink_dev(dev,bytecode,loop):
     #logger.info("Sending Bytecode: %i bytes (available %i)",totsize,_flashspace)
     #self.log("Sending Bytecode: "+str(totsize)+" bytes (available "+str(_flashspace)+")")
     info("Sending Bytecode:",totsize,"bytes ( available",_flashspace,")")
-    
+
     wrt = 0
     ll = len(thebin)
     nblock = 0
@@ -386,7 +386,8 @@ def _uplink_dev(dev,bytecode,loop):
 @click.option("--bc","bc_ota",default=0, type=int,help="Select OTA VM Bytecode index")
 @click.option("--file",default="", type=str,help="Save binary to specified file")
 @click.option("--bin",default=False,flag_value=True,help="Save in binary format")
-def link(vmuid,bytecode,include_vm,vm_ota,bc_ota,file,otavm,bin):
+@click.option("--debug_bytecode",default=False,flag_value=True,help="Save debug info in bytecode")
+def link(vmuid,bytecode,include_vm,vm_ota,bc_ota,file,otavm,bin,debug_bytecode):
     """
 .. _ztc-cmd-link:
 
@@ -418,23 +419,23 @@ Generating firmware for FOTA updates can be tricky. The following information is
     * The unique identifier of a new FOTA enabled VM, :samp:`vmuid_new`
     * The current slot the VM is running on, :samp:`vmslot`. Can be retrieved with :ref:`fota library <stdlib.fota>`
     * The current slot the bytecode is running on, :samp:`bcslot`, Can be retrieved with :ref:`fota library <stdlib.fota>`
-      
+
 For example, assuming a project has been compiled to the bytecode file :samp:`project.vbo` and :samp:`vmslot=0` and :samp:`bcslot=0`, the following commands can be given: ::
 
 
     # generate bytecode capable of running on slot 1 with VM in slot 0
     # the resulting file can be used for a FOTA update of the bytecode
     ztc link vmuid project.vbo --bc 1 --file project.vbe
-    
+
     # generate bytecode capable of running on slot 1 with VM in slot 1
     # the resulting file CAN'T be used for a FOTA update because the running VM is in slot 0
     # and project.vbe does not contain the new VM
-    ztc link vmuid_new project.vbo --bc 1 --vm 1 --file project.vbe 
+    ztc link vmuid_new project.vbo --bc 1 --vm 1 --file project.vbe
 
     # generate bytecode capable of running on slot 1 with VM in slot 1
     # the resulting file can be used for a FOTA update of the bytecode and VM
     # because project.vbe contains the new VM
-    ztc link vmuid_new project.vbo --bc 1 --vm 1 --otavm --file project.vbe 
+    ztc link vmuid_new project.vbo --bc 1 --vm 1 --otavm --file project.vbe
 
 
 .. note:: It is not possible to generate a FOTA update of the VM only!
@@ -466,9 +467,17 @@ For example, assuming a project has been compiled to the bytecode file :samp:`pr
     debug("ROMSTART: ",hex(_romstart))
     relocator = Relocator(bf,vm,Var({"relocator":vm["relocator"],"cc":vm["cc"],"rodata_in_ram":vm.get("rodata_in_ram",False)}))
     addresses = []#[int(symbols[x],16) for x in relocator.vmsym]
-    thebin = relocator.relocate(addresses,_memstart,_romstart)
+    dbginfo = []
+    thebin = relocator.relocate(addresses,_memstart,_romstart,dbginfo)
     bcbin = thebin
 
+    if debug_bytecode:
+        if dbginfo:
+            dbgbin = fs.readfile(dbginfo[0],"b")
+            bf["dbg"]={}
+            bf["dbg"]["address"] = hex(dbginfo[1])
+            bf["dbg"]["info"] = base64.b64encode(dbgbin).decode("utf-8")
+            fs.set_json(bf,bytecode)
 
     if include_vm:
         if vm_ota or bc_ota:

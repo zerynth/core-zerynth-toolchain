@@ -98,6 +98,8 @@ The :command:`create` can also accept the following options:
             fs.write_file("# "+title+"\n# Created at "+pinfo["created_at"]+"\n\n",fs.path(path,"main.py"))
             info("Writing",fs.path(path,"readme.md"))
             fs.write_file(title+"\n"+("="*len(title))+"\n\n"+description,fs.path(path,"readme.md"))
+            info("Writing",fs.path(path,"project.yml"))
+            fs.copyfile(fs.path(fs.dirname(__file__),"project.yml"),fs.path(path,"project.yml"))
         # REMOTE API CALL
         try:
             res = zpost(url=env.api.project, data=pinfo)
@@ -516,6 +518,44 @@ By default the documentation is generated in a temporary directory, but it can a
             webbrowser.open("file://"+fs.path(htmlpath,"index.html"))
     else:
         error("Can't build docs!")
+
+
+@project.command(help="Configure project")
+@click.argument("project")
+@click.option("-D","toadd",default=[],multiple=True,type=(str,str))
+@click.option("-X","toremove",default=[],multiple=True)
+def config(project,toadd,toremove):
+    """
+.. _ztc-cmd-project-config:
+
+Configure
+---------
+
+The command: ::
+
+    ztc project config path -D ZERYNTH_SSL 1 -X ZERYNTH_SSL_ECDSA
+
+configures some project variables that turn on and off advanced features for the project at :samp:`path`. In particular the :option:`-D` option adds a new variable with its corresponding value to the project configuration, whereas the :option:`-X` option remove a variable. Both options can be repeated multiple times.
+
+    """
+    cfgfile = fs.path(project,"project.yml")
+    cfg = fs.get_yaml(cfgfile,failsafe=True)
+    if not cfg:
+        cfg["config"]={}
+
+    for var,value in toadd:
+        try:
+            val = int(value)
+        except:
+            try:
+                val = float(value)
+            except:
+                val = value
+        cfg["config"][var]=val
+    for var in toremove:
+        cfg["config"].pop(var,None)
+
+    fs.set_yaml(cfg,cfgfile,flow_style=False)
 
 
 
