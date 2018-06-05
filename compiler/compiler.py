@@ -239,7 +239,14 @@ class Compiler():
             if opt.startswith("-I#"):
                 self.cincpaths.add(os.path.realpath(fs.path(env.stdlib,opt[3:])))
             elif opt.startswith("-I"):
-                self.cincpaths.add(os.path.realpath(opt[2:].replace("...",fbase)))
+                # -I.../mylibh can be used instead of -Imylibh to make compilation work when not called from
+                # project folder so that ... can be replaced with project absolute path
+                # to make it work also when called from project folder (where fbase is ''),
+                # leading slash shall be stripped otherwise /mylibh would be obtained
+                incpath = os.path.realpath(opt[2:].replace("...",fbase))
+                if not fbase and incpath.startswith('/'):
+                    incpath = incpath[1:]
+                self.cincpaths.add(incpath)
         if isinstance(natives,str):
             if natives not in self.cnatives:
                 self.cnatives[natives]=len(self.cnatives)
@@ -305,6 +312,10 @@ class Compiler():
                     "yml":optfile,
                     "cfg":opts
                 }
+
+        # add CDEFS in board port.def to CFG options
+        for opt in self.prepdefines["CDEFS"]:
+            self.prepdefines["CFG"][opt]=1
 
         preg = re.compile("\s*(#+-)(if|else|endif)\s*(!{0,1}[a-zA-Z0-9_]*)(?:\s+(>=|<=|==|!=|>|<)\s+([A-Za-z0-9_]+)){0,1}")
         stack = []
