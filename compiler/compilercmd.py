@@ -45,6 +45,9 @@ import click
 @click.option("--imports","-m",flag_value=True,default=False,help="only generate the list of imported modules")
 @click.option("--config","-cfg",flag_value=True,default=False,help="only generate the configuration table")
 def compile(project,target,output,include,define,imports,proj,config):
+    _zcompile(project,target,output,include,define,imports,proj,config)
+
+def _zcompile(project,target,output,include,define,imports,proj,config):
     if project.endswith(".py"):
         mainfile=project
         project=fs.dirname(project)

@@ -105,6 +105,7 @@ import misc
 import things
 import aws
 import jtag
+import ateccx08a
 
 if __name__=="__main__":
     init_all()

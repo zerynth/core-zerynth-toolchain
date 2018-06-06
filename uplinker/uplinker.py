@@ -9,7 +9,7 @@ import struct
 import base64
 from jtag import *
 
-def get_device(alias,loop):
+def get_device(alias,loop,perform_reset=True):
     _dsc = devices.Discover()
     uids = []
     adev = _dsc.search_for_device(alias)
@@ -35,16 +35,19 @@ def get_device(alias,loop):
     else:
         fatal("Error!",uid)
     # got dev object!
-    if dev.uplink_reset is True:
-        info("Please reset the device!")
-        sleep(dev.reset_time/1000)
-        info("Searching for device",uid,"again")
-        # wait for dev to come back, port/address may change -_-
-        uids,devs = _dsc.wait_for_uid(uid)
-        if len(uids)!=1:
-            fatal("Can't find device",uid)
-    elif dev.uplink_reset == "reset":
-        dev.reset()
+
+    if perform_reset:
+
+        if dev.uplink_reset is True:
+            info("Please reset the device!")
+            sleep(dev.reset_time/1000)
+            info("Searching for device",uid,"again")
+            # wait for dev to come back, port/address may change -_-
+            uids,devs = _dsc.wait_for_uid(uid)
+            if len(uids)!=1:
+                fatal("Can't find device",uid)
+        elif dev.uplink_reset == "reset":
+            dev.reset()
 
     dev = devs[hh]
     return dev
