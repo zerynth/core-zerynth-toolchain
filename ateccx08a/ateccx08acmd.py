@@ -2,7 +2,7 @@
 # @Author: Lorenzo
 # @Date:   2018-06-05 17:31:01
 # @Last Modified by:   Lorenzo
-# @Last Modified time: 2018-06-06 18:32:47
+# @Last Modified time: 2018-06-07 17:50:44
 
 """
 .. _ztc-cmd-ateccx08a:
@@ -37,8 +37,6 @@ def __uplink_config_firmware(alias, i2caddr, i2cdrv, cryptotype):
     configurator_firm = fs.path(fs.dirname(__file__), "firmware", "configurator")
     tmpdir = fs.get_tempdir()
 
-    info("> tmpdir:", tmpdir)
-
     fs.copytree(configurator_firm, tmpdir)
 
     configurator_conf_path = fs.path(tmpdir, "config.json")
@@ -66,7 +64,7 @@ def _serial_channel(alias):
     conn.set_serial(dev.port,**dev.connection)
     ch = Channel(conn)
     try:
-        ch.open(timeout=0.5)
+        ch.open(timeout=2)
     except:
         fatal("Can't open serial:",dev.port)
     return ch
@@ -75,22 +73,31 @@ def _serial_channel(alias):
 @click.argument("alias")
 def __read_config(alias):
     cmd_ch = _serial_channel(alias)
-    commander = SerialCommander(cmd_ch, info)
+    commander = SerialCommander(cmd_ch, info, fatal)
     commander.read_config()
 
 @ateccx08a.command("get-public", help="retrieve public key associated to private in chosen slot")
 @click.argument("alias")
 @click.argument("private_slot")
 @click.option("--format", "pub_format", default="pem", type=click.Choice(["pem","hex"]))
-def __get_public(alias, private_slot, pub_format):
+@click.option("--output", "-o", default='', type=click.Path())
+def __get_public(alias, private_slot, pub_format, output):
     cmd_ch = _serial_channel(alias)
-    commander = SerialCommander(cmd_ch, info)
-    public_key = commander.get_public(private_slot)
+    commander = SerialCommander(cmd_ch, info, fatal)
+    public_key = commander.get_public(int(private_slot))
 
     if pub_format == "pem":
-        info("Public key:\n", public_converter.xytopem(public_key), sep="", end="")
+        formatted_key = public_converter.xytopem(public_key)
+        info(" Public key:\n", formatted_key, sep="", end="")
     elif pub_format == "hex":
-        info("Public key:\n", public_converter.xytohex(public_key), sep="")
+        formatted_key = public_converter.xytohex(public_key)
+        info(" Public key:\n", formatted_key, sep="")
+
+    if output:
+        if fs.is_dir(output):
+            output=fs.path(output,"public." + pub_format)
+        fs.write_file(formatted_key, output)
+
 
 def _do_lock(commander, config_crc):
     commander.lock_config_cmd(config_crc)
@@ -107,12 +114,11 @@ def _do_write_config(commander):
     while True:
         if current_byte < 16:
             config_parser.config_put_special(commander.getspecial_cmd())
-            info('Desired config (special zone retrieved from device)')
-            config_parser.print_desired_config(info)
+            des_config = config_parser.print_desired_config()
+            info(' Desired config (special zone retrieved from device)\n', des_config, end='', sep='')
             config_crc = crc16(config_parser.config_zone_bin)
             # crc is returned LSb first
             info('crc16:', '%02X-%02X' % (config_crc[0], config_crc[1]))
-            info()
             current_byte += 16
         if current_byte < 84 or (current_byte >= 88 and current_byte < 128):
             commander.write_cmd(current_byte, config_parser.config_zone_bin[current_byte:current_byte+config_parser.word_size])
@@ -134,8 +140,7 @@ def _do_write_config(commander):
 @click.option("--lock", default=False, type=bool)
 def __write_config(alias, configuration_file, lock):
     cmd_ch = _serial_channel(alias)
-    cmd_ch = _serial_channel(alias)
-    commander = SerialCommander(cmd_ch, info)
+    commander = SerialCommander(cmd_ch, info, fatal)
 
     desired_config = fs.get_yaml(configuration_file)
     for cmd, value in desired_config.items():
@@ -150,8 +155,13 @@ def __write_config(alias, configuration_file, lock):
 @click.argument("alias")
 @click.argument("private_slot")
 @click.argument("subject")
-def __get_csr(alias, private_slot, subject):
+@click.option("--output", "-o", default='', type=click.Path())
+def __get_csr(alias, private_slot, subject, output):
     cmd_ch = _serial_channel(alias)
-    commander = SerialCommander(cmd_ch, info)
-    commander.get_csr(private_slot, subject)
+    commander = SerialCommander(cmd_ch, info, fatal)
+    csr = commander.get_csr(int(private_slot), subject)
 
+    if output:
+        if fs.is_dir(output):
+            output=fs.path(output,"atecc.csr")
+        fs.write_file(csr, output)

@@ -2,7 +2,7 @@
 # @Author: Lorenzo
 # @Date:   2018-06-06 16:08:32
 # @Last Modified by:   Lorenzo
-# @Last Modified time: 2018-06-06 17:39:31
+# @Last Modified time: 2018-06-07 16:45:31
 
 from .utils import *
 
@@ -139,6 +139,9 @@ def toconfig(offset, binary):
     else:
         config_zone_bin[offset] = binary
 
-def print_desired_config(out):
+def print_desired_config():
+    des_config = ''
     for i in range((config_zone_size+1)//word_size):
-        out(word_fmt(i*word_size, config_zone_bin[i*word_size:(i+1)*word_size]))
+        des_config += word_fmt(i*word_size, config_zone_bin[i*word_size:(i+1)*word_size]) + '\n'
+    return des_config
+
