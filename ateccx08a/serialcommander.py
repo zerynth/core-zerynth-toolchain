@@ -2,12 +2,12 @@
 # @Author: Lorenzo
 # @Date:   2018-06-06 17:22:52
 # @Last Modified by:   Lorenzo
-# @Last Modified time: 2018-06-07 16:43:10
+# @Last Modified time: 2018-06-08 17:45:33
 
 from .utils import *
 
 raw_cmds = [
-    'WCF', 'EXT', 'LCF', 'LDT', 'GSP', 'RCF', 'GPB', 'CSR'
+    'WCF', 'EXT', 'LCF', 'LDT', 'GSP', 'RCF', 'GPB', 'CSR', 'GPV'
 ]
 
 WRITECFG_CMD   = 0
@@ -18,6 +18,7 @@ GETSPECIAL_CMD = 4
 READCFG_CMD    = 5
 GETPUBLIC_CMD  = 6
 GETCSR_CMD     = 7
+GENPRIVATE_CMD = 8
 
 ASCII_RESP_CODE = 1
 BIN_RESP_CODE   = 2
@@ -58,6 +59,10 @@ class SerialCommander:
 
     def get_public(self, private_slot):
         status, msg = self._exe_cmd(GETPUBLIC_CMD, bytes([private_slot]))
+        return msg
+
+    def generate_private(self, private_slot):
+        status, msg = self._exe_cmd(GENPRIVATE_CMD, bytes([private_slot]))
         return msg
 
     def getspecial_cmd(self):

@@ -37,13 +37,14 @@ GETSPECIAL_CMD = 4
 READCFG_CMD    = 5
 GETPUBLIC_CMD  = 6
 GETCSR_CMD     = 7
+GENPRIVATE_CMD = 8
 
 raw_cmds = [
-    'WCF', 'EXT', 'LCF', 'LDT', 'GSP', 'RCF', 'GPB', 'CSR'
+    'WCF', 'EXT', 'LCF', 'LDT', 'GSP', 'RCF', 'GPB', 'CSR', 'GPV'
 ]
 
 has_args = [
-    True, True, True, False, False, False, True, True
+    True, True, True, False, False, False, True, True, True
 ]
 
 ASCII_RESP_CODE = 1
@@ -93,6 +94,10 @@ class CommandHandler:
 
     def get_public(self, slot):
         self.cmd_resp.msg  = crypto_element.gen_public_key_cmd(bytes([slot & 0xff, slot >> 8]), False, bytes(3))
+        self.cmd_resp.type = BIN_RESP_CODE
+
+    def generate_private(self, slot):
+        self.cmd_resp.msg  = crypto_element.gen_private_key_cmd(bytes([slot & 0xff, slot >> 8]), False, bytes(3))
         self.cmd_resp.type = BIN_RESP_CODE
 
     def out_config(self, channel):
@@ -180,6 +185,8 @@ while True:
             command_handler.get_public(args[0])
         elif raw_cmd_code == GETCSR_CMD:
             command_handler.get_csr(args[0], args[1:])
+        elif raw_cmd_code == GENPRIVATE_CMD:
+            command_handler.generate_private(args[0])
 
         if cmd_resp.type is not None:
             cmd_ch.write(bytes([cmd_resp.type])) # write a single byte to notify resp mode

@@ -2,7 +2,7 @@
 # @Author: Lorenzo
 # @Date:   2018-06-05 17:31:01
 # @Last Modified by:   Lorenzo
-# @Last Modified time: 2018-06-07 17:50:44
+# @Last Modified time: 2018-06-08 17:52:32
 
 """
 .. _ztc-cmd-ateccx08a:
@@ -97,6 +97,27 @@ def __get_public(alias, private_slot, pub_format, output):
         if fs.is_dir(output):
             output=fs.path(output,"public." + pub_format)
         fs.write_file(formatted_key, output)
+
+@ateccx08a.command("gen-private", help="generate private key in chosen slot")
+@click.argument("alias")
+@click.argument("private_slot")
+@click.option("--format", "pub_format", default="pem", type=click.Choice(["pem","hex"]))
+def __gen_private(alias, private_slot, pub_format):
+    cmd_ch = _serial_channel(alias)
+    commander = SerialCommander(cmd_ch, info, fatal)
+    public_key = commander.generate_private(int(private_slot))
+
+    if pub_format == "pem":
+        formatted_key = public_converter.xytopem(public_key)
+        info(" Public key:\n", formatted_key, sep="", end="")
+    elif pub_format == "hex":
+        formatted_key = public_converter.xytohex(public_key)
+        info(" Public key:\n", formatted_key, sep="")
+
+    # if output:
+    #     if fs.is_dir(output):
+    #         output=fs.path(output,"public." + pub_format)
+    #     fs.write_file(formatted_key, output)
 
 
 def _do_lock(commander, config_crc):
