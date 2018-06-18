@@ -58,7 +58,7 @@ class Device():
             pb.send("program "+fs.wpath(fname)+" verify reset "+offs)
             now = time.time()
             wait_verification = False
-            while time.time()-now<self.get("jtag_timeout",10):
+            while time.time()-now<self.get("jtag_timeout",30):
                 lines = pb.read_lines()
                 for line in lines:
                     if line.startswith("wrote 0 "):
@@ -74,6 +74,9 @@ class Device():
                         now = time.time()
                     if "** Programming Failed **" in line:
                         return False, "Programming failed"
+                    if "** Programming Finished **" in line:
+                        # restart timeout counter
+                        now = time.time()
             return False,"timeout"
         except Exception as e:
             return False, str(e)
@@ -86,7 +89,7 @@ class Device():
             pb.connect()
             pb.send(self.jtag_chipid_command)
             # pb.send("halt; mdw 0x1fff7a10; mdw 0x1fff7a14; mdw 0x1fff7a18")
-            lines = pb.read_lines(timeout=0.5)
+            lines = pb.read_lines(timeout=1)
             ids = []
             for line in lines:
                 # if ":" not in line or not line.startswith("0x1fff7"):
@@ -112,7 +115,7 @@ class Device():
         cmd+="; ".join(["mdw "+hex(int(addr,16)+i) for i in range(0,32,4)])
         # halt and read 8 words
         pb.send(cmd)
-        lines = pb.read_lines(timeout=0.5)
+        lines = pb.read_lines(timeout=1)
         ids = []
         for line in lines:
             if ":" not in line or not line.startswith("0x"):
@@ -301,7 +304,7 @@ class Device():
 
         mth_list = re.compile('////(.*): (.*)')
         mth_pin = re.compile('\s*/\*\s*([DA0-9]*)\s.*\*/\s*MAKE_PIN\(')
-        mth_cls = re.compile('.*MAKE_PIN_CLASS\(([0-9]*),')
+        mth_cls = re.compile('.*MAKE_PIN_CLASS\(([0-9]*)\s*,')
         mth_header = re.compile('.*\sconst\s*_(.*)class\[\]\s*STORED')
 
         names = {

@@ -541,6 +541,8 @@ class Compiler():
 
         self.cfiles.update(self.prepcfiles)
         self.cfiles = fs.unique_paths(self.cfiles)
+        ofiles = None
+
         if self.cfiles:
 
             info("#"*10,"STEP",self.phase,"- C code compilation")

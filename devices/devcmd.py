@@ -312,6 +312,7 @@ The option :option:`--skip_burn` avoid flashing the device with the registering 
     res,chipid = _extract_chipid_from_serial(tgt)
     if not res:
         fatal(chipid)
+    info("Chip id retrieved:",chipid)
     dinfo = {
         "name": tgt.custom_name or tgt.name,
         "on_chip_id": chipid,
