@@ -72,9 +72,9 @@ class Environment():
         except:
             self.versions = {self.var.version:["base"]}
 
-    def load_skin(self,cfgdir):
+    def load_skin(self):
         try:
-            js = fs.get_json(fs.path(cfgdir,"skin.json"))
+            js = fs.get_json(fs.path(fs.dirname(__file__),"skin.json"))
             self.skin = js["skin"]
         except:
             self.skin=""
@@ -242,6 +242,7 @@ env=Environment()
 
 def init_cfg():
     # platform
+    env.load_skin()
     env.nbits = "64" if sys.maxsize > 2**32 else "32"
     if sys.platform.startswith("win"):
         env.platform="windows"+env.nbits
@@ -264,6 +265,8 @@ def init_cfg():
         zdir = "zerynth2" if env.is_windows() else ".zerynth2"
     elif testmode == 1:
         zdir = "zerynth2_local" if env.is_windows() else ".zerynth2_local"
+    if env.skin:
+        zdir = zdir+"_"+env.skin
 
     env.home      = fs.path(os.environ.get("ZERYNTH_HOME",fs.homedir()),zdir)
     env.cfg       = fs.path(env.home,"cfg")
@@ -279,7 +282,6 @@ def init_cfg():
     env.load(env.cfg)
     env.load_dbs(env.cfg,"devices.db")
     env.load_versions(env.cfg)
-    env.load_skin(env.cfg)
     #env.load_zpack_db(env.zdb,"packages.db")
     #env.load_ipack_db(env.idb,"packages.db")
     version = env.var.version
