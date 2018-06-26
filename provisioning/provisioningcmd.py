@@ -2,7 +2,7 @@
 # @Author: Lorenzo
 # @Date:   2018-06-05 17:31:01
 # @Last Modified by:   Lorenzo
-# @Last Modified time: 2018-06-26 17:22:49
+# @Last Modified time: 2018-06-26 17:37:29
 
 """
 .. _ztc-cmd-provisioning:
@@ -155,7 +155,7 @@ Retrieves the public key derived from private key stored in :samp:`private_slot`
 Available command options are:
 
 * :option:`--format pubkey_format`, to specify the output format of the public key: ``pem`` or ``hex``. ``pem`` by default;
-* :option:`--output path`, to specify a path to store retrieved public key. If a folder is given, the key is saved in a ``public.pubkey_format`` file.
+* :option:`--output path`, to specify a path to store retrieved public key. If a folder is given, the key is saved to ``public.pubkey_format`` file.
 
     """
     cmd_ch = _serial_channel(alias)
@@ -250,6 +250,10 @@ The command: ::
 
 Writes configuration specified in :samp:`configuration_file` YAML file to the crypto element plugged to device with alias :samp:`device_alias`.
 
+Available command options are:
+
+* :option:`--lock lock_value`, if True locks written configuration;
+
 .. note:: an Example YAML configuration file can be copied to :samp:`configuration_file` path if ``get`` is passed as :samp:`device_alias`.
 
     """
@@ -291,6 +295,9 @@ The command: ::
 
 Retrieves a Certificate Signing Request built on subject :samp:`subject` and signed with private key store in slot :samp:`private_slot` of the crypto element plugged to device with alias :samp:`alias`.
 
+Available command options are:
+
+* :option:`--output path`, to specify a path to store retrieved CSR. If a folder is given, the CSR is saved to ``atecc.csr`` file.
     """
     cmd_ch = _serial_channel(alias)
     commander = SerialCommander(cmd_ch, info, fatal)
