@@ -13,6 +13,7 @@
 		["Packages","packages/packagecmd.py"],
 		["Connected Devices","things/thingcmd.py"],
 		["AWS","aws/awscmd.py"],
-		["Miscellanea","misc/misccmd.py"]
+		["Miscellanea","misc/misccmd.py"],
+        	["Provisioning","provisioning/provisioningcmd.py"]
 	]
 }
