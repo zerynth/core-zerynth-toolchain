@@ -2,7 +2,7 @@
 # @Author: Lorenzo
 # @Date:   2018-06-05 17:31:01
 # @Last Modified by:   Lorenzo
-# @Last Modified time: 2018-06-26 17:37:29
+# @Last Modified time: 2018-06-27 15:47:07
 
 """
 .. _ztc-cmd-provisioning:
@@ -70,7 +70,7 @@ The implementation of the Configurator is dependent on target cryptoelement, but
 Available command options are:
 
 * :option:`--cryptofamily family`, to specify the family of the crypto element to provision (at the moment ``ateccx08a`` is the only supported  option). Default :samp:`family` is ``ateccx08a``;
-* :option:`--cryptodevice device`, to specify the device, from those available in chosen family, to provision. For ``ateccx08a`` family, devices ``atecc508a`` and ``atecc608a`` are supported and can be chosen with a :samp:`device` value of ``5`` or ``6`` respectively. Default :samp:`device` value depends on chosen family: ``5`` for ``ateccx08a`` family;
+* :option:`--cryptodevice device`, to specify the device, from those available in chosen family, to provision. For ``ateccx08a`` family, devices ``atecc508a`` is supported and can be chosen with a :samp:`device` value of ``5`` which is also the default for ``ateccx08a`` family;
 * :option:`--i2caddr address`, to specify the i2c address of the crypto element. Needed only if the crypto element uses an i2c interface. Default :samp:`address` value depends on chosen family: ``0x60`` for ``ateccx08a`` family;
 * :option:`--i2cdrv drv`, to specify the device i2c driver the crypto element is plugged to. Needed only if the crypto element uses an i2c interface. :samp:`drv` can be ``I2C0``, ``I2C1``, ... . Default :samp:`drv` value is ``I2C0``.
 
@@ -294,6 +294,7 @@ The command: ::
     ztc provisioning get-csr device_alias private_slot subject
 
 Retrieves a Certificate Signing Request built on subject :samp:`subject` and signed with private key store in slot :samp:`private_slot` of the crypto element plugged to device with alias :samp:`alias`.
+:samp:`subject` is a string containing a comma-separated list of OID types and values (e.g. ``"C=IT,O=ZER,CN=device 1"``).
 
 Available command options are:
 
