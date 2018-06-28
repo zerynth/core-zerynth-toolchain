@@ -32,11 +32,12 @@ It takes the following options (one at a time):
 
     
 Clean
-----_
+-----
 
 The :command:`clean` command behave differently based on the following options:
 
-    * :option:`--tmp`, if given clears the temporary folder.
-    * :option:`--inst version`, can be repeated multiple times and removes a previous installed :samp:`version` of Zerynth
+* :option:`--tmp` if given clears the temporary folder.
+* :option:`--inst version` can be repeated multiple times and removes a previous installed :samp:`version` of Zerynth
+* :option:`--db` if given forgets all devices (clears all devices from database).
 
     

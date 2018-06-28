@@ -6,7 +6,7 @@ Compiler
 The ZTC compiler takes a project as input and produces an executable bytecode file ready to be :ref:`uplinked <ztc-cmd-uplink>` on a :ref:`virtualized <ztc-cmd-device-virtualize>`.
 
 The command: ::
-    
+
         ztc compile project target
 
 compiles the source files found at :samp:`project` (the project path) for a device with target :samp:`target`.

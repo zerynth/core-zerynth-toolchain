@@ -61,6 +61,7 @@ class Relocator():
                     if mth:
                         undefs.append(mth.group(1).replace("`","").replace("'",""))
                 warning("There are",undf,"missing symbols! This VM does not support the requested features!",undefs)
+                fatal("Check if the device is virtualized with the last available varsion-patch of the virtual machine")
             else:
                 fatal("Relocation error",output)
         sym = cc.symbol_table(lfile)
