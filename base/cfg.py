@@ -296,7 +296,7 @@ def init_cfg():
     elif testmode==2:
         # CI
         env.git_url   = os.environ.get("ZERYNTH_GIT_URL","https://test.zerynth.com/git")
-        env.backend   = os.environ.get("ZERYNTH_BACKEND_URL","http://localhost/v1")
+        env.backend   = os.environ.get("ZERYNTH_BACKEND_URL","https://test.zerynth.com/v1")
         env.connector = os.environ.get("ZERYNTH_ADM_URL","https://testapi.zerynth.com:444/v1" )
         env.patchurl  = os.environ.get("ZERYNTH_PATCH_URL","https://test.zerynth.com/installer")
         env.packurl   = os.environ.get("ZERYNTH_PACK_URL","https://test.zerynth.com")

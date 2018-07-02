@@ -10,5 +10,6 @@
     "repo": "official",
     "title": "Zerynth Toolchain",
     "version": "r2.1.1",
+    "skinnable": true,
     "whatsnew": ""
 }
