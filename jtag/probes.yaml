@@ -6,6 +6,9 @@
 atmel_ice:
     script: cmsis-dap.cfg
     name: Atmel ICE
+atmel_edbg:
+    script: cmsis-dap.cfg
+    name: Atmel EDBG
 jlink:
     script: jlink.cfg
     name: SEGGER JLink

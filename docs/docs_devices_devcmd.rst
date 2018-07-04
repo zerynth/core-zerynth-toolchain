@@ -249,6 +249,20 @@ Different versions of the ZTC may have a different set of supported devices. To 
 and a table of :samp:`target` names and paths to device support packages will be printed.
 
     
+.. _ztc-cmd-device-erase-flash:
+
+Erase of the device flash memory
+--------------------------------
+
+Erase completely the flash memory of the device (all data stored will be deleted).
+
+This operation is performed by issuing the command: ::
+
+    ztc device erase_flash alias
+
+where :samp:`alias` is the device alias previously set (or just the initial part of it).
+
+    
 .. _ztc-cmd-device-db-list:
 
 Configured Devices

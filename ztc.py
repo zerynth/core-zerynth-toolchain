@@ -105,6 +105,7 @@ import misc
 import things
 import aws
 import jtag
+import provisioning
 
 if __name__=="__main__":
     init_all()
