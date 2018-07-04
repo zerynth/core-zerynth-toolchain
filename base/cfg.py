@@ -310,6 +310,9 @@ def init_cfg():
         env.packurl= os.environ.get("ZERYNTH_PACK_URL","https://backend.zerynth.com")
         github_app = "99fdc1e39d8ce3051ce6"
 
+    if env.skin:
+        env.packurl=env.packurl+"/"+env.skin
+
     # dist directories
     env.dist      = fs.path(env.home,"dist",version)
     env.ztc       = fs.path(env.home,"dist",version,"ztc")
@@ -357,7 +360,7 @@ def init_cfg():
         "community":env.backend+"/community",
         "packages":env.packurl+"/packages",
         "ns":env.backend+"/namespaces",
-        "repo":env.packurl if not env.skin else env.packurl+"/"+env.skin,
+        "repo":env.packurl,
         "search": env.backend+"/packages/search",
         "profile": env.backend+"/user/profile",
         "installation": env.backend+"/installations",

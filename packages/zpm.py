@@ -125,8 +125,8 @@ def install_core_patch(package,version,distpath):
     if package.fullname == "core.zerynth.studio":
         #change package.json for nw.js
         packjson = fs.get_json(fs.path(dst,"package.nw"))
-        packjson["version"] = env.version
-        packjson["user-agent"] ="ide/%ver/"+platform
+        packjson["version"] = env.var.version
+        packjson["user-agent"] ="ide/%ver/"+env.platform
         # no icon for mac, it's already in the browser
         if not env.is_mac():
             packjson["window"].update({"icon":"img/Logo512.png"})
