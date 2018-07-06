@@ -313,7 +313,10 @@ def redeem(code):
         rj = res.json()
         if rj["status"]=="success":
             asset = rj["data"]
-            info("Code successfully redeemed! You now have",asset["value"],"premium" if asset["pro"] else "starter","virtual machine(s) for the following targets:",asset["target"])
+            if env.human:
+                info("Code successfully redeemed! You now have",asset["value"],"premium" if asset["pro"] else "starter","virtual machine(s) for the following targets:",asset["target"])
+            else:
+                log_json(asset)
         else:
             fatal("Can't redeem code!",rj["message"])
     except Exception as e:
