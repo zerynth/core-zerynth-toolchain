@@ -2,7 +2,7 @@
 # @Author: Lorenzo
 # @Date:   2018-06-05 17:31:01
 # @Last Modified by:   Lorenzo
-# @Last Modified time: 2018-06-27 15:47:07
+# @Last Modified time: 2018-07-10 17:31:42
 
 """
 .. _ztc-cmd-provisioning:
@@ -98,6 +98,29 @@ Available command options are:
 
     fs.del_tempdir(tmpdir)
 
+@provisioning.command("crypto-scan", help="scan for crypto element")
+@click.argument("alias")
+def __crypto_scan(alias):
+    """
+.. _ztc-cmd-provisioning-crypto_scan:
+
+Scan for a Crypto Element Address
+---------------------------------
+
+The command: ::
+
+    ztc provisioning crypto-scan device_alias
+
+
+    """
+    cmd_ch = _serial_channel(alias)
+    commander = SerialCommander(cmd_ch, info, fatal)
+
+    address = commander.scan_cryptoelement()
+    info("Cryto element address:", hex(address))
+
+    cmd_ch.close()
+
 def _serial_channel(alias):
     loop = 5
     dev = uplinker.get_device(alias,loop,perform_reset=False)
@@ -114,7 +137,8 @@ def _serial_channel(alias):
 
 @provisioning.command("read-config", help="read crypto element configuration")
 @click.argument("alias")
-def __read_config(alias):
+@click.option("--output", "-o", default='', type=click.Path())
+def __read_config(alias, output):
     """
 .. warning:: It is mandatory for the following commands to correctly execute to flash the Configurator firmware first.
 
@@ -129,10 +153,28 @@ The command: ::
 
 Reads and outputs the configuration of the crypto element plugged to device with alias :samp:`alias`.
 
+Available command options are:
+
+* :option:`--output path`, to specify a path to store read configuration in binary format.
+
     """
     cmd_ch = _serial_channel(alias)
     commander = SerialCommander(cmd_ch, info, fatal)
-    commander.read_config()
+    config = commander.read_config()
+
+    if output:
+        config_bytes = bytearray()
+        config = config.split('\n')
+        for config_line in config:
+            if not config_line:
+                continue
+            line_bytes = bytes([ int(byte, 16) for byte in config_line.split(' ')[-1].split('-') ])
+            config_bytes.extend(line_bytes)
+
+        if fs.is_dir(output):
+            output=fs.path(output,"configuration.bin")
+        fs.write_file(config_bytes , output)
+    cmd_ch.close()
 
 @provisioning.command("get-public", help="retrieve public key associated to private stored in specified slot")
 @click.argument("alias")
@@ -267,9 +309,13 @@ Available command options are:
         cmd_ch = _serial_channel(alias)
         commander = SerialCommander(cmd_ch, info, fatal)
 
-        desired_config = fs.get_yaml(configuration_file)
-        for cmd, value in desired_config.items():
-            config_parser.parse_cmd(cmd, value)
+        if configuration_file.endswith('.bin'):
+            config_bytes = fs.readfile(configuration_file,'b')
+            config_parser.toconfig(0, config_bytes)
+        else:
+            desired_config = fs.get_yaml(configuration_file)
+            for cmd, value in desired_config.items():
+                config_parser.parse_cmd(cmd, value)
 
         config_crc = _do_write_config(commander)
         if lock:
@@ -323,7 +369,7 @@ The command: ::
 
     ztc provisioning locked device_alias
 
-Outputs the lock state of the crypto elements plugged to device with alias :samp:`alias`.
+Outputs the lock state of the crypto element plugged to device with alias :samp:`alias`.
 
     """
     cmd_ch = _serial_channel(alias)
@@ -332,5 +378,30 @@ Outputs the lock state of the crypto elements plugged to device with alias :samp
 
     for key, value in locked.items():
         info(key + ':' + ' '*(8-len(key)), value)
+
+    cmd_ch.close()
+
+@provisioning.command("serial-number", help="retrieve crypto element serial number")
+@click.argument("alias")
+def __serial_number(alias):
+    """
+.. _ztc-cmd-provisioning-serial_number:
+
+Serial Number
+-------------
+
+The command: ::
+
+    ztc provisioning serial_number device_alias
+
+Outputs the serial number of the crypto element plugged to device with alias :samp:`alias`.
+
+    """
+    cmd_ch = _serial_channel(alias)
+    commander = SerialCommander(cmd_ch, info, fatal)
+    serial_number = commander.get_serial_number()
+
+    formatted_sn = public_converter.xytohex(serial_number)
+    info(" Serial number:\n", formatted_sn, sep="")
 
     cmd_ch.close()

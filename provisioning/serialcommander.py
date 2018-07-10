@@ -2,13 +2,13 @@
 # @Author: Lorenzo
 # @Date:   2018-06-06 17:22:52
 # @Last Modified by:   Lorenzo
-# @Last Modified time: 2018-06-26 15:42:14
+# @Last Modified time: 2018-07-10 17:03:38
 
 from .utils import *
 import json
 
 raw_cmds = [
-    'WCF', 'EXT', 'LCF', 'LDT', 'GSP', 'RCF', 'GPB', 'CSR', 'GPV', 'GLK'
+    'WCF', 'EXT', 'LCF', 'LDT', 'GSP', 'RCF', 'GPB', 'CSR', 'GPV', 'GLK', 'GSN', 'SCN'
 ]
 
 WRITECFG_CMD   = 0
@@ -21,6 +21,8 @@ GETPUBLIC_CMD  = 6
 GETCSR_CMD     = 7
 GENPRIVATE_CMD = 8
 GETLOCKED_CMD  = 9
+GETSERNUM_CMD  = 10
+SCANCRYPTO_CMD = 11
 
 ASCII_RESP_CODE = 1
 BIN_RESP_CODE   = 2
@@ -33,12 +35,24 @@ class SerialCommander:
         self.error = error
 
     def _exe_cmd(self, cmd_code, args=None):
-        self.cmd_ch.write(raw_cmds[cmd_code])
+        retries = 0
+        try:
+            while True:
+                self.cmd_ch.write(raw_cmds[cmd_code] + '\n')
+                line = self.cmd_ch.readline()
+                if line == 'acceptedcmd\n':
+                    break
+                if retries > 10:
+                    raise Exception
+                retries += 1
+        except Exception:
+            self.error('command not accepted')
+
         if args is not None:
             self.cmd_ch.write(bytes([len(args)]) + args)
-        resp_type = self.cmd_ch.read(1)[0]
         resp_msg  = None
         resp_status  = None
+        resp_type = self.cmd_ch.read(1)[0]
         if resp_type == ASCII_RESP_CODE:
             resp_msg = ''
             while True:
@@ -47,7 +61,7 @@ class SerialCommander:
                     resp_status = line.strip()
                     break
                 elif line.startswith('exc'):
-                    fatal('error executing command:', raw_cmds[cmd_code])
+                    self.error('error executing command:', raw_cmds[cmd_code])
                 resp_msg += line
         elif resp_type == BIN_RESP_CODE:
             resp_len = self.cmd_ch.read(1)[0]
@@ -58,6 +72,7 @@ class SerialCommander:
         status, msg = self._exe_cmd(READCFG_CMD)
         self.out(" Read command sent\n", msg, sep='', end='')
         self.out(status)
+        return msg
 
     def get_public(self, private_slot):
         status, msg = self._exe_cmd(GETPUBLIC_CMD, bytes([private_slot]))
@@ -104,3 +119,14 @@ class SerialCommander:
     def get_locked(self):
         status, msg = self._exe_cmd(GETLOCKED_CMD)
         return json.loads(msg)
+
+    def get_serial_number(self):
+        status, msg = self._exe_cmd(GETSERNUM_CMD)
+        return msg
+
+    def scan_cryptoelement(self):
+        timeout = self.cmd_ch.get_timeout()
+        self.cmd_ch.set_timeout(40)
+        status, msg = self._exe_cmd(SCANCRYPTO_CMD)
+        self.cmd_ch.set_timeout(timeout)
+        return msg[0]

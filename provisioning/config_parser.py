@@ -2,11 +2,11 @@
 # @Author: Lorenzo
 # @Date:   2018-06-06 16:08:32
 # @Last Modified by:   Lorenzo
-# @Last Modified time: 2018-06-07 16:45:31
+# @Last Modified time: 2018-07-10 11:48:45
 
 from .utils import *
 
-config_zone_size = 127
+config_zone_size = 128
 config_zone_bin  = bytearray(config_zone_size)
 word_size        = 4
 
@@ -141,7 +141,7 @@ def toconfig(offset, binary):
 
 def print_desired_config():
     des_config = ''
-    for i in range((config_zone_size+1)//word_size):
+    for i in range((config_zone_size)//word_size):
         des_config += word_fmt(i*word_size, config_zone_bin[i*word_size:(i+1)*word_size]) + '\n'
     return des_config
 
