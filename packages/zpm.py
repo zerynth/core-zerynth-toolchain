@@ -48,7 +48,7 @@ def install_lib_patch(package,version,distpath,simulate=False):
     name = flds[2]
     repo = package.repo
     lib_dst = fs.path(libsdir,repo,namespace,name)
-    lib_tgt = fs.path(env.lib_dir(env.dist),repo,namespace,name)            
+    lib_tgt = fs.path(env.lib_dir(env.dist),repo,namespace,name)
 
     if simulate: return "",lib_tgt
 
@@ -68,7 +68,7 @@ def install_sys_patch(package,version,distpath):
     fs.untarxz(package.file,sys_src)
     pk = fs.get_json(fs.path(sys_src,"package.json"))
     tdir = pk["targetdir"]
-    
+
     if package.fullname.startswith("sys.zerynth.runtime-"):
         # for patches there is no need for newpython hack
         tdir = tdir.replace("newpython","python")
@@ -102,7 +102,7 @@ def install_device_patch(package,version,distpath,simulate=False):
     fs.makedirs(dev_dst)
     info("    installing in",dev_dst)
     fs.untarxz(package.file,dev_dst)
-    return dev_dst, dev_tgt 
+    return dev_dst, dev_tgt
 
 
 def install_core_patch(package,version,distpath):
@@ -124,20 +124,27 @@ def install_core_patch(package,version,distpath):
     fs.untarxz(package.file,dst)
     if package.fullname == "core.zerynth.studio":
         #change package.json for nw.js
-        packjson = {
-                      "name": "Zerynth Studio",
-                      "main": "index.html",
-                      "window": {
-                        "frame": True,
-                        "min_width": 800,
-                        "min_height": 600
-                      },
-                      "version":env.var.version,
-                      "user-agent":"ide/%ver/"+env.platform
-                    }
+        packjson = fs.get_json(fs.path(dst,"package.nw"))
+        packjson["version"] = env.var.version
+        packjson["user-agent"] ="ide/%ver/"+env.platform
         # no icon for mac, it's already in the browser
         if not env.is_mac():
             packjson["window"].update({"icon":"img/Logo512.png"})
         fs.set_json(packjson,fs.path(dst,"package.json"))
+        # packjson = {
+        #               "name": "Zerynth Studio",
+        #               "main": "index.html",
+        #               "window": {
+        #                 "frame": True,
+        #                 "min_width": 800,
+        #                 "min_height": 600
+        #               },
+        #               "version":env.var.version,
+        #               "user-agent":"ide/%ver/"+env.platform
+        #             }
+        # # no icon for mac, it's already in the browser
+        # if not env.is_mac():
+        #     packjson["window"].update({"icon":"img/Logo512.png"})
+        # fs.set_json(packjson,fs.path(dst,"package.json"))
     return dst, pdst
 

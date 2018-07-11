@@ -238,6 +238,8 @@ class Compiler():
         for opt in opts:
             if opt.startswith("-I#"):
                 self.cincpaths.add(os.path.realpath(fs.path(env.stdlib,opt[3:])))
+            elif opt.startswith("-I@"):
+                self.cincpaths.add(os.path.realpath(fs.path(env.official_libs,opt[3:])))
             elif opt.startswith("-I"):
                 # -I.../mylibh can be used instead of -Imylibh to make compilation work when not called from
                 # project folder so that ... can be replaced with project absolute path

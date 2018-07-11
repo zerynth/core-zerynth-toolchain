@@ -72,6 +72,13 @@ class Environment():
         except:
             self.versions = {self.var.version:["base"]}
 
+    def load_skin(self):
+        try:
+            js = fs.get_json(fs.path(fs.dirname(__file__),"skin.json"))
+            self.skin = js["skin"]
+        except:
+            self.skin=""
+
     def save_versions(self):
         try:
             js = fs.set_json(self.versions,fs.path(self.cfgdir,"versions.json"))
@@ -235,6 +242,7 @@ env=Environment()
 
 def init_cfg():
     # platform
+    env.load_skin()
     env.nbits = "64" if sys.maxsize > 2**32 else "32"
     if sys.platform.startswith("win"):
         env.platform="windows"+env.nbits
@@ -257,6 +265,8 @@ def init_cfg():
         zdir = "zerynth2" if env.is_windows() else ".zerynth2"
     elif testmode == 1:
         zdir = "zerynth2_local" if env.is_windows() else ".zerynth2_local"
+    if env.skin:
+        zdir = zdir+"_"+env.skin
 
     env.home      = fs.path(os.environ.get("ZERYNTH_HOME",fs.homedir()),zdir)
     env.cfg       = fs.path(env.home,"cfg")
@@ -300,19 +310,23 @@ def init_cfg():
         env.packurl= os.environ.get("ZERYNTH_PACK_URL","https://backend.zerynth.com")
         github_app = "99fdc1e39d8ce3051ce6"
 
+    if env.skin:
+        env.packurl=env.packurl+"/"+env.skin
+
     # dist directories
-    env.dist      = fs.path(env.home,"dist",version)
-    env.ztc       = fs.path(env.home,"dist",version,"ztc")
-    env.libs      = fs.path(env.home,"dist",version,"libs")
-    env.nest      = fs.path(env.home,"dist",version,"nest")
-    env.stdlib    = fs.path(env.home,"dist",version,"stdlib")
-    env.vhal      = fs.path(env.home,"dist",version,"vhal")
-    env.studio    = fs.path(env.home,"dist",version,"studio")
-    env.docs      = fs.path(env.home,"dist",version,"docs")
-    env.examples  = fs.path(env.home,"dist",version,"examples")
-    env.devices   = fs.path(env.home,"dist",version,"devices")
-    env.things    = fs.path(env.home,"dist",version,"things")
-    env.idb       = fs.path(env.home,"dist",version,"idb")
+    env.dist          = fs.path(env.home,"dist",version)
+    env.ztc           = fs.path(env.home,"dist",version,"ztc")
+    env.libs          = fs.path(env.home,"dist",version,"libs")
+    env.official_libs = fs.path(env.home,"dist",version,"libs", "official")
+    env.nest          = fs.path(env.home,"dist",version,"nest")
+    env.stdlib        = fs.path(env.home,"dist",version,"stdlib")
+    env.vhal          = fs.path(env.home,"dist",version,"vhal")
+    env.studio        = fs.path(env.home,"dist",version,"studio")
+    env.docs          = fs.path(env.home,"dist",version,"docs")
+    env.examples      = fs.path(env.home,"dist",version,"examples")
+    env.devices       = fs.path(env.home,"dist",version,"devices")
+    env.things        = fs.path(env.home,"dist",version,"things")
+    env.idb           = fs.path(env.home,"dist",version,"idb")
 
     env.dist_dir = lambda x: fs.path(env.home,"dist",x)
     env.ztc_dir = lambda x: fs.path(x,"ztc")
@@ -347,7 +361,6 @@ def init_cfg():
         "community":env.backend+"/community",
         "packages":env.packurl+"/packages",
         "ns":env.backend+"/namespaces",
-        "db":env.packurl+"/repository",
         "repo":env.packurl,
         "search": env.backend+"/packages/search",
         "profile": env.backend+"/user/profile",

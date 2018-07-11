@@ -2,11 +2,12 @@
 # @Author: lorenzo
 # @Date:   2018-05-03 16:32:55
 # @Last Modified by:   Lorenzo
-# @Last Modified time: 2018-06-07 15:47:42
+# @Last Modified time: 2018-07-11 12:55:42
 
 
 from .ecdsa.util import oid_ecPublicKey, encoded_oid_ecPublicKey
 from .ecdsa import NIST256p, der
+from .ecdsa.keys import VerifyingKey
 
 import binascii
 
@@ -24,3 +25,6 @@ def xytopem(xy):
 
 def xytohex(xy):
     return '0x' + binascii.hexlify(xy).decode('utf-8')
+
+def from_pem(pem):
+    return VerifyingKey.from_pem(pem)
