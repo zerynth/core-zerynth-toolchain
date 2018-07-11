@@ -2,27 +2,29 @@
 # @Author: Lorenzo
 # @Date:   2018-06-06 17:22:52
 # @Last Modified by:   Lorenzo
-# @Last Modified time: 2018-07-10 17:03:38
+# @Last Modified time: 2018-07-11 16:26:20
 
 from .utils import *
 import json
 
 raw_cmds = [
-    'WCF', 'EXT', 'LCF', 'LDT', 'GSP', 'RCF', 'GPB', 'CSR', 'GPV', 'GLK', 'GSN', 'SCN'
+    'WCF', 'EXT', 'LCF', 'LDT', 'GSP', 'RCF', 'GPB', 'CSR', 'GPV', 'GLK', 'GSN', 'SCN', 'STP', 'STC'
 ]
 
-WRITECFG_CMD   = 0
-EXTRA_CMD      = 1
-LOCKCFG_CMD    = 2
-LOCKDATA_CMD   = 3
-GETSPECIAL_CMD = 4
-READCFG_CMD    = 5
-GETPUBLIC_CMD  = 6
-GETCSR_CMD     = 7
-GENPRIVATE_CMD = 8
-GETLOCKED_CMD  = 9
-GETSERNUM_CMD  = 10
-SCANCRYPTO_CMD = 11
+WRITECFG_CMD    = 0
+EXTRA_CMD       = 1
+LOCKCFG_CMD     = 2
+LOCKDATA_CMD    = 3
+GETSPECIAL_CMD  = 4
+READCFG_CMD     = 5
+GETPUBLIC_CMD   = 6
+GETCSR_CMD      = 7
+GENPRIVATE_CMD  = 8
+GETLOCKED_CMD   = 9
+GETSERNUM_CMD   = 10
+SCANCRYPTO_CMD  = 11
+STOREPUBLIC_CMD = 12
+STORECERT_CMD   = 13
 
 ASCII_RESP_CODE = 1
 BIN_RESP_CODE   = 2
@@ -49,7 +51,21 @@ class SerialCommander:
             self.error('command not accepted')
 
         if args is not None:
-            self.cmd_ch.write(bytes([len(args)]) + args)
+            # number of args: two bytes, big endian
+            self.cmd_ch.write(bytes([(len(args) >> 8), len(args) & 0xff]))
+
+            while True:
+                len_confirm = self.cmd_ch.read(1)[0]
+                if len_confirm == 0:
+                    break
+                if len_confirm != (len(args) & 0xff):
+                    self.error('wrong args len confirm:', len_confirm)
+
+            chunk_size = 32
+            for i in range(len(args)//chunk_size + 1):
+                # written in chunks (writing chunks bigger thank 64 fails on some platforms)
+                self.cmd_ch.write(args[i*chunk_size:(i+1)*chunk_size])
+
         resp_msg  = None
         resp_status  = None
         resp_type = self.cmd_ch.read(1)[0]
@@ -130,3 +146,11 @@ class SerialCommander:
         status, msg = self._exe_cmd(SCANCRYPTO_CMD)
         self.cmd_ch.set_timeout(timeout)
         return msg[0]
+
+    def store_pubkey(self, slot, pubkey):
+        status, msg = self._exe_cmd(STOREPUBLIC_CMD, bytes([slot]) + pubkey)
+        return status
+
+    def store_certificate(self, certtype, certificate):
+        status, msg = self._exe_cmd(STORECERT_CMD, bytes([certtype]) + certificate)
+        return status

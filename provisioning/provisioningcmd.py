@@ -2,7 +2,7 @@
 # @Author: Lorenzo
 # @Date:   2018-06-05 17:31:01
 # @Last Modified by:   Lorenzo
-# @Last Modified time: 2018-07-10 17:31:42
+# @Last Modified time: 2018-07-11 16:12:59
 
 """
 .. _ztc-cmd-provisioning:
@@ -18,6 +18,8 @@ The Zerynth Toolchain allows to easily provision cryto elements by means of the 
 
 from base import *
 import click
+
+import base64
 
 from uplinker import uplinker
 from compiler import compilercmd
@@ -392,7 +394,7 @@ Serial Number
 
 The command: ::
 
-    ztc provisioning serial_number device_alias
+    ztc provisioning serial-number device_alias
 
 Outputs the serial number of the crypto element plugged to device with alias :samp:`alias`.
 
@@ -403,5 +405,73 @@ Outputs the serial number of the crypto element plugged to device with alias :sa
 
     formatted_sn = public_converter.xytohex(serial_number)
     info(" Serial number:\n", formatted_sn, sep="")
+
+    cmd_ch.close()
+
+
+@provisioning.command("store-public", help="store a public key on a crypto element slot")
+@click.argument("alias")
+@click.argument("slot", type=int)
+@click.argument("public_key",type=click.Path())
+def __store_public(alias, slot, public_key):
+    """
+.. _ztc-cmd-provisioning-store_public:
+
+Store Public
+------------
+
+The command: ::
+
+    ztc provisioning store-public device_alias slot public_key
+
+Store a public key in slot :samp:`slot` of the crypto element plugged to device with alias :samp:`alias`.
+Public key is retrieved from file :samp:`public_key` and is expected to be in pem format.
+
+    """
+    cmd_ch = _serial_channel(alias)
+    commander = SerialCommander(cmd_ch, info, fatal)
+
+    xy = public_converter.from_pem(fs.readfile(public_key,'b')).to_string()
+    status = commander.store_pubkey(slot, xy)
+
+    info(status)
+
+    cmd_ch.close()
+
+
+@provisioning.command("store-certificate", help="store a certificate (device or signer)")
+@click.argument("alias")
+@click.argument("certificate_type", type=click.Choice(["device", "signer"]))
+@click.argument("certificate",type=click.Path())
+def __store_certificate(alias, certificate_type, certificate):
+    """
+.. _ztc-cmd-provisioning-store_certificate:
+
+Store Certificate
+-----------------
+
+The command: ::
+
+    ztc provisioning store-certificate device_alias certificate_type certificate
+
+Store a compressed certificate to the crypto element plugged to device with alias :samp:`alias`.
+Certificate is retrieved from file :samp:`certificate` and is expected to be in pem format.
+
+    """
+    cmd_ch = _serial_channel(alias)
+    commander = SerialCommander(cmd_ch, info, fatal)
+
+    certificate_types = {"device": 0, "signer": 1}
+    certificate_type = certificate_types[certificate_type]
+
+    pem_certificate = fs.readfile(certificate, 'b')
+    pem_certificate = pem_certificate.replace(b'-----BEGIN CERTIFICATE-----\n',b'')
+    pem_certificate = pem_certificate.replace(b'-----END CERTIFICATE-----\n',b'')
+    pem_certificate = pem_certificate.strip().replace(b'\n',b'')
+    der_certificate = base64.b64decode(pem_certificate)
+
+    status = commander.store_certificate(certificate_type, der_certificate)
+
+    info(status)
 
     cmd_ch.close()

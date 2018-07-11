@@ -11,6 +11,10 @@ from microchip.ateccx08a import ateccx08a
 config_zone_size = 128
 word_size = 4
 
+@native_c('_load_certificates', ['csrc/certificates.c'])
+def load_certificates():
+    pass
+
 def load_conf():
     confstream = open('resource://config.json')
     conf = ''
@@ -25,25 +29,27 @@ def word_fmt(word_addr, word):
     return ('%03d: ' % word_addr) + '-'.join([('%02X' % word_byte) for word_byte in word])
 
 
-WRITECFG_CMD   = 0
-EXTRA_CMD      = 1
-LOCKCFG_CMD    = 2
-LOCKDATA_CMD   = 3
-GETSPECIAL_CMD = 4
-READCFG_CMD    = 5
-GETPUBLIC_CMD  = 6
-GETCSR_CMD     = 7
-GENPRIVATE_CMD = 8
-GETLOCKED_CMD  = 9
-GETSERNUM_CMD  = 10
-SCANCRYPTO_CMD = 11
+WRITECFG_CMD    = 0
+EXTRA_CMD       = 1
+LOCKCFG_CMD     = 2
+LOCKDATA_CMD    = 3
+GETSPECIAL_CMD  = 4
+READCFG_CMD     = 5
+GETPUBLIC_CMD   = 6
+GETCSR_CMD      = 7
+GENPRIVATE_CMD  = 8
+GETLOCKED_CMD   = 9
+GETSERNUM_CMD   = 10
+SCANCRYPTO_CMD  = 11
+STOREPUBLIC_CMD = 12
+STORECERT_CMD   = 13
 
 raw_cmds = [
-    'WCF', 'EXT', 'LCF', 'LDT', 'GSP', 'RCF', 'GPB', 'CSR', 'GPV', 'GLK', 'GSN', 'SCN'
+    'WCF', 'EXT', 'LCF', 'LDT', 'GSP', 'RCF', 'GPB', 'CSR', 'GPV', 'GLK', 'GSN', 'SCN', 'STP', 'STC'
 ]
 
 has_args = [
-    True, True, True, False, False, False, True, True, True, False, False, False
+    True, True, True, False, False, False, True, True, True, False, False, False, True, True
 ]
 
 ASCII_RESP_CODE = 1
@@ -166,6 +172,24 @@ class CommandHandler:
             self.cmd_resp.msg = bytes([0])
             self.cmd_resp.type = BIN_RESP_CODE
 
+    def store_public(self, slot, pubkey):
+        self.cmd_resp.type = ASCII_RESP_CODE
+        try:
+            ateccx08a.write_pubkey(slot, pubkey)
+            self.cmd_resp.status = 0
+        except Exception:
+            self.cmd_resp.status = -1
+
+    def store_cert(self, certtype, cert):
+        self.cmd_resp.type = ASCII_RESP_CODE
+        # certtype: device - 0, signer - 1
+        try:
+            ateccx08a.write_certificate(certtype, cert)
+            self.cmd_resp.status = 0
+        except Exception:
+            self.cmd_resp.status = -1   
+
+
 def crypto_element_init(addr):
     global crypto_element
     crypto_element = ateccx08a.ATECC508A(crypto_info.drv, addr=addr)
@@ -185,6 +209,8 @@ command_handler = CommandHandler(cmd_resp)
 
 discover_retries = 0
 crypto_element   = None
+
+load_certificates()
 
 while True:
     try:
@@ -232,8 +258,17 @@ while True:
     cmd_ch.write('acceptedcmd\n')
     # print('> code', raw_cmd_code)
     if has_args[raw_cmd_code]:
-        args_len = cmd_ch.read(1)[0] # number of args bytes
-        args = cmd_ch.read(args_len)
+        args_len = cmd_ch.read(2) # number of args bytes: two bytes, big endian
+        args_len = (args_len[0] << 8) | args_len[1]
+        args = bytearray(args_len)
+
+        # resync after bytearray alloc
+        for _ in range(5):
+            cmd_ch.write(bytes([args_len & 0xff]))
+        cmd_ch.write(bytes([0]))
+
+        n = cmd_ch._readbuf(args, args_len)
+
 
     try:
         if raw_cmd_code == WRITECFG_CMD:
@@ -262,6 +297,10 @@ while True:
             command_handler.get_serial_number()
         elif raw_cmd_code == SCANCRYPTO_CMD:
             command_handler.scan_crypto()
+        elif raw_cmd_code == STOREPUBLIC_CMD:
+            command_handler.store_public(args[0], args[1:])
+        elif raw_cmd_code == STORECERT_CMD:
+            command_handler.store_cert(args[0], args[1:])
 
         if cmd_resp.type is not None:
             cmd_ch.write(bytes([cmd_resp.type])) # write a single byte to notify resp mode
