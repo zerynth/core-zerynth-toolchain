@@ -26,9 +26,20 @@ The implementation of the Configurator is dependent on target cryptoelement, but
 Available command options are:
 
 * :option:`--cryptofamily family`, to specify the family of the crypto element to provision (at the moment ``ateccx08a`` is the only supported  option). Default :samp:`family` is ``ateccx08a``;
-* :option:`--cryptodevice device`, to specify the device, from those available in chosen family, to provision. For ``ateccx08a`` family, devices ``atecc508a`` and ``atecc608a`` are supported and can be chosen with a :samp:`device` value of ``5`` or ``6`` respectively. Default :samp:`device` value depends on chosen family: ``5`` for ``ateccx08a`` family;
+* :option:`--cryptodevice device`, to specify the device, from those available in chosen family, to provision. For ``ateccx08a`` family, devices ``atecc508a`` is supported and can be chosen with a :samp:`device` value of ``5`` which is also the default for ``ateccx08a`` family;
 * :option:`--i2caddr address`, to specify the i2c address of the crypto element. Needed only if the crypto element uses an i2c interface. Default :samp:`address` value depends on chosen family: ``0x60`` for ``ateccx08a`` family;
 * :option:`--i2cdrv drv`, to specify the device i2c driver the crypto element is plugged to. Needed only if the crypto element uses an i2c interface. :samp:`drv` can be ``I2C0``, ``I2C1``, ... . Default :samp:`drv` value is ``I2C0``.
+
+    
+.. _ztc-cmd-provisioning-crypto_scan:
+
+Scan for a Crypto Element Address
+---------------------------------
+
+The command: ::
+
+    ztc provisioning crypto-scan device_alias
+
 
     
 .. warning:: It is mandatory for the following commands to correctly execute to flash the Configurator firmware first.
@@ -43,6 +54,10 @@ The command: ::
     ztc provisioning read-config device_alias
 
 Reads and outputs the configuration of the crypto element plugged to device with alias :samp:`alias`.
+
+Available command options are:
+
+* :option:`--output path`, to specify a path to store read configuration in binary format.
 
     
 .. _ztc-cmd-provisioning-get_public:
@@ -71,13 +86,19 @@ The command: ::
 
     ztc provisioning write-config device_alias configuration_file
 
-Writes configuration specified in :samp:`configuration_file` YAML file to the crypto element plugged to device with alias :samp:`device_alias`.
+Writes configuration specified in :samp:`configuration_file` file to the crypto element plugged to device with alias :samp:`device_alias`.
+Configuration can be a YAML or a binary file.
+
+An example YAML configuration file can be copied to :samp:`configuration_file` path if ``get`` is passed as :samp:`device_alias`: ::
+
+    ztc provisioning write-config get 'my_configuration.yaml'
+
+while valid binary configurations are output by the :ref:`read config <ztc-cmd-provisioning-read_config>` command.
 
 Available command options are:
 
 * :option:`--lock lock_value`, if True locks written configuration;
 
-.. note:: an Example YAML configuration file can be copied to :samp:`configuration_file` path if ``get`` is passed as :samp:`device_alias`.
 
     
 .. _ztc-cmd-provisioning-get_csr:
@@ -90,6 +111,7 @@ The command: ::
     ztc provisioning get-csr device_alias private_slot subject
 
 Retrieves a Certificate Signing Request built on subject :samp:`subject` and signed with private key store in slot :samp:`private_slot` of the crypto element plugged to device with alias :samp:`alias`.
+:samp:`subject` is a string containing a comma-separated list of OID types and values (e.g. ``"C=IT,O=ZER,CN=device 1"``).
 
 Available command options are:
 
@@ -104,6 +126,44 @@ The command: ::
 
     ztc provisioning locked device_alias
 
-Outputs the lock state of the crypto elements plugged to device with alias :samp:`alias`.
+Outputs the lock state of the crypto element plugged to device with alias :samp:`alias`.
+
+    
+.. _ztc-cmd-provisioning-serial_number:
+
+Serial Number
+-------------
+
+The command: ::
+
+    ztc provisioning serial-number device_alias
+
+Outputs the serial number of the crypto element plugged to device with alias :samp:`alias`.
+
+    
+.. _ztc-cmd-provisioning-store_public:
+
+Store Public
+------------
+
+The command: ::
+
+    ztc provisioning store-public device_alias slot public_key
+
+Stores a public key in slot :samp:`slot` of the crypto element plugged to device with alias :samp:`alias`.
+Public key is retrieved from file :samp:`public_key` and is expected to be in pem format.
+
+    
+.. _ztc-cmd-provisioning-store_certificate:
+
+Store Certificate
+-----------------
+
+The command: ::
+
+    ztc provisioning store-certificate device_alias certificate_type certificate
+
+Stores a compressed certificate to the crypto element plugged to device with alias :samp:`alias`.
+Certificate is retrieved from file :samp:`certificate` and is expected to be in pem format.
 
     
