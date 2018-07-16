@@ -154,7 +154,7 @@ class CommandHandler:
             self.cmd_resp.type = BIN_RESP_CODE
             return
 
-        for addr in range(0x100):
+        for addr in range(0x30, 0x100):
             crypto_element_init(addr)
             try:
                 if crypto_element.info_cmd('revision') == b'\x00\x00\x50\x00':

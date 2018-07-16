@@ -2,7 +2,7 @@
 # @Author: Lorenzo
 # @Date:   2018-06-05 17:31:01
 # @Last Modified by:   Lorenzo
-# @Last Modified time: 2018-07-11 16:12:59
+# @Last Modified time: 2018-07-16 11:14:28
 
 """
 .. _ztc-cmd-provisioning:
@@ -292,13 +292,19 @@ The command: ::
 
     ztc provisioning write-config device_alias configuration_file
 
-Writes configuration specified in :samp:`configuration_file` YAML file to the crypto element plugged to device with alias :samp:`device_alias`.
+Writes configuration specified in :samp:`configuration_file` file to the crypto element plugged to device with alias :samp:`device_alias`.
+Configuration can be a YAML or a binary file.
+
+An example YAML configuration file can be copied to :samp:`configuration_file` path if ``get`` is passed as :samp:`device_alias`: ::
+
+    ztc provisioning write-config get 'my_configuration.yaml'
+
+while valid binary configurations are output by the :ref:`read config <ztc-cmd-provisioning-read_config>` command.
 
 Available command options are:
 
 * :option:`--lock lock_value`, if True locks written configuration;
 
-.. note:: an Example YAML configuration file can be copied to :samp:`configuration_file` path if ``get`` is passed as :samp:`device_alias`.
 
     """
     if alias == 'get':
@@ -424,7 +430,7 @@ The command: ::
 
     ztc provisioning store-public device_alias slot public_key
 
-Store a public key in slot :samp:`slot` of the crypto element plugged to device with alias :samp:`alias`.
+Stores a public key in slot :samp:`slot` of the crypto element plugged to device with alias :samp:`alias`.
 Public key is retrieved from file :samp:`public_key` and is expected to be in pem format.
 
     """
@@ -454,7 +460,7 @@ The command: ::
 
     ztc provisioning store-certificate device_alias certificate_type certificate
 
-Store a compressed certificate to the crypto element plugged to device with alias :samp:`alias`.
+Stores a compressed certificate to the crypto element plugged to device with alias :samp:`alias`.
 Certificate is retrieved from file :samp:`certificate` and is expected to be in pem format.
 
     """
