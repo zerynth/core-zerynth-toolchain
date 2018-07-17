@@ -15,4 +15,5 @@
        docs_things_thingcmd
        docs_aws_awscmd
        docs_misc_misccmd
+       docs_provisioning_provisioningcmd
 

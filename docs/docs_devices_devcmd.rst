@@ -23,14 +23,23 @@ When a new device is connected, some steps must be taken in order to make it abl
 4. The device must be :ref:`virtualized <ztc-cmd-device-virtualize>, namely a suited virtual machine must be loaded on the device microcontroller
 
 
+Sometimes the device automatic recognition is not enough to gather all the device parameters or to allow the usage of JTAG/SWD probes. In such cases additional commands have been introduced in order to manually specify the additional parameters. A separate database of devices with advanced configurations is maintained.  
+
 List of device commands:
 
 * :ref:`discover <ztc-cmd-device-discover>`
 * :ref:`alias put <ztc-cmd-device-alias_put>`
 * :ref:`register <ztc-cmd-device-register>`
+* :ref:`register by uid <ztc-cmd-device-register-by-uid>`
+* :ref:`register raw <ztc-cmd-device-register-raw>`
 * :ref:`virtualize <ztc-cmd-device-virtualize>`
+* :ref:`virtualize raw <ztc-cmd-device-virtualize-raw>`
 * :ref:`supported <ztc-cmd-device-supported>`
 * :ref:`open <ztc-cmd-device-open>`
+* :ref:`open raw <ztc-cmd-device-open-raw>`
+* :ref:`db list <ztc-cmd-device-db-list>`
+* :ref:`db put <ztc-cmd-device-db-put>`
+* :ref:`db remove <ztc-cmd-device-db-remove>`
 
 
 The list of supported devices is available :ref:`here <doc-supported-boards>`
@@ -129,6 +138,42 @@ The option :option:`--skip_burn` avoid flashing the device with the registering 
 .. note:: Devices with multiple modes can be registered one at a time only!
 
     
+.. _ztc-cmd-device-register-by-uid:
+
+Device Registration by UID
+--------------------------
+
+If the microcontroller unique identifier is already known (i.e. obtained with a JTAG probe), the device can be registered skipping the registration firmware flashing phase.
+
+Device registration is performed by issuing the command: ::
+
+    ztc device register_by_uid chipid target
+
+where :samp:`chipid` is the microcontroller unique identifier  and :samp:`target` is the type of the device being registered. A list of available targets can be obtained  with the ref:`supported <ztc-cmd-device-supported>`.
+
+Upon successful registration the device is assigned an UID by the backend.
+
+    
+.. _ztc-cmd-device-register-raw:
+
+Device Raw Registration
+-----------------------
+
+Sometimes it is useful to manually provide the device parameters for registration. The parameters that can be provided are:
+
+* :samp:`port`, the serial port exposed by the device
+* :samp:`disk`, the mass storage path provided by the device
+* :samp:`probe`, the type of JTAG/SWD probe to use during registering
+
+The above parameters must be specified using the :option:`--spec` option followed by the pair parameter name and value separated by a colon (see the example below).
+
+Device registration is performed by issuing the command: ::
+
+    ztc device register_raw target --spec port:the_port --spec disk:the_disk --spec probe:the_probe
+
+It is necessary to provide at least one device parameter and the registration will be attempted gibing priority to the probe parameter. Registration by probe is very fast (and recommended for production scenarios) beacuse the registration firmware is not required.
+
+    
 .. _ztc-cmd-device-virtualize:
 
 Virtualization
@@ -142,6 +187,24 @@ Virtualization is started by: ::
 where :samp:`alias` is the device alias and :samp:`vmuid` is the unique identifier of the chosen vm. :samp:`vmuid` can be typed partially, ZTC will try to match it against known identifiers. :samp:`vmuid` is obtained during virtual machine :ref:`creation <ztc-cmd-vm-create>`.
 
 The virtualization process is automated, no user interaction is required.
+
+    
+.. _ztc-cmd-device-virtualize-raw:
+
+Raw Virtualization
+------------------
+
+Device virtualization consists in flashing a Zerynth virtual machine on a registered device. One or more virtual machines for a device can be obtained with specific ZTC :ref:`commands <ztc-cmd-vm-create>`.
+
+Sometimes it is useful to manually provide the device parameters for virtualization. The parameters that can be provided are the same of the :ref:`register_raw <ztc-device-register-raw>` command.
+
+Virtualization is started by: ::
+
+    ztc device virtualize vmuid --spec port:the_port --spec disk:the_disk --spec  probe:the_probe
+
+where :samp:`vmuid` is the unique identifier of the chosen vm. :samp:`vmuid` can be typed partially, ZTC will try to match it against known identifiers. :samp:`vmuid` is obtained during virtual machine :ref:`creation <ztc-cmd-vm-create>`.
+
+The virtualization by probe has priority over the other device parameters and is recommended for production scenarios.
 
     
 .. _ztc-cmd-device-open:
@@ -158,6 +221,22 @@ The command: ::
 tries to open the default serial port with the correct parameters for the device. Output from the device is printed to stdout while stdin is redirected to the serial port. Adding the option :option:`--echo` to the command echoes back the characters from stdin to stdout.
 
     
+.. _ztc-cmd-device-open-raw:
+
+Serial Console (raw)
+--------------------
+
+Each virtual machine provides a default serial port where the output of the program is printed. Such port can be opened in full duplex mode allowing bidirectional communication between the device and the terminal.
+
+it is sometime useful to directly specify the serial port on the command line.
+
+The command: ::
+
+    ztc device open port
+
+tries to open :samp:`port` with the correct parameters for the device. Output from the device is printed to stdout while stdin is redirected to the serial port. Adding the option :option:`--echo` to the command echoes back the characters from stdin to stdout.
+
+    
 .. _ztc-cmd-device-supported:
 
 Supported Devices
@@ -168,10 +247,69 @@ Different versions of the ZTC may have a different set of supported devices. To 
     ztc device supported
 
 and a table of :samp:`target` names and paths to device support packages will be printed.
-Supported devices can be filtered by type with the :option:`--type type` option where :samp:`type` can be one of:
 
-* :samp:`board` for development boards
-* :samp:`jtag` for JTAG tools
-* :samp:`usbtoserial` for USB to Serial converters
+    
+.. _ztc-cmd-device-erase-flash:
+
+Erase of the device flash memory
+--------------------------------
+
+Erase completely the flash memory of the device (all data stored will be deleted).
+
+This operation is performed by issuing the command: ::
+
+    ztc device erase_flash alias
+
+where :samp:`alias` is the device alias previously set (or just the initial part of it).
+
+    
+.. _ztc-cmd-device-db-list:
+
+Configured Devices
+------------------
+
+Manual device configurations can be saved in a local database in order to avoid retyping device parameters every time.
+The command: ::
+
+    ztc device db list
+
+prints the list of configured devices with relevant parameters. By providing the oprion :option:`--filter-target` the list for a specific target can be retrieved.
+
+    
+.. _ztc-cmd-device-db-put:
+
+Add Configured Devices
+----------------------
+
+Manual device configurations can be saved in a local database in order to avoid retyping device parameters every time.
+The relevant parameter for a device are:
+
+    * :samp:`target`, the device type
+    * :samp:`name`, the device name. It must be unique and human readable
+    * :samp:`port`, the device serial port (may change upon device reset!)
+    * :samp:`disk`, the mass storage path of the device (if exposed)
+    * :samp:`probe`, the JTAG/SWD probe used for device programming
+    * :samp:`chipid`, the device microcontroller unique identifier
+    * :samp:`remote_id`, the device UID assigned by the backend after registation
+
+If the device :samp:`name` is not present in the database, a new device is created; otherwise the existing device is updated with the provided parameters. To unset a parameter pass the "null" value (as a string). If a parameter is not given it is not modified in the database. A parameter is set tonull if not specified upon device creation.
+
+The command: ::
+
+    ztc device db put target device_name --spec port:the_port --spec disk:the_disk --spec probe:the_probe --spec chipid:the_chipid --spec remote_uid:the_remote_uid
+
+inserts or modifies the configured device :samp:`device_name` in the database. The given parameters are updated as well. For the probe parameter, the list of available probes can be obtained with the :ref:`probe list <ztc-cmd-probe-list>` command.
+
+    
+.. _ztc-cmd-device-db-remove:
+
+Remove Configured Devices
+-------------------------
+
+The command: ::
+
+    ztc device db remove device_name
+
+removes the device :samp:`device_name` from the configured devices.
 
     

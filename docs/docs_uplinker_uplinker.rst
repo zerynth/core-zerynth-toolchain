@@ -3,7 +3,7 @@
 Uplink
 ======
 
-Once a Zerynth program is compiled to bytecode it can be executed by transferring such bytecode to a running virtual machine on a device. 
+Once a Zerynth program is compiled to bytecode it can be executed by transferring such bytecode to a running virtual machine on a device.
 This operation is called "uplinking" in the ZTC terminology.
 
 Indeed Zerynth virtual machines act as a bootloader waiting a small amount of time after device reset to check if new bytecode is incoming.
@@ -25,9 +25,38 @@ The uplinking process may require user interaction for manual resetting the devi
 
 Each of the previous phases may fail in different ways and the cause can be determined by inspecting error messages.
 
-The :command:`uplink` may the additional :option:`--loop times` option that specifies the number of retries during the discovery phase (each retry lasts one second). 
+The :command:`uplink` may the additional :option:`--loop times` option that specifies the number of retries during the discovery phase (each retry lasts one second).
 
 
+
+    
+.. _ztc-cmd-uplink-raw:
+
+Uplink (raw)
+============
+
+It is possible to perform an uplink against a configured device by specifying th relevant device parameters as in the :ref:`register raw <ztc-cmd-device-register-raw>` command, by specifying the :samp:`port` parameter.
+
+The command: ::
+
+    ztc uplink_raw target bytecode --spec port:the_port
+
+performs an uplink on the device of type :samp:`target` using the bytecode file at :samp:`bytecode` using the serial prot :samp:`port`.
+
+    
+.. _ztc-cmd-uplink-by-probe:
+
+Uplink by probe
+===============
+
+It is possible to perform an uplink against a configured device by using a probe. Contrary to other uplink commands that require a bytecode file argument, the :samp:`uplink_by_probe` command requires a linked bytecode file argument (obtained with the :ref:`link <ztc-cmd-link>` command).
+
+The command: ::
+
+    ztc uplink_by_probe target probe linked_bytecode
+
+perform an uplink on the device type :samp:`target` using probe :samp:`probe` to transfer the :samp:`linked_bytecode` file to the running VM.
+It is possible to change the address where the bytecode will be flashed by specifying the :option:`--address` option followed by the hexadecimal representation of the address (useful for OTA VMs scenarios)
 
     
 .. _ztc-cmd-link:
@@ -60,23 +89,23 @@ Generating firmware for FOTA updates can be tricky. The following information is
     * The unique identifier of a new FOTA enabled VM, :samp:`vmuid_new`
     * The current slot the VM is running on, :samp:`vmslot`. Can be retrieved with :ref:`fota library <stdlib.fota>`
     * The current slot the bytecode is running on, :samp:`bcslot`, Can be retrieved with :ref:`fota library <stdlib.fota>`
-      
+
 For example, assuming a project has been compiled to the bytecode file :samp:`project.vbo` and :samp:`vmslot=0` and :samp:`bcslot=0`, the following commands can be given: ::
 
 
     # generate bytecode capable of running on slot 1 with VM in slot 0
     # the resulting file can be used for a FOTA update of the bytecode
     ztc link vmuid project.vbo --bc 1 --file project.vbe
-    
+
     # generate bytecode capable of running on slot 1 with VM in slot 1
     # the resulting file CAN'T be used for a FOTA update because the running VM is in slot 0
     # and project.vbe does not contain the new VM
-    ztc link vmuid_new project.vbo --bc 1 --vm 1 --file project.vbe 
+    ztc link vmuid_new project.vbo --bc 1 --vm 1 --file project.vbe
 
     # generate bytecode capable of running on slot 1 with VM in slot 1
     # the resulting file can be used for a FOTA update of the bytecode and VM
     # because project.vbe contains the new VM
-    ztc link vmuid_new project.vbo --bc 1 --vm 1 --otavm --file project.vbe 
+    ztc link vmuid_new project.vbo --bc 1 --vm 1 --otavm --file project.vbe
 
 
 .. note:: It is not possible to generate a FOTA update of the VM only!

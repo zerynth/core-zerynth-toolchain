@@ -191,3 +191,15 @@ By default the documentation is generated in a temporary directory, but it can a
 
 
     
+.. _ztc-cmd-project-config:
+
+Configure
+---------
+
+The command: ::
+
+    ztc project config path -D ZERYNTH_SSL 1 -X ZERYNTH_SSL_ECDSA
+
+configures some project variables that turn on and off advanced features for the project at :samp:`path`. In particular the :option:`-D` option adds a new variable with its corresponding value to the project configuration, whereas the :option:`-X` option remove a variable. Both options can be repeated multiple times.
+
+    

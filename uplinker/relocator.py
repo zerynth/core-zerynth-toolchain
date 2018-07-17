@@ -52,7 +52,16 @@ class Relocator():
             #logger.info("Relocation: %s",output)
             undf = output.count("undefined reference")
             if undf > 0:
-                warning("There are",undf,"missing symbols! This VM does not support the requested features!")
+                lines = output.split("\n")
+                undefs = []
+                umth = re.compile(".*undefined reference to (.+).*")
+
+                for line in lines:
+                    mth = umth.match(line)
+                    if mth:
+                        undefs.append(mth.group(1).replace("`","").replace("'",""))
+                warning("There are",undf,"missing symbols! This VM does not support the requested features!",undefs)
+                fatal("Check if the device is virtualized with the last available version-patch of the virtual machine")
             else:
                 fatal("Relocation error",output)
         sym = cc.symbol_table(lfile)
@@ -64,7 +73,7 @@ class Relocator():
     def align_to(self,x,n):
         return x if x%n==0 else x+(n-(x%n))
 
-    def relocate(self,_symbols,_memstart,_romstart):
+    def relocate(self,_symbols,_memstart,_romstart,debug_info=None):
         #logger.info("Relocating Bytecode for %s",self.upl.board["shortname"])
         cc = gcc(tools[self.device.cc])
         # unpack zcode
@@ -116,7 +125,7 @@ class Relocator():
                 new_rodata_start = 0 if not new_rodata_size else self.align_to(vcobj.rodata_start()+mem_pad,16)  #reserve space for mem_pad
                 new_rodata_end   = 0 if not new_rodata_size else new_rodata_start+new_rodata_size
                 new_rodata_pad   = self.align_to(new_rodata_size,16)-new_rodata_size
-                
+
                 acc = vcobj.romdata_start() if not new_rodata_size else new_rodata_start+new_rodata_size+new_rodata_pad
                 new_romdata_size  = vcobj.romdata_size()
                 new_romdata_start = 0 if not new_romdata_size else self.align_to(acc,16)
@@ -140,7 +149,7 @@ class Relocator():
                 debug("romdata     ::",hex(new_romdata_start),"::",hex(new_romdata_end),"::",hex(new_romdata_size),"::",hex(new_romdata_start-new_text_end))
                 debug("data        ::",hex(new_data_start),"::",hex(new_data_end),"::",hex(new_data_size))
                 debug("bss         ::",hex(new_bss_start),"::",hex(new_bss_end),"::",hex(new_bss_size),"::",hex(new_bss_start-new_data_end))
-                
+
 
                 sects = {
                     ".text":new_text_start,
@@ -179,10 +188,12 @@ class Relocator():
 
 
                 ###########################################
-                # text - pad - rodata - pad - romdata - pad 
+                # text - pad - rodata - pad - romdata - pad
 
 
                 lfile2 = fs.path(tmpdir,"zerynth.lo2")
+                if debug_info is not None:
+                    debug_info.append(lfile2)
                 vcobj2 = self.get_relocated_code(symreloc,ofile,lfile2,rodata_in_ram)
 
                 fwend = new_romdata_end if new_romdata_size else new_rodata_end
@@ -234,10 +245,15 @@ class Relocator():
                 debug(hex(len(cbin)))
                 cbin.extend(vcobj.get_section(".data"))
                 debug("data_start",hex(data_start))
-                
+                if debug_info is not None:
+                    debug_info.append(lfile)
 
 
 
+
+
+            if debug_info is not None:
+                debug_info.append(_textstart)
 
             # padding pyobjs
             pdsz = _textstart-_romstart-len(header)-len(pyobjs)
@@ -248,13 +264,16 @@ class Relocator():
             header[16:20] = struct.pack("=I",data_start)
             header[20:24] = struct.pack("=I",data_end)
             header[24:28] = struct.pack("=I",hsize)
-            
+
             # updating native table
             hbg = zinfo["pyobjtable_end"]
             #logger.debug("cnatives: %i symbols: %i",len(self.upl.cnatives),len(vcobj.symbols))
             rlct = self.device.relocator
             for nn in cnatives:
-                addr = vcobj.symbols[nn]
+                try:
+                    addr = vcobj.symbols[nn]
+                except Exception as e:
+                    fatal("Missing symbols!",nn)
                 #print(nn,hex(addr))
                 #logger.info("%s => %s",tohex(addr), nn)
                 # WARNING!!! +1 because it's thumb instructions! (maybe we should add thumb in arch)
@@ -266,7 +285,7 @@ class Relocator():
             thebin = header+pyobjs+cbin
         else:
             thebin = header+pyobjs
-        
+
         # print("Header starts at:",hex(_romstart))
         # print("Header size:",len(self.upl.header))
         # print("Header ends at:",hex(_romstart+len(self.upl.header)))

@@ -142,6 +142,8 @@ It takes the following options (one at a time):
     if __version or __fullversion:
         patchid = env.patches[env.var.version]
         vrs = env.var.version+"-"+patchid
+        if env.skin:
+            vrs = vrs + " "+env.skin
         if __fullversion:
             log(vrs)
         else:

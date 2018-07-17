@@ -301,3 +301,28 @@ def __register(email,passwd,name):
             fatal(res.status_code,"while registering user")
     except Exception as e:
         fatal("Exception while registering user",e)
+
+
+
+################# REDEEM VMs
+@cli.command("redeem",help="Redeem assets with codes")
+@click.argument("code")
+def redeem(code):
+    try:
+        res = zpost(env.api.user+"/redeem/",{"code":code})
+        rj = res.json()
+        if rj["status"]=="success":
+            asset = rj["data"]
+            if env.human:
+                info("Code successfully redeemed! You now have",asset["value"],"premium" if asset["pro"] else "starter","virtual machine(s) for the following targets:",asset["target"])
+            else:
+                log_json(asset)
+        else:
+            fatal("Can't redeem code!",rj["message"])
+    except Exception as e:
+        critical("Can't redeem code",exc=e)
+
+
+
+
+

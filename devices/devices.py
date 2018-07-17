@@ -24,7 +24,7 @@ class Device():
         if "cls" in x:
             del x["cls"]
         return x
-        
+
     def __getitem__(self,key):
         return self.__getattr__(key)
 
@@ -47,7 +47,7 @@ class Device():
 
     def virtualize(self,bin):
         pass
-    
+
     def burn_with_probe(self,bin,offset=0):
         #TODO: add support for multifile vms
         offs = offset if isinstance(offset,str) else hex(offset)
@@ -58,7 +58,7 @@ class Device():
             pb.send("program "+fs.wpath(fname)+" verify reset "+offs)
             now = time.time()
             wait_verification = False
-            while time.time()-now<self.get("jtag_timeout",10):
+            while time.time()-now<self.get("jtag_timeout",30):
                 lines = pb.read_lines()
                 for line in lines:
                     if line.startswith("wrote 0 "):
@@ -69,8 +69,14 @@ class Device():
                         return True, ""
                     if wait_verification and line.startswith("** Verified Failed"):
                         return False, "Verification failed"
+                    if "** Programming Finished **" in line:
+                        # reset countdown
+                        now = time.time()
                     if "** Programming Failed **" in line:
                         return False, "Programming failed"
+                    if "** Programming Finished **" in line:
+                        # restart timeout counter
+                        now = time.time()
             return False,"timeout"
         except Exception as e:
             return False, str(e)
@@ -83,7 +89,7 @@ class Device():
             pb.connect()
             pb.send(self.jtag_chipid_command)
             # pb.send("halt; mdw 0x1fff7a10; mdw 0x1fff7a14; mdw 0x1fff7a18")
-            lines = pb.read_lines(timeout=0.5)
+            lines = pb.read_lines(timeout=1)
             ids = []
             for line in lines:
                 # if ":" not in line or not line.startswith("0x1fff7"):
@@ -100,7 +106,7 @@ class Device():
         except Exception as e:
             warning(e)
             return None
-    
+
     def get_vmuid(self):
         pb = Probe()
         pb.connect()
@@ -109,7 +115,7 @@ class Device():
         cmd+="; ".join(["mdw "+hex(int(addr,16)+i) for i in range(0,32,4)])
         # halt and read 8 words
         pb.send(cmd)
-        lines = pb.read_lines(timeout=0.5)
+        lines = pb.read_lines(timeout=1)
         ids = []
         for line in lines:
             if ":" not in line or not line.startswith("0x"):
@@ -174,7 +180,7 @@ class Device():
         try:
             # start temporary probe
             if not skip_probe:
-                tp = start_temporary_probe(self.target,probe) 
+                tp = start_temporary_probe(self.target,probe)
             chipid = self.get_chipid()
             # stop temporary probe
             if not skip_probe:
@@ -185,6 +191,16 @@ class Device():
         except Exception as e:
             warning(e)
             return None,"Can't retrieve chip id"
+
+    def do_erase_flash(self,outfn=None):
+        if not self.flash_erasable:
+            return False, "Target does not support erase flash feature!"
+        try:
+            res,out = self.erase(outfn=outfn)
+            return res,out
+        except Exception as e:
+            warning(e)
+            return None,"Can't erase flash"
 
     def reset(self):
         pass
@@ -228,7 +244,7 @@ class Device():
                 "DAC":0x0800,
                 "LED":0x0900,
                 "BTN":0x0A00
-            } 
+            }
 
             vcls = {
                "SPI":["MOSI","MISO","SCLK"],
@@ -288,7 +304,7 @@ class Device():
 
         mth_list = re.compile('////(.*): (.*)')
         mth_pin = re.compile('\s*/\*\s*([DA0-9]*)\s.*\*/\s*MAKE_PIN\(')
-        mth_cls = re.compile('.*MAKE_PIN_CLASS\(([0-9]*),')
+        mth_cls = re.compile('.*MAKE_PIN_CLASS\(([0-9]*)\s*,')
         mth_header = re.compile('.*\sconst\s*_(.*)class\[\]\s*STORED')
 
         names = {

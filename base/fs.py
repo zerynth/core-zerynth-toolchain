@@ -62,13 +62,13 @@ class zfs():
             else:
                 raise e
 
-    def set_yaml(self,ym,dst):
+    def set_yaml(self,ym,dst,flow_style=None):
         if dst:
             self.check_path(dst)
             with open(dst,"w",encoding="utf8") as ff:
-                yaml.dump(ym,ff,indent=4,encoding="utf-8",explicit_start=True,explicit_end=True,default_flow_style=None,allow_unicode=True)
+                yaml.dump(ym,ff,indent=4,encoding="utf-8",explicit_start=True,explicit_end=True,default_flow_style=flow_style,allow_unicode=True)
         else:
-            return yaml.dump(ym,indent=4,encoding="utf-8",explicit_start=True,explicit_end=True,default_flow_style=None,allow_unicode=True).decode("utf-8")
+            return yaml.dump(ym,indent=4,encoding="utf-8",explicit_start=True,explicit_end=True,default_flow_style=flow_style,allow_unicode=True).decode("utf-8")
 
 
 

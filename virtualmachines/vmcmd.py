@@ -306,8 +306,6 @@ Additional options can be provided:
     except Exception as e:
         fatal("Generic Error", e)
 
-
-
 ################# CUSTOM VMs
 
 @vm.group(help="Manage custom virtual machines.")

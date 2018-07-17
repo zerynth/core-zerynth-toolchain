@@ -112,6 +112,9 @@ class Channel():
         self._reader()
 
 
+    def get_timeout(self):
+        return self.ch.timeout
+
     def set_timeout(self,timeout):
         self.ch.timeout=timeout
 

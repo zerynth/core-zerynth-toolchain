@@ -312,6 +312,7 @@ The option :option:`--skip_burn` avoid flashing the device with the registering 
     res,chipid = _extract_chipid_from_serial(tgt)
     if not res:
         fatal(chipid)
+    info("Chip id retrieved:",chipid)
     dinfo = {
         "name": tgt.custom_name or tgt.name,
         "on_chip_id": chipid,
@@ -672,6 +673,38 @@ def ports_and_disks():
             "ports":_dsc.devsrc.find_all_serial_ports()
     }
     log_json(res)
+
+
+@device.command(help="Erase the flash of the device. \n\n Arguments: \n\n ALIAS: device alias")
+@click.argument("alias")
+def erase_flash(alias):
+    """ 
+.. _ztc-cmd-device-erase-flash:
+
+Erase of the device flash memory
+--------------------------------
+
+Erase completely the flash memory of the device (all data stored will be deleted).
+
+This operation is performed by issuing the command: ::
+
+    ztc device erase_flash alias
+
+where :samp:`alias` is the device alias previously set (or just the initial part of it).
+
+    """
+    tgt = _dsc.search_for_device(alias)
+    if not tgt:
+        fatal("Can't find device",alias)
+    elif isinstance(tgt,list):
+        fatal("Ambiguous alias",[x.alias for x in tgt])
+
+    info("Starting erasing flash...")
+    res,out = tgt.do_erase_flash(outfn=info)
+    if not res:
+        fatal("Can't erase flash! -->",out)
+    info("Memory flash erased")
+
 
 @device.group(help="Manage device configurations manually.")
 def db():
