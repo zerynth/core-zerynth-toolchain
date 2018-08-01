@@ -71,14 +71,7 @@ def _zcompile(project,target,output,include,define,imports,proj,config):
 
     ## parse configuration and set defines
     define = set(define)  # remove duplicates
-    conf = fs.path(project,"project.yml")
-    if fs.exists(conf):
-        pconf = fs.get_yaml(conf)
-        if not pconf: pconf={}
-        if "config" in pconf:
-            # parse the option key
-            for opt in pconf["config"]:
-                define.add(opt)
+
 
     #TODO: check target is valid
     compiler = Compiler(mainfile,target,include,define,localmods=prjs)
