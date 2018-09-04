@@ -2,7 +2,7 @@
 # @Author: Lorenzo
 # @Date:   2018-06-05 17:31:01
 # @Last Modified by:   Lorenzo
-# @Last Modified time: 2018-07-16 11:14:28
+# @Last Modified time: 2018-09-04 10:54:14
 
 """
 .. _ztc-cmd-provisioning:
@@ -78,11 +78,20 @@ Available command options are:
 
     """
     cryptodevice = _check_cryptodevicefamily(cryptofamily, cryptodevice)
+    loop = 5
+    dev = uplinker.get_device(alias, loop, perform_reset=False)
 
     configurator_firm = fs.path(fs.dirname(__file__), "firmware", "configurator")
     tmpdir = fs.get_tempdir()
 
     fs.copytree(configurator_firm, tmpdir)
+
+    if "crypto_provisioning" in dev.to_dict() and dev.to_dict()["crypto_provisioning"] == "lightweight":
+        configurator_projectyml_path = fs.path(tmpdir, "project.yml")
+        configurator_projectyml = fs.get_yaml(configurator_projectyml_path)
+        configurator_projectyml['config']['PROVISIONING_CONFIGURATOR_LIGHT'] = True
+        configurator_projectyml['config']['ZERYNTH_HWCRYPTO_ATECCx08A'] = None
+        fs.set_yaml(configurator_projectyml, configurator_projectyml_path)
 
     configurator_conf_path = fs.path(tmpdir, "config.json")
     configurator_conf = fs.get_json(configurator_conf_path)
@@ -90,8 +99,6 @@ Available command options are:
     configurator_conf["i2cdrv"]  = int(i2cdrv[3:])
     fs.set_json(configurator_conf, configurator_conf_path)
 
-    loop = 5
-    dev = uplinker.get_device(alias, loop, perform_reset=False)
     compilercmd._zcompile(tmpdir, dev.target, False, [], [], False, [], False)
 
     # reset before uplink
@@ -102,7 +109,8 @@ Available command options are:
 
 @provisioning.command("crypto-scan", help="scan for crypto element")
 @click.argument("alias")
-def __crypto_scan(alias):
+@click.option("--output", "-o", default='', type=click.Path())
+def __crypto_scan(alias, output):
     """
 .. _ztc-cmd-provisioning-crypto_scan:
 
@@ -114,12 +122,26 @@ The command: ::
     ztc provisioning crypto-scan device_alias
 
 
+Available command options are:
+
+* :option:`--output path`, to specify a path to store scanned device address and type. If a folder is given, retrieved info is saved to ``scanned_crypto.json`` file.
     """
     cmd_ch = _serial_channel(alias)
     commander = SerialCommander(cmd_ch, info, fatal)
 
-    address = commander.scan_cryptoelement()
+    address, devtype = commander.scan_cryptoelement()
     info("Cryto element address:", hex(address))
+    info("Cryto element type:    ATECC%i08A" % devtype)
+
+    if output:
+        scanned_info = {
+            'address': address,
+            'devtype': ("ATECC%i08A" % devtype)
+        }
+
+        if fs.is_dir(output):
+            output=fs.path(output,"scanned_crypto.json")
+        fs.set_json(scanned_info, output)
 
     cmd_ch.close()
 

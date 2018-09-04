@@ -2,7 +2,7 @@
 # @Author: Lorenzo
 # @Date:   2018-06-06 17:22:52
 # @Last Modified by:   Lorenzo
-# @Last Modified time: 2018-07-11 16:26:20
+# @Last Modified time: 2018-09-03 16:39:31
 
 from .utils import *
 import json
@@ -145,7 +145,7 @@ class SerialCommander:
         self.cmd_ch.set_timeout(40)
         status, msg = self._exe_cmd(SCANCRYPTO_CMD)
         self.cmd_ch.set_timeout(timeout)
-        return msg[0]
+        return msg[0], msg[1]
 
     def store_pubkey(self, slot, pubkey):
         status, msg = self._exe_cmd(STOREPUBLIC_CMD, bytes([slot]) + pubkey)
