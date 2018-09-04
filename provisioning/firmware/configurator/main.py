@@ -5,15 +5,19 @@ import streams
 import json
 import threading
 
+#-if !PROVISIONING_CONFIGURATOR_LIGHT
 import x509
+#-endif
 from microchip.ateccx08a import ateccx08a
 
 config_zone_size = 128
 word_size = 4
 
+#-if !PROVISIONING_CONFIGURATOR_LIGHT
 @native_c('_load_certificates', ['csrc/certificates.c'])
 def load_certificates():
     pass
+#-endif
 
 def load_conf():
     confstream = open('resource://config.json')
@@ -55,11 +59,23 @@ has_args = [
 ASCII_RESP_CODE = 1
 BIN_RESP_CODE   = 2
 
+crypto_revisions = {
+    ateccx08a.DEV_ATECC508A: b'\x00\x00\x50\x00',
+    ateccx08a.DEV_ATECC608A: b'\x00\x00\x60\x01'
+}
+
+_ateccx08a2commander_cryptotype = {
+    ateccx08a.DEV_ATECC508A: 5,
+    ateccx08a.DEV_ATECC608A: 6
+}
+
 class CryptoInfo:
-    def __init__(self, drv, addr, plugged):
+    def __init__(self, drv, cryptotype, addr, plugged):
         self.drv = drv
         self.addr = addr
         self.plugged = plugged
+        self.cryptotype = cryptotype
+        self.detected_cryptotype = None
 
 
 class CmdResponse:
@@ -76,10 +92,12 @@ class CommandHandler:
     def __init__(self, response_object):
         self.cmd_resp = response_object
 
+#-if !PROVISIONING_CONFIGURATOR_LIGHT
         self._csr = None
         self._csr_subject_str = None
         self._csr_event = threading.Event()
         thread(self._csr_thread, size=12288)
+#-endif
 
     def write_cfg(self, offset, content):
         self.cmd_resp.status = crypto_element.write_cmd('Config', bytes([offset>>2, 0]), content, False)[0]
@@ -131,6 +149,7 @@ class CommandHandler:
             channel.write(word_fmt(i*word_size, crypto_element.read_cmd('Config', bytes([i*word_size>>2, 0]), False)) + '\n')
         self.cmd_resp.status = 0
 
+#-if !PROVISIONING_CONFIGURATOR_LIGHT
     def get_csr(self, slot, subject_str):
         ateccx08a.set_privatekey_slot(slot)
         self._csr_subject_str = subject_str
@@ -147,31 +166,35 @@ class CommandHandler:
             self._csr = x509.generate_csr_for_key('', self._csr_subject_str)[:-1] # remove terminal 0
             self._csr_event.set()
             self._csr_event.clear()
+#-endif
 
     def scan_crypto(self):
         if crypto_info.plugged:
-            self.cmd_resp.msg = crypto_info.addr
+            self.cmd_resp.msg = bytes([crypto_info.addr, _ateccx08a2commander_cryptotype[crypto_info.detected_cryptotype]])
             self.cmd_resp.type = BIN_RESP_CODE
             return
 
         for addr in range(0x30, 0x100):
             crypto_element_init(addr)
             try:
-                if crypto_element.info_cmd('revision') == b'\x00\x00\x50\x00':
+                if crypto_element_info_check():
                     crypto_info.addr = addr
-                    crypto_info.plugged = True
+                    crypto_element_init(addr, crypto_info.detected_cryptotype)
                     break
             except Exception:
                 pass
             sleep(20)
         if crypto_info.addr != -1:
-            ateccx08a.hwcrypto_init(crypto_info.drv, 0, i2c_addr=crypto_info.addr)
-            self.cmd_resp.msg = bytes([crypto_info.addr])
+#-if !PROVISIONING_CONFIGURATOR_LIGHT
+            ateccx08a.hwcrypto_init(crypto_info.drv, 0, i2c_addr=crypto_info.addr, dev_type=crypto_info.detected_cryptotype)
+#-endif
+            self.cmd_resp.msg = bytes([crypto_info.addr, _ateccx08a2commander_cryptotype[crypto_info.detected_cryptotype]])
             self.cmd_resp.type = BIN_RESP_CODE
         else:
-            self.cmd_resp.msg = bytes([0])
+            self.cmd_resp.msg = bytes([0, 0])
             self.cmd_resp.type = BIN_RESP_CODE
 
+#-if !PROVISIONING_CONFIGURATOR_LIGHT
     def store_public(self, slot, pubkey):
         self.cmd_resp.type = ASCII_RESP_CODE
         try:
@@ -187,12 +210,25 @@ class CommandHandler:
             ateccx08a.write_certificate(certtype, cert)
             self.cmd_resp.status = 0
         except Exception:
-            self.cmd_resp.status = -1   
+            self.cmd_resp.status = -1
+#-endif   
 
 
-def crypto_element_init(addr):
+def crypto_element_init(addr, cryptotype=ateccx08a.DEV_ATECC508A):
     global crypto_element
-    crypto_element = ateccx08a.ATECC508A(crypto_info.drv, addr=addr)
+    if cryptotype == ateccx08a.DEV_ATECC508A:
+        crypto_element = ateccx08a.ATECC508A(crypto_info.drv, addr=addr)
+    else:
+        crypto_element = ateccx08a.ATECC608A(crypto_info.drv, addr=addr)
+
+def crypto_element_info_check():
+    rev = crypto_element.info_cmd('revision')
+    for cryptotype, crev in crypto_revisions.items():
+        if crev == rev:
+            crypto_info.plugged = True
+            crypto_info.detected_cryptotype = cryptotype
+            return True
+    return False
 
 # debug channel
 # streams.serial(SERIAL1)
@@ -202,7 +238,7 @@ cmd_ch = streams.serial(set_default=False)
 new_resource("config.json")
 conf = load_conf()
 
-crypto_info = CryptoInfo(I2C0 + conf['i2cdrv'], conf['i2caddr'], False)
+crypto_info = CryptoInfo(I2C0 + conf['i2cdrv'], None, conf['i2caddr'], False)
 
 cmd_resp = CmdResponse()
 command_handler = CommandHandler(cmd_resp)
@@ -210,13 +246,15 @@ command_handler = CommandHandler(cmd_resp)
 discover_retries = 0
 crypto_element   = None
 
+#-if !PROVISIONING_CONFIGURATOR_LIGHT
 load_certificates()
+#-endif
 
 while True:
     try:
         crypto_element_init(crypto_info.addr)
-        if crypto_element.info_cmd('revision') == b'\x00\x00\x50\x00':
-            crypto_info.plugged = True
+        if crypto_element_info_check():
+            crypto_element_init(crypto_info.addr, crypto_info.detected_cryptotype)
             break
     except Exception:
         pass
@@ -226,7 +264,11 @@ while True:
     sleep(100)
 
 if crypto_info.plugged:
-    ateccx08a.hwcrypto_init(crypto_info.drv, 0, i2c_addr=crypto_info.addr)
+#-if !PROVISIONING_CONFIGURATOR_LIGHT
+    ateccx08a.hwcrypto_init(crypto_info.drv, 0, i2c_addr=crypto_info.addr, dev_type=crypto_info.detected_cryptotype)
+#-else
+    pass
+#-endif
 else:
     crypto_info.addr = -1
 
@@ -287,8 +329,10 @@ while True:
             command_handler.out_config(cmd_ch)
         elif raw_cmd_code == GETPUBLIC_CMD:
             command_handler.get_public(args[0])
+#-if !PROVISIONING_CONFIGURATOR_LIGHT
         elif raw_cmd_code == GETCSR_CMD:
             command_handler.get_csr(args[0], args[1:])
+#-endif
         elif raw_cmd_code == GENPRIVATE_CMD:
             command_handler.generate_private(args[0])
         elif raw_cmd_code == GETLOCKED_CMD:
@@ -297,10 +341,12 @@ while True:
             command_handler.get_serial_number()
         elif raw_cmd_code == SCANCRYPTO_CMD:
             command_handler.scan_crypto()
+#-if !PROVISIONING_CONFIGURATOR_LIGHT
         elif raw_cmd_code == STOREPUBLIC_CMD:
             command_handler.store_public(args[0], args[1:])
         elif raw_cmd_code == STORECERT_CMD:
             command_handler.store_cert(args[0], args[1:])
+#-endif
 
         if cmd_resp.type is not None:
             cmd_ch.write(bytes([cmd_resp.type])) # write a single byte to notify resp mode
