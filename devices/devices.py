@@ -291,6 +291,7 @@ class Device():
             raise e
 
     def __get_specs(self):
+        #TODO: additional_pins are not yet loaded py port.yml
         portfile = fs.path(self.path,"port.yml")
         if fs.exists(portfile):
             tmpl = fs.get_yaml(portfile)
@@ -327,6 +328,7 @@ class Device():
         cfun = None
         clsc = 0
         npin = 0
+        additional_pins = set()
         for line in lines:
             mth = mth_list.match(line)
             if mth:
@@ -336,6 +338,9 @@ class Device():
                     vprph = mth.group(2).strip().split(" ")
                 elif mth.group(1)=="CDEFINES":
                     cdefs.extend(mth.group(2).strip().split(" "))
+                elif mth.group(1)=="EXTPINS":
+                    for pname in mth.group(2).strip().split(" "):
+                        additional_pins.add(pname)
                 continue
             mth = mth_pin.match(line)
             if mth:
@@ -381,7 +386,14 @@ class Device():
 
         #pp = pprint.PrettyPrinter(indent=4)
 
-
+        if additional_pins:
+            for pin in additional_pins:
+                idx = int(pin[1:])
+                vpins[idx]={
+                    "idx":idx,
+                    "name":pin,
+                    "fx":{}  #all digitals
+                }
         pinout = collections.OrderedDict()
         lpins = [v for k,v in vpins.items()]
         lpins.sort(key= lambda x: x["idx"])
