@@ -8,6 +8,7 @@ import re
 import struct
 import base64
 from jtag import *
+import virtualmachines
 
 def get_device(alias,loop,perform_reset=True):
     _dsc = devices.Discover()
@@ -294,7 +295,10 @@ def _uplink_dev(dev,bytecode,loop):
     vms = tools.get_vm(vmuid,version,chuid,target)
     if not vms:
         ch.close()
-        fatal("No such vm for",dev.target,"with id",vmuid)
+        warning("No such vm for",dev.target,"with id",vmuid," ==> searching online...")
+        virtualmachines.download_vm(vmuid)
+        info("VM downloaded, retry uplinking!")
+
     vm = fs.get_json(vms)
 
     symbols,_memstart,_romstart,_flashspace = handshake(ch)
@@ -449,7 +453,12 @@ For example, assuming a project has been compiled to the bytecode file :samp:`pr
     """
     vms = tools.get_vm_by_uid(vmuid)
     if not vms:
-        fatal("No such vm with uid",vmuid)
+        warning("No such vm with uid",vmuid," ==> searching online...")
+        virtualmachines.download_vm(vmuid)
+        vms = tools.get_vm_by_uid(vmuid)
+        if not vms:
+            fatal("Unexpected error searching for vm",vmuid)
+
     vm = fs.get_json(vms)
 
     try:
