@@ -304,7 +304,7 @@ def __register(email,passwd,name):
 
 
 
-################# REDEEM VMs
+################# REDEEM Licenses
 @cli.command("redeem",help="Redeem assets with codes")
 @click.argument("code")
 def redeem(code):
