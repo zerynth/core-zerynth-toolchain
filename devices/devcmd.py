@@ -871,7 +871,7 @@ def get_device_by_target(target,options,skip_reset=False):
 
     if not skip_reset:
         if dev.uplink_reset is True:
-            info("Please reset the device!",dev.reset_time)
+            info("Please reset the device!")
             sleep(dev.reset_time/1000)
         elif dev.uplink_reset == "reset":
             dev.reset()

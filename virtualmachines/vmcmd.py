@@ -131,7 +131,8 @@ def _vm_create(vminfo,custom_target=None):
 @click.option("--name", default="",help="Virtual machine name")
 @click.option("--custom_target", default="",help="Original target for custom vms")
 @click.option("--share", default=False, flag_value=True, help="Create shareable VM")
-def create_by_uid(dev_uid,version,rtos,feat,name,patch,custom_target,share):
+@click.option("--reshare", default=False, flag_value=True, help="Create shareable VM")
+def create_by_uid(dev_uid,version,rtos,feat,name,patch,custom_target,share,reshare):
     vminfo = {
         "name": "dev:"+dev_uid,
         "dev_uid":dev_uid,
@@ -139,7 +140,8 @@ def create_by_uid(dev_uid,version,rtos,feat,name,patch,custom_target,share):
         "rtos": rtos,
         "patch":patch,
         "features": feat,
-        "shared":[] if not share else ["*"]
+        "shared":[] if not share else ["*"],
+        "reshareable":reshare
         }
     _vm_create(vminfo,custom_target=None if not custom_target else custom_target)
 
@@ -149,10 +151,8 @@ def _own_vm(vm_uid):
     rj = res.json()
     if rj["status"]=="success":
         vmd = rj["data"]
-        if env.human:
-            info("VM",vm_uid,"successfully owned with chip_id",vmd["chip_id"],"and target",vmd["dev_type"])
-        else:
-            log_json(vmd)
+        info("VM",vm_uid,"successfully owned with chip_id",vmd["chip_id"],"and target",vmd["dev_type"])
+        return vmd["chip_id"],vmd["dev_type"],vmd["dev_uid"]
     else:
         fatal("Can't own virtual machine",vm_uid,rj["message"])
 
@@ -188,7 +188,7 @@ def retrieve_vm_uid(alias):
     vm_uid,version,target,chipid = _vmuid_dev(dev)
     if target!=dev.target:
         fatal("Target mismatch!",target,"vs",dev.target)
-    return vm_uid,version,target,chipid
+    return vm_uid,version,target,chipid,dev
 
 
 def retrieve_vm_uid_raw(target,__specs):
@@ -202,30 +202,38 @@ def retrieve_vm_uid_raw(target,__specs):
     vm_uid,version,target,chipid = _vmuid_dev(dev)
     if target!=dev.target:
         fatal("Target mismatch!",target,"vs",dev.target)
-    return vm_uid,version,target,chipid
+    return vm_uid,version,target,chipid,dev
 
 
-@vm.command(help="Own third party VM by uid")
+def _reg_owning(dev,remote_uid,chipid):
+    # register device
+    dev = dev.to_dict()
+    dev["chipid"]=chipid
+    dev["remote_id"]=remote_uid
+    env.put_dev(dev,linked=dev.get("sid")=="no_sid")
+
+@vm.command(help="Redeem third party VM by uid")
 @click.argument("vm_uid")
 def own(vm_uid):
-    _own_vm(vm_uid)
+    chipid, devtype, remote_uid = _own_vm(vm_uid)
 
-@vm.command(help="Own third party VM by uid taken from device")
+@vm.command(help="Redeem third party VM by uid taken from device")
 @click.argument("alias")
 def own_alias(alias):
-    vm_uid,version,target,chipid = retrieve_vm_uid(alias)
-    _own_vm(vm_uid)
-    #TODO: update device db
+    vm_uid,version,target,chipid,dev = retrieve_vm_uid(alias)
+    chipid, devtype, remote_uid = _own_vm(vm_uid)
+    _reg_owning(dev,remote_uid,chipid)
 
-@vm.command(help="Own third party VM by uid taken from device raw")
+@vm.command(help="Redeem third party VM by uid taken from device raw")
 @click.argument("target")
 @click.option("--spec","__specs",default="",multiple=True)
 def own_target(target,__specs):
-    vm_uid,version,target,chipid = retrieve_vm_uid_raw(target,__specs)
-    _own_vm(vm_uid)
+    vm_uid,version,target,chipid,dev = retrieve_vm_uid_raw(target,__specs)
+    chipid, devtype, remote_uid = _own_vm(vm_uid)
+    # _reg_owning(dev,remote_uid,chipid)
 
 
-@vm.command(help="Own third party VM by uid taken from device by probe")
+@vm.command(help="Redeem third party VM by uid taken from device by probe")
 @click.argument("target")
 @click.argument("probe")
 def own_by_probe(target,probe):
@@ -240,7 +248,8 @@ def own_by_probe(target,probe):
         warning(e)
     stop_temporary_probe(tp)
     if vm_uid:
-        _own_vm(vm_uid)
+        chipid, devtype, remote_uid = _own_vm(vm_uid)
+        # _reg_owning(dev,remote_uid,chipid)
     else:
         fatal("Can't retrieve vm uid!")
 
@@ -286,7 +295,7 @@ Additional options can be provided to filter the returned virtual machine set:
                     _from += 1
                 log_table(table,headers=["Number","UID","Name","Version","Patch","Dev Type","Rtos","Features"])
             else:
-                log_json(rj["data"])                
+                log_json(rj["data"])
         else:
             critical("Can't get vm list",rj["message"])
     except Exception as e:

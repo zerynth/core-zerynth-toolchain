@@ -1,7 +1,7 @@
 from .zrequests import *
 import re
 import pygit2
-
+import urllib.parse
 
 # hack for pygit2 gc issue on __del__ remote
 # TODO: investigate better
@@ -250,6 +250,21 @@ class Git():
             # first commit
             commit = repo.create_commit('refs/heads/master', repo.default_signature, repo.default_signature, msg, tree, [])
         info("Ok")
+
+
+    def git_clone_external(self,url,dest,user=None,password=None):
+        try:
+            eurl = url
+            if url.startswith("https://") or url.startswith("http://"):
+                if user and password:
+                    pos = url.find(":") #http(s):
+                    eurl = url[:pos+3]+urllib.parse.quote(user)+":"+urllib.parse.quote(password)+"@"+url[pos+3:]
+            repo = pygit2.clone_repository(eurl,dest)
+        except Exception as e:
+            fatal("Can't clone:",str(e))
+        info("Ok")
+        return eurl
+
 
 
     def git_clone(self,project,path):

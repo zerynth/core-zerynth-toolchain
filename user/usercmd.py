@@ -50,7 +50,9 @@ def check_installation():
 @click.option("--token",default=None,help="set the token in non interactive mode")
 @click.option("--user",default=None,help="username for manual login")
 @click.option("--passwd",default=None,help="password for manual login")
-def __login(token,user,passwd):
+@click.option("--origin",default=None,help="origin for 3dparty auth")
+@click.option("--origin_username",default=None,help="origin username for 3dparty auth")
+def __login(token,user,passwd,origin,origin_username):
     """
 .. _ztc-cmd-user-login:
 
@@ -97,7 +99,11 @@ The :samp:`authentication_token` can be obtained by manually opening the login/r
     elif user and passwd:
         try:
             head = {"Authorization":"Basic "+base64.standard_b64encode(bytes(user+":"+passwd,"utf-8")).decode("utf-8")}
-            res = zget(env.api.user,head,auth=False)
+            params = {}
+            if origin and origin_username:
+                params["origin"]=origin
+                params["origin_username"]=origin_username
+            res = zget(env.api.user,head,params,auth=False)
             if res.status_code==200:
                 rj = res.json()
                 if rj["status"]=="success":

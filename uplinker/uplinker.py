@@ -196,6 +196,7 @@ def _uplink_dev(dev,bytecode,loop):
         warning("No such vm for",dev.target,"with id",vmuid," ==> searching online...")
         virtualmachines.download_vm(vmuid)
         info("VM downloaded, retry uplinking!")
+        return
 
     vm = fs.get_json(vms)
 
