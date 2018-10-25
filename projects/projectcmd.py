@@ -392,6 +392,34 @@ retrieves a project repository saved to the Zerynth backend and clones it to :sa
 
     git.git_clone(project,path)
 
+@project.command(help="Clone a project repository.\n\n Arguments: \n\n PROJECT: project uid\nPATH: project path")
+@click.argument("url")
+@click.argument("dest",type=click.Path())
+@click.option("--title",default="",help="set cloned project title")
+def git_clone_external(url,dest,title):
+    """
+.. _ztc-cmd-project-git_clone_external:
+
+Clone a project
+---------------
+
+The command: ::
+
+    ztc project git_clone project path
+
+retrieves a project repository saved to the Zerynth backend and clones it to :samp:`path`. The parameter :samp:`project` is the project uid assigned dring project creation. It can be retrieved with the :ref:`list command <ztc-project-list>`.
+
+    """
+
+    url = git.git_clone_external(url,dest)
+    pjfile = fs.path(dest,".zproject")
+    if not fs.exists(pjfile):
+        pinfo = {
+            "title": title or "Cloned Project",
+            "created_at":str(datetime.datetime.utcnow()),
+            "description":"Cloned from "+url
+        }
+        fs.set_json(pinfo,pjfile)
 
 
 @project.command("list", help="List remote projects")
