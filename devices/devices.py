@@ -202,6 +202,17 @@ class Device():
             warning(e)
             return None,"Can't erase flash"
 
+    def do_put_mode(self, mode, outfn=None):
+        try:
+            mode_meth = getattr(self, 'put_' + mode.lower())
+            if not mode_meth:
+                return None,"unsupported mode '%s'" % mode
+            res,out = mode_meth(outfn=outfn)
+            return res,out
+        except Exception as e:
+            warning(e)
+            return None,"exception while putting in selected mode"
+
     def reset(self):
         pass
 
