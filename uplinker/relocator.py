@@ -29,7 +29,8 @@ class Relocator():
         #         self.vmsym.append(m.group(2))
 
     def get_relocated_code(self,symreloc,ofile,lfile,rodata_in_ram=False):
-        cc = gcc(tools[self.device.cc])
+        print("GCCOPTS",self.device.gccopts)
+        cc = gcc(tools[self.device.cc],self.device.gccopts)
         undf = cc.get_undefined(ofile)
         fund = set()
         srel = dict(symreloc)
@@ -75,7 +76,7 @@ class Relocator():
 
     def relocate(self,_symbols,_memstart,_romstart,debug_info=None):
         #logger.info("Relocating Bytecode for %s",self.upl.board["shortname"])
-        cc = gcc(tools[self.device.cc])
+        # cc = gcc(tools[self.device.cc],opts=self.device.gccopts)
         # unpack zcode
         cobjs = self.zcode["cobjs"]
         header = bytearray(base64.standard_b64decode(self.zcode["header"]))

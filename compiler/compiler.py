@@ -637,9 +637,9 @@ class Compiler():
             #print(obcfiles,vhalfiles,rvofiles)
             # linking non vhal, non rvo
             if obcfiles:
-                ret,output = gcc.link(obcfiles,{},reloc=True,ofile=obcfile)
+                ret,output = gcc.link(obcfiles,{},reloc=True,ofile=obcfile,libs=["m"])
                 if ret!=0:
-                    error("Linking Error:",output);
+                    error("Linking Error:",output)
                     raise CNativeError(0,0,"","C Native Linking Error!")
                 #save relocatable viper object
                 fs.copyfile(obcfile,fs.path(tmpdir,"lastbuilt.rvo"))
@@ -648,7 +648,12 @@ class Compiler():
             ofiles.extend(obcfiles)
             ofiles.extend(vhalfiles)
             ofiles.extend(rvofiles)
-            ret,output = gcc.link(ofiles,{},reloc=True,ofile=ofile)
+            ret,output = gcc.link(ofiles,{},reloc=True,ofile=ofile,libs=["m"])
+            ##### IMPORTANT
+            # When using reloc=True, gcc-ld can't find libraries with "-lxxx" switches.
+            # The reason is not clear, still investigating.
+            # However, passing the full path of the library with -L works...
+            # gcc class automatically searches for libraries and selects the right ones, making them available as gcc.libxxx
             if ret!=0:
                 error("Linking Error:",output);
                 raise CNativeError(0,0,"","C Native Linking Error!")
@@ -659,9 +664,9 @@ class Compiler():
             #    info("==>",ss)
             #warning("Undefined symbols!")
             undf = sym.getfrom(sym.undef)
-            #undf = {k:v for k,v in undf.items() if k not in set(self.vmsym)}
-            #for uu in undf:
-            #    info("==>",uu)
+            # undf = {k:v for k,v in undf.items() if k not in set(self.vmsym)}
+            for uu in undf:
+               info("==>",uu)
             csym = frozenset(self.cnatives)
             if not(csym<=syms):
                 error("The following @cnatives are missing:")
