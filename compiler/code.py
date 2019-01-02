@@ -28,6 +28,7 @@ class CodeObj():
         self.srcfile=srcfile
         self.consts = []
         self.pconst = {}
+        self.const_table = []
         self.pconstsize = 0
         self.nargs = nargs
         self.nkwargs = nkwargs
@@ -325,46 +326,106 @@ class CodeObj():
 
             # Pack Consts            
             self.pconstheader=[]
+            self.pconst={"int":[],"float":[],"str":[]}
             for c in self.consts:
                 if isinstance(c, int):
-                    if 4 not in self.pconst:
-                        self.pconst[4] = []
-                    self.pconst[4].append(c)
-                    self.pconstsize += 4
+                    pcsize =4 if (c<=0xffffffff and c>=-2147483648) else 8 
+                    self.pconst["int"].append((c,pcsize))
+                    # self.pconstsize += pcsize 
                 elif isinstance(c, float):
-                    if 4 not in self.pconst:
-                        self.pconst[4] = []
-                    self.pconst[4].append(c)
-                    self.pconstsize += 4
+                    self.pconst["float"].append((c,8))
+                    # self.pconstsize += 8
                 elif isinstance(c, str) or isinstance(c,bytes):
                     sz = len(c) + 2
                     sz = sz if sz % 4 == 0 else sz + (4-(sz % 4))
-                    if sz not in self.pconst:
-                        self.pconst[sz] = []
-                    self.pconst[sz].append(c)
-                    self.pconstsize += sz
+                    self.pconst["str"].append((c,sz))
+                    # self.pconstsize += sz
+            #sort pconst by size
+            self.pconst["int"]=sorted(self.pconst["int"], key = lambda x: x[1])
+            self.pconst["float"]=sorted(self.pconst["float"], key = lambda x: x[1])
+            self.pconst["str"]=sorted(self.pconst["str"], key = lambda x: x[1])
+            # build a ctable with packed consts
+            self.const_table = []
+            #assume cpos is aligned to 4; it will be enforce when generating bytes
+
+            cpos = 0  
+            for ctype in ["int","float","str"]:
+                for cnc in self.pconst[ctype]:
+                    cc,sz = cnc
+                    align=0
+                    if ctype!="str" and cpos%sz!=0:
+                        #align int and float to boundaries
+                        align=sz-(cpos%sz)
+                    self.const_table.append((cpos+align,cc,sz,align))
+                    self.pconstheader.append(cpos)
+                    cpos+=sz+align
+            #last cpos is full const size (actual size + alignment)
+            self.pconstsize=cpos
+            # align pconstheader to 8: (each element is 32bit)
+            if len(self.pconstheader)%2!=0:
+                # add fake constant
+                self.pconstheader.append(0)
+            self.pconstsize+=len(self.pconstheader)*4
+
+            # scan opcodes and match constants
+            # the index of a constant points into pconstheader for the offset
             for op in self.bytecode.opcodes:
                 if op.hasConst():
                     cn = op.getConst()
-                    cpos = 0
-                    for sz in sorted(self.pconst.keys()):
-                        cnst = self.pconst[sz]
-                        #if cn in cnst:
-                        ss = [(i,x) for i,x in enumerate(cnst) if x==cn and type(x)==type(cn)]
-                        if ss:
-                            cpos += ss[0][0]*sz
-                            #cpos += cnst.index(cn) * sz
-                            if isinstance(cn,str) or isinstance(cn,bytes):
-                                if cpos not in self.pconstheader:
-                                    op.resolveConst(len(self.pconstheader))
-                                    self.pconstheader.append(cpos)
-                                else:
-                                    op.resolveConst(self.pconstheader.index(cpos))
-                            else:
-                                op.resolveConst(cpos)
+                    #O(n^2) but hey, how many constants will you ever need?
+                    for i,ch in enumerate(self.const_table):
+                        cpos, cc, sz, aling = ch
+                        if cc==cn and type(cc)==type(cn):
+                            # same value, same type (in Python 1.0==1, not wanted)
+                            op.resolveConst(i)
                             break
-                        cpos += sz * len(cnst)
-            self.pconstsize+=len(self.pconstheader)*2
+                    else:
+                        fatal("Error in const table! Can't assign",cn)
+            print(self.scope)
+            print(self.pconstsize)
+            print(self.pconstheader)
+            print(self.const_table)
+            # self.pconstheader=[]
+            # for c in self.consts:
+            #     if isinstance(c, int):
+            #         if 4 not in self.pconst:
+            #             self.pconst[4] = []
+            #         self.pconst[4].append(c)
+            #         self.pconstsize += 4
+            #     elif isinstance(c, float):
+            #         if 4 not in self.pconst:
+            #             self.pconst[4] = []
+            #         self.pconst[4].append(c)
+            #         self.pconstsize += 4
+            #     elif isinstance(c, str) or isinstance(c,bytes):
+            #         sz = len(c) + 2
+            #         sz = sz if sz % 4 == 0 else sz + (4-(sz % 4))
+            #         if sz not in self.pconst:
+            #             self.pconst[sz] = []
+            #         self.pconst[sz].append(c)
+            #         self.pconstsize += sz
+            # for op in self.bytecode.opcodes:
+            #     if op.hasConst():
+            #         cn = op.getConst()
+            #         cpos = 0
+            #         for sz in sorted(self.pconst.keys()):
+            #             cnst = self.pconst[sz]
+            #             #if cn in cnst:
+            #             ss = [(i,x) for i,x in enumerate(cnst) if x==cn and type(x)==type(cn)]
+            #             if ss:
+            #                 cpos += ss[0][0]*sz
+            #                 #cpos += cnst.index(cn) * sz
+            #                 if isinstance(cn,str) or isinstance(cn,bytes):
+            #                     if cpos not in self.pconstheader:
+            #                         op.resolveConst(len(self.pconstheader))
+            #                         self.pconstheader.append(cpos)
+            #                     else:
+            #                         op.resolveConst(self.pconstheader.index(cpos))
+            #                 else:
+            #                     op.resolveConst(cpos)
+            #                 break
+            #             cpos += sz * len(cnst)
+            # self.pconstsize+=len(self.pconstheader)*2
 
 
     def addConst(self, cnst):
@@ -435,26 +496,40 @@ class CodeObj():
             #print("CONST TABLE FOR CODE",self.name)
             for cpos in self.pconstheader:
                 #print("PCONSTH",len(buf),cpos)
-                buf += (struct.pack("=H", cpos))
+                buf += (struct.pack("=I", cpos))
             cnsts = len(buf)
-            for sz in sorted(self.pconst.keys()):
-                cnst = self.pconst[sz]
-                for cn in cnst:
-                    if isinstance(cn, int):
-                        #print("Int starting at",len(buf)-cnsts)
-                        buf += (struct.pack("=i", cn))
-                    elif isinstance(cn, float):
-                        #print("Float starting at",len(buf)-cnsts)
-                        buf += (struct.pack("=f", cn))
-                    elif isinstance(cn, str) or isinstance(cn,bytes):
-                        #print("String starting at",len(buf)-cnsts)
-                        buf += (struct.pack("=H", len(cn)))
-                        if isinstance(cn,str):
-                            buf+= (struct.pack("="+str(sz-2)+"s", cn.encode("utf8")))
+            for cpos,cn,sz,align in self.const_table:
+                # add padding
+                if align!=0:
+                    buf+= (struct.pack("="+str(align)+"s", align*b'\x00'))
+                if isinstance(cn, int):
+                    #print("Int starting at",len(buf)-cnsts)
+                    if sz==8:
+                        if cn<0:
+                            buf += (struct.pack("=q", cn))
                         else:
-                            buf+= (struct.pack("="+str(sz-2)+"s", cn))
-                        if len(buf)%2:
-                            buf+= (struct.pack("=b", 0))
+                            buf += (struct.pack("=Q", cn))
+                    else:
+                        if cn<0:
+                            buf += (struct.pack("=i", cn))
+                        else:
+                            buf += (struct.pack("=I", cn))
+                elif isinstance(cn, float):
+                    #print("Float starting at",len(buf)-cnsts)
+                    buf += (struct.pack("=d", cn))
+                elif isinstance(cn, str) or isinstance(cn,bytes):
+                    #print("String starting at",len(buf)-cnsts)
+                    buf += (struct.pack("=H", len(cn)))
+                    if isinstance(cn,str):
+                        buf+= (struct.pack("="+str(sz-2)+"s", cn.encode("utf8")))
+                    else:
+                        buf+= (struct.pack("="+str(sz-2)+"s", cn))
+                    if len(buf)%2:
+                        buf+= (struct.pack("=b", 0))
+            print(self.scope)
+            print(self.const_table)
+            print(self.pconstheader)
+            print(buf)
         else:
             buf += (struct.pack("=H", self.ccode)) #tableidx
 
