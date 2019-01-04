@@ -227,9 +227,11 @@ class gcc():
         self.libpaths=[]
         pline=""
         for line in lines:
-            print("!",line,"!")
             if line.startswith("=") and pline.startswith("libraries:"):
-                paths = line[1:].split(":")
+                if env.platform.startswith("win"):  #how cool is that? -_-
+                    paths = line[1:].split(";")
+                else:
+                    paths = line[1:].split(":")
                 for path in paths:
                     self.libpaths.append(fs.apath(path))
                 break
