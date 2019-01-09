@@ -357,7 +357,7 @@ class CodeObj():
                         #align int and float to boundaries
                         align=sz-(cpos%sz)
                     self.const_table.append((cpos+align,cc,sz,align))
-                    self.pconstheader.append(cpos)
+                    self.pconstheader.append(cpos+align)
                     cpos+=sz+align
             #last cpos is full const size (actual size + alignment)
             self.pconstsize=cpos
@@ -381,10 +381,10 @@ class CodeObj():
                             break
                     else:
                         fatal("Error in const table! Can't assign",cn)
-            print(self.scope)
-            print(self.pconstsize)
-            print(self.pconstheader)
-            print(self.const_table)
+            # print(self.scope)
+            # print(self.pconstsize)
+            # print(self.pconstheader)
+            # print(self.const_table)
             # self.pconstheader=[]
             # for c in self.consts:
             #     if isinstance(c, int):
@@ -526,10 +526,11 @@ class CodeObj():
                         buf+= (struct.pack("="+str(sz-2)+"s", cn))
                     if len(buf)%2:
                         buf+= (struct.pack("=b", 0))
-            print(self.scope)
-            print(self.const_table)
-            print(self.pconstheader)
-            print(buf)
+            # if self.scope.uid.startswith("__main_"):
+            #     print(self.scope)
+            #     print(self.const_table)
+            #     print(self.pconstheader)
+            # print(buf)
         else:
             buf += (struct.pack("=H", self.ccode)) #tableidx
 
