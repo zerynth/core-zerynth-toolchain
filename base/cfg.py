@@ -285,6 +285,7 @@ def init_cfg():
     #env.load_zpack_db(env.zdb,"packages.db")
     #env.load_ipack_db(env.idb,"packages.db")
     version = env.var.version
+    env.var.bytecode_version=1
     if testmode==1:
         # local
         env.git_url   = os.environ.get("ZERYNTH_GIT_URL","http://localhost/git")

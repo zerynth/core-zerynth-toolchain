@@ -29,7 +29,7 @@ class Relocator():
         #         self.vmsym.append(m.group(2))
 
     def get_relocated_code(self,symreloc,ofile,lfile,rodata_in_ram=False):
-        print("GCCOPTS",self.device.gccopts)
+        # print("GCCOPTS",self.device.gccopts)
         cc = gcc(tools[self.device.cc],self.device.gccopts)
         undf = cc.get_undefined(ofile)
         fund = set()
@@ -286,6 +286,14 @@ class Relocator():
             thebin = header+pyobjs+cbin
         else:
             thebin = header+pyobjs
+
+        # insert bytecode hash and length
+        thebin[44:48]=struct.pack("=I",len(thebin))
+        hash = md5b(thebin)
+        thebin[28:44]=hash
+
+
+
 
         # print("Header starts at:",hex(_romstart))
         # print("Header size:",len(self.upl.header))

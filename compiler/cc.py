@@ -238,8 +238,8 @@ class gcc():
             pline=line
         if not self.libpaths:
             warning("No library path found!")
-        else:
-            print(self.libpaths)
+        # else:
+        #     print(self.libpaths)
 
 
         # search for compiler libraries in ../lib
@@ -424,9 +424,9 @@ class gcc():
         if ofile:
             ldopt.append("-o")
             ldopt.append(ofile)
-        print(ldopt)
+        # print(ldopt)
         ret,output = self.run_command(self.ld,ldopt)
-        print(output)
+        # print(output)
         return (ret,output)
     def retrieve_sections(self,fname):
         res,output = self.run_command(self.objdump,["-s",fname])
