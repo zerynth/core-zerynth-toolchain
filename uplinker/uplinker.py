@@ -377,7 +377,13 @@ For example, assuming a project has been compiled to the bytecode file :samp:`pr
 
     debug("MEMSTART: ",hex(_memstart))
     debug("ROMSTART: ",hex(_romstart))
-    relocator = Relocator(bf,vm,Var({"relocator":vm["relocator"],"cc":vm["cc"],"rodata_in_ram":vm.get("rodata_in_ram",False)}))
+    relocator = Relocator(bf,vm,Var(
+        {
+            "relocator":vm["relocator"],
+            "cc":vm["cc"],
+            "gccopts":vm["gccopts"],
+            "rodata_in_ram":vm.get("rodata_in_ram",False)
+        },recursive=False))
     addresses = []#[int(symbols[x],16) for x in relocator.vmsym]
     dbginfo = []
     thebin = relocator.relocate(addresses,_memstart,_romstart,dbginfo)

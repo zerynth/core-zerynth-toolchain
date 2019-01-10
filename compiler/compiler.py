@@ -666,7 +666,7 @@ class Compiler():
             undf = sym.getfrom(sym.undef)
             # undf = {k:v for k,v in undf.items() if k not in set(self.vmsym)}
             for uu in undf:
-               info("==>",uu)
+               debug("==>",uu)
             csym = frozenset(self.cnatives)
             if not(csym<=syms):
                 error("The following @cnatives are missing:")
