@@ -776,11 +776,17 @@ class Compiler():
         buf+=struct.pack("=I",0)
         buf+=struct.pack("=I",0)
         buf+=struct.pack("=I",0)
+        #ts
+        buf+=struct.pack("=I",0)
+        #marker
+        buf+=struct.pack("=I",0)
         #blen
+        buf+=struct.pack("=I",0)
+        #vversion
         buf+=struct.pack("=I",0)
         #bversion
         buf+=struct.pack("=I",env.var.bytecode_version)
-        #unused
+        #bcoptions
         buf+=struct.pack("=I",0)
 
         cobsz = 4*len(objbuf)+(len(buf)+4)+(len(etable)*8+emtablelen)+4*len(self.cnatives)

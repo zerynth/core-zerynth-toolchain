@@ -3,6 +3,7 @@ from compiler import gcc
 import re
 import base64
 import struct
+import time
 
 class Relocator():
     def __init__(self,zcode,vm,device):
@@ -287,10 +288,16 @@ class Relocator():
         else:
             thebin = header+pyobjs
 
-        # insert bytecode hash and length
-        thebin[44:48]=struct.pack("=I",len(thebin))
+        # insert bytecode length
+        thebin[52:56]=struct.pack("=I",len(thebin))
+        # insert vm version
+        thebin[56:60]=struct.pack("=I",int(self.thevm["hexversion"],16))
+        # calculate hash with ts=0 and hash=0
         hash = md5b(thebin)
+        # insert hash
         thebin[28:44]=hash
+        # insert timestamp
+        thebin[44:48]=struct.pack("=I",int(time.time()))
 
 
 
