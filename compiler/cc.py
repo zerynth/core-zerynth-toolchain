@@ -324,7 +324,7 @@ class gcc():
             ret, output = self.run_command(self.gcc,self.gccopts+inc+nm+self.defines+["-g"])
             #print(output)
             lines = output.split("\n")
-            catcher = re.compile("([^:]+):([0-9]+):([0-9]+):[^:]*(warning|error)(.*)")
+            catcher = re.compile("(.+):([0-9]+):([0-9]+):[^:]*(warning|error)(.*)")
             for line in lines:
                 res = catcher.match(line)
                 if res:
