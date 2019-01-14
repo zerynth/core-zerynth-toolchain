@@ -29,8 +29,8 @@ def handshake(ch):
 
     # read symbols
     symbols = []
-    nsymbols=3#int(line.strip("\n"),16)
-    info("    symbols:",nsymbols)
+    # nsymbols=3#int(line.strip("\n"),16)
+    # info("    symbols:",nsymbols)
     # for sj in range(0,nsymbols-3):
     #     line=ch.readline()
     #     debug(line)
@@ -201,6 +201,10 @@ def _uplink_dev(dev,bytecode,loop):
     vm = fs.get_json(vms)
 
     symbols,_memstart,_romstart,_flashspace = handshake(ch)
+    _memdelta = _memstart-int(vm["map"]["memstart"],16)
+    info("    memdelta :"+str(_memdelta))
+    if _memdelta != vm["map"]["memdelta"]:
+        debug("memdelta mismatch: fota updates could not work")
 
     relocator = Relocator(bf,vm,dev)
     thebin = relocator.relocate(symbols,_memstart,_romstart)
