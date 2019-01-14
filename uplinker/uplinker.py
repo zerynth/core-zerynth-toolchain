@@ -296,9 +296,10 @@ def _uplink_dev(dev,bytecode,loop):
 @click.option("--vm","vm_ota",default=0, type=int,help="Select OTA VM index")
 @click.option("--bc","bc_ota",default=0, type=int,help="Select OTA VM Bytecode index")
 @click.option("--file",default="", type=str,help="Save binary to specified file")
+@click.option("--vmfile",default="", type=str,help="Save binary to specified file")
 @click.option("--bin",default=False,flag_value=True,help="Save in binary format")
 @click.option("--debug_bytecode",default=False,flag_value=True,help="Save debug info in bytecode")
-def link(vmuid,bytecode,include_vm,vm_ota,bc_ota,file,otavm,bin,debug_bytecode):
+def link(vmuid,bytecode,include_vm,vm_ota,bc_ota,file,otavm,bin,debug_bytecode,vmfile):
     """
 .. _ztc-cmd-link:
 
@@ -433,6 +434,12 @@ For example, assuming a project has been compiled to the bytecode file :samp:`pr
                 fs.set_json(res,file)
         else:
             log_json(res)
+
+        if vmfile and otavm and bin:
+            fs.write_file(base64.b64decode(res["vmbin"]),vmfile)
+            info("File",vmfile,"saved")
+            fs.write_file(base64.b64decode(res["bcbin"]),file)
+            info("File",file,"saved")
     else:
         if file:
             fs.write_file(thebin,file)
@@ -450,7 +457,9 @@ def ota_prepare_vm(vm):
         bin = bytearray()
         for i in bin_indexes:   # add one after the other the various vm segments
             b64c = vm["bin"][i]
-            bin.extend(base64.b64decode(bytes(b64c,"utf8")))
+            bb =base64.b64decode(bytes(b64c,"utf8")) 
+            debug("adding segment",i,len(bb),hex(bb[0]))
+            bin.extend(bb)
         return base64.b64encode(bin).decode("utf-8")
         # multi file vm
 
