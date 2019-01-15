@@ -269,6 +269,7 @@ def start(target,probe,bytecode):
     # import gdbgui
     from .gdbgui import backend
     sys.argv = ["","-g",gdb,"--hide_gdbgui_upgrades","-n","-x",gdbfile]
+    info("**Starting GDB GUI**")
     backend.main()
     try:
         stop_temporary_probe(tp)
