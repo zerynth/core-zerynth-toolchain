@@ -705,6 +705,36 @@ where :samp:`alias` is the device alias previously set (or just the initial part
         fatal("Can't erase flash! -->",out)
     info("Memory flash erased")
 
+@device.command(help="Put the device in a selected operating mode. \n\n Arguments: \n\n ALIAS: device alias \n\n MODE: selected mode")
+@click.argument("alias")
+@click.argument("mode")
+def put_mode(alias, mode):
+    """ 
+.. _ztc-cmd-device-put-mode:
+
+Put the device in a selected mode
+---------------------------------
+
+Erase completely the flash memory of the device (all data stored will be deleted).
+
+This operation is performed by issuing the command: ::
+
+    ztc device put_mode alias mode
+
+where :samp:`alias` is the device alias previously set (or just the initial part of it).
+
+    """
+    tgt = _dsc.search_for_device(alias)
+    if not tgt:
+        fatal("Can't find device",alias)
+    elif isinstance(tgt,list):
+        fatal("Ambiguous alias",[x.alias for x in tgt])
+
+    info("Putting the device in %s mode" % mode)
+    res,out = tgt.do_put_mode(mode, outfn=info)
+    if not res:
+        fatal("Cannot put the device in selected mode! -->",out)
+    info("Device put in selected mode")
 
 @device.group(help="Manage device configurations manually.")
 def db():
@@ -819,4 +849,105 @@ removes the device :samp:`device_name` from the configured devices.
     fs.set_yaml(db,fs.path(env.cfg,"devices.yaml"))
 
 
+def get_device(alias,loop,perform_reset=True):
+    _dsc = Discover()
+    uids = []
+    adev = _dsc.search_for_device(alias)
+    if not adev:
+        fatal("Can't find device",alias)
+    elif isinstance(adev,list):
+        fatal("Ambiguous alias",[x.alias for x in adev])
+    uid = adev.uid
+
+    # search for device
+    info("Searching for device",uid,"with alias",alias)
+    uids, devs = _dsc.wait_for_uid(uid,loop=loop)
+    if not uids:
+        fatal("No such device",uid)
+    elif len(uids)>1:
+        fatal("Ambiguous uid",uids)
+    uid = uids[0]
+    for k,d in devs.items():
+        if d.uid == uid:
+            dev = d
+            hh = k
+            break
+    else:
+        fatal("Error!",uid)
+    # got dev object!
+
+    if perform_reset:
+
+        if dev.uplink_reset is True:
+            info("Please reset the device!")
+            sleep(dev.reset_time/1000)
+            info("Searching for device",uid,"again")
+            # wait for dev to come back, port/address may change -_-
+            uids,devs = _dsc.wait_for_uid(uid)
+            if len(uids)!=1:
+                fatal("Can't find device",uid)
+        elif dev.uplink_reset == "reset":
+            dev.reset()
+
+    dev = devs[hh]
+    return dev
+
+
+def get_device_by_target(target,options,skip_reset=False):
+    info("Searching for device",target)
+    dev = tools.get_target(target,options)
+    if not dev:
+        fatal("No such target!",target)
+
+    if not skip_reset:
+        if dev.uplink_reset is True:
+            info("Please reset the device!")
+            sleep(dev.reset_time/1000)
+        elif dev.uplink_reset == "reset":
+            dev.reset()
+    return dev
+
+def probing(ch,devtarget, adjust_timeouts=True):
+    # PROBING
+    starttime = time.perf_counter()
+    probesent = False
+    hcatcher = re.compile("^(r[0-9]+\.[0-9]+\.[0-9]+) ([0-9A-Za-z_\-]+) ([^ ]+) ([0-9a-fA-F]+) ZERYNTH")
+    # reduce timeout
+    if adjust_timeouts: # Windows Driver for some USB serials (i.e. arduino_due) send simulated DTR (two zeros) when reconfiguring timeout -_- -_- -_-
+        ch.set_timeout(0.5)
+    while time.perf_counter()-starttime<5:
+        line=ch.readline()
+        if not line and not probesent:
+            probesent=True
+            ch.write("V")
+            info("Probe sent")
+        line = line.replace("\n","").strip()
+        if line:
+            info("Got header:",line)
+        if line.endswith("ZERYNTH"):
+            mth = hcatcher.match(line)
+            if mth:
+                version = mth.group(1)
+                vmuid = mth.group(2)
+                chuid = mth.group(4)
+                target = mth.group(3)
+                break
+    else:
+        fatal("No answer to probe")
+
+    # im = ZpmVersion(env.min_vm_dep)                             # minimum vm version compatible with current ztc
+    # ik = ZpmVersion(version)                                    # vm version
+
+    # if compare_versions(version,env.var.version) != 0:
+    #     fatal("VM version [",version,"] is not compatible with this uplinker! Virtualize again with a newer VM...")
+
+    if target!=devtarget:
+        fatal("Wrong VM: probing for",devtarget,"and found",target,"instead")
+    else:
+        info("Found VM",vmuid,"for",target)
+
+    # restore timeout
+    if adjust_timeouts:
+        ch.set_timeout(2)
+    return version,vmuid,chuid,target
 

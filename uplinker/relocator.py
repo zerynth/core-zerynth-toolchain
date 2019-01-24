@@ -3,6 +3,7 @@ from compiler import gcc
 import re
 import base64
 import struct
+import time
 
 class Relocator():
     def __init__(self,zcode,vm,device):
@@ -29,7 +30,8 @@ class Relocator():
         #         self.vmsym.append(m.group(2))
 
     def get_relocated_code(self,symreloc,ofile,lfile,rodata_in_ram=False):
-        cc = gcc(tools[self.device.cc])
+        # print("GCCOPTS",self.device.gccopts)
+        cc = gcc(tools[self.device.cc],self.device.gccopts)
         undf = cc.get_undefined(ofile)
         fund = set()
         srel = dict(symreloc)
@@ -75,7 +77,7 @@ class Relocator():
 
     def relocate(self,_symbols,_memstart,_romstart,debug_info=None):
         #logger.info("Relocating Bytecode for %s",self.upl.board["shortname"])
-        cc = gcc(tools[self.device.cc])
+        # cc = gcc(tools[self.device.cc],opts=self.device.gccopts)
         # unpack zcode
         cobjs = self.zcode["cobjs"]
         header = bytearray(base64.standard_b64decode(self.zcode["header"]))
@@ -285,6 +287,20 @@ class Relocator():
             thebin = header+pyobjs+cbin
         else:
             thebin = header+pyobjs
+
+        # insert bytecode length
+        thebin[52:56]=struct.pack("=I",len(thebin))
+        # insert vm version
+        thebin[56:60]=struct.pack("=I",int(self.thevm["hexversion"],16))
+        # calculate hash with ts=0 and hash=0
+        hash = md5b(thebin)
+        # insert hash
+        thebin[28:44]=hash
+        # insert timestamp
+        thebin[44:48]=struct.pack("=I",int(time.time()))
+
+
+
 
         # print("Header starts at:",hex(_romstart))
         # print("Header size:",len(self.upl.header))

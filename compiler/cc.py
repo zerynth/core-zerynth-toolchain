@@ -214,25 +214,64 @@ class gcc():
             self.defines = ["-D"+str(x) for x in opts["defs"]]
         if "inc" in opts:
             self.incpaths = ["-I"+str(x) for x in opts["inc"]]
+        self.archopts = opts["arch"]
+
+
         self.objdump = tools["objdump"]
         self.ld = tools["ld"]
         self.readelf = tools["readelf"]
-        # search for compiler libraries in ../lib
-        libpath = None
-        libfiles = fs.all_files(fs.path(fs.dirname(self.gcc),"..","lib"))
-        libgcc = []
-        for libfile in libfiles:
-            if fs.basename(libfile)=="libgcc.a":
-                libgcc.append(libfile) 
-        if not libgcc:    
-            fatal("Can't find libgcc!")
-        for libfile in libgcc:
-            # select thumb libgcc if existing
-            libpath = fs.dirname(libfile)
-            if "thumb" in libfile:
+
+        # find search path: https://stackoverflow.com/a/21610523
+        ret, output = self.run_command(self.gcc,self.archopts+["-print-search-dirs"])
+        lines = output.split()
+        self.libpaths=[]
+        pline=""
+        for line in lines:
+            if line.startswith("=") and pline.startswith("libraries:"):
+                if env.platform.startswith("win"):  #how cool is that? -_-
+                    paths = line[1:].split(";")
+                else:
+                    paths = line[1:].split(":")
+                for path in paths:
+                    self.libpaths.append(fs.apath(path))
                 break
-        debug("libgcc:",libpath)
-        self.libpath = libpath
+            pline=line
+        if not self.libpaths:
+            warning("No library path found!")
+        # else:
+        #     print(self.libpaths)
+
+
+        # search for compiler libraries in ../lib
+        # libpath = None
+        # libfiles = fs.all_files(fs.path(fs.dirname(self.gcc),"..","lib"))
+        # libgcc = []
+        # for libfile in libfiles:
+        #     if fs.basename(libfile)=="libgcc.a":
+        #         libgcc.append(libfile) 
+        # if not libgcc:    
+        #     fatal("Can't find libgcc!")
+        # for libfile in libgcc:
+        #     # select thumb libgcc if existing
+        #     libpath = fs.dirname(libfile)
+        #     if "thumb" in libfile:
+        #         break
+        # debug("libgcc:",libpath)
+        # self.libpath = libpath
+
+        # # find math lib
+        # libmath=None
+        # libfiles = fs.all_files(fs.path(fs.dirname(self.gcc),".."),filter="libm.a")
+        # for libfile in libfiles:
+        #     if fs.basename(fs.dirname(libfile))=="lib":
+        #         libmath=libfile
+        #         break
+        # if not libmath:    
+        #     fatal("Can't find libmath!")
+        # self.libmath = libmath
+        # print(self.libpath,self.libmath)
+                
+
 
     def run_command(self,cmd, args):
         ret = 0
@@ -285,7 +324,7 @@ class gcc():
             ret, output = self.run_command(self.gcc,self.gccopts+inc+nm+self.defines+["-g"])
             #print(output)
             lines = output.split("\n")
-            catcher = re.compile("([^:]+):([0-9]+):([0-9]+):[^:]*(warning|error)(.*)")
+            catcher = re.compile("(.+):([0-9]+):([0-9]+):[^:]*(warning|error)(.*)")
             for line in lines:
                 res = catcher.match(line)
                 if res:
@@ -333,7 +372,7 @@ class gcc():
             catcher = re.compile("([0-9a-fA-F]+)([A-Za-z ]+)([^ ]+) ([0-9a-fA-F]+) ([^ ]+)")
             lines = output.split("\n")
             for line in lines:
-                #print(">>",line,"<<")
+                # print(">>",line,"<<")
                 mth = catcher.match(line)
                 
                 if mth and mth.group(3) in ["*ABS*","*UND*"] and "f" not in mth.group(2):
@@ -355,12 +394,13 @@ class gcc():
         if reloc:
             ldopt.append("-r")
         ldopt.extend(fnames)
-        #add libgcc
-        if abi:
-            ldopt.append("-L")
-            ldopt.append(self.libpath)
-            ldopt.append("-lgcc")
 
+        # add library paths
+        for l in self.libpaths:
+            ldopt.append("-L")
+            ldopt.append(l)
+
+        # First, libraries
         for lib in libs:
             if fs.exists(lib):
                 if fs.isfile(lib):
@@ -374,11 +414,19 @@ class gcc():
                 #it's an abbreviated lib
                 ldopt.append("-l"+lib)
 
+        #add libgcc as last one (symbols in gcc.a are needed by previous libraries)
+        if abi:
+            # ldopt.append("-L")
+            # ldopt.append(self.libpath)
+            ldopt.append("-lgcc")
+
+
         if ofile:
             ldopt.append("-o")
             ldopt.append(ofile)
-        #print(ldopt)
+        # print(ldopt)
         ret,output = self.run_command(self.ld,ldopt)
+        # print(output)
         return (ret,output)
     def retrieve_sections(self,fname):
         res,output = self.run_command(self.objdump,["-s",fname])

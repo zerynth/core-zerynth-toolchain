@@ -430,10 +430,20 @@ class OpCode():
                     opc = OpCode("CONSTI_0")
                 else:
                     # Need to pass byte for size() to be correct
-                    opc = OpCode("CONSTI", [Short(0)])
+                    if val<0:
+                        #signed constant
+                        if val<-2147483648:  #less than -2^31 => it's 64 bits
+                            opc = OpCode("CONSTI64", [Short(0)])
+                        else:
+                            opc = OpCode("CONSTI", [Short(0)])
+                    else:
+                        #unsigned constant
+                        if val>0xffffffff:  #greater then max uint32_t => it's64 bits
+                            opc = OpCode("CONSTU64", [Short(0)])
+                        else:
+                            opc = OpCode("CONSTU", [Short(0)])
                     opc.aconst = val
                 opc.stu = 1
-
                 return opc
             elif isinstance(val, float):
                 if val == 1.0:

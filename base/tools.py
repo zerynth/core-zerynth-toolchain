@@ -121,7 +121,11 @@ class Tools():
         return res
 
     def _parse_order(self,path):
-        order = fs.readfile(fs.path(path,"order.txt"))
+        try:
+            order = fs.readfile(fs.path(path,"order.txt"))
+            debug("Can't open order.txt at",path)
+        except:
+            return []
         lines = order.split("\n")
         stack = []
         rs = []

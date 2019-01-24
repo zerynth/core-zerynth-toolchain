@@ -22,6 +22,8 @@ For the customization process please refer to the :ref:`dedicated section <ztc-c
     """
 from base import *
 from packages import *
+from devices import get_device, get_device_by_target, probing
+from jtag import *
 import click
 import datetime
 import json
@@ -128,18 +130,134 @@ def _vm_create(vminfo,custom_target=None):
 @click.option("--feat", multiple=True, type=str,help="add extra features to the requested virtual machine (multi-value option)")
 @click.option("--name", default="",help="Virtual machine name")
 @click.option("--custom_target", default="",help="Original target for custom vms")
-def create_by_uid(dev_uid,version,rtos,feat,name,patch,custom_target):
+@click.option("--share", default=False, flag_value=True, help="Create shareable VM")
+@click.option("--reshare", default=False, flag_value=True, help="Create shareable VM")
+def create_by_uid(dev_uid,version,rtos,feat,name,patch,custom_target,share,reshare):
     vminfo = {
         "name": "dev:"+dev_uid,
         "dev_uid":dev_uid,
         "version": version,
         "rtos": rtos,
         "patch":patch,
-        "features": feat
+        "features": feat,
+        "shared":[] if not share else ["*"],
+        "reshareable":reshare
         }
     _vm_create(vminfo,custom_target=None if not custom_target else custom_target)
 
 
+def _own_vm(vm_uid):
+    res = zpost(url=env.api.vm+"/"+vm_uid,data={})
+    rj = res.json()
+    if rj["status"]=="success":
+        vmd = rj["data"]
+        info("VM",vm_uid,"successfully owned with chip_id",vmd["chip_id"],"and target",vmd["dev_type"])
+        return vmd["chip_id"],vmd["dev_type"],vmd["dev_uid"]
+    else:
+        fatal("Can't own virtual machine",vm_uid,rj["message"])
+
+def _vmuid_dev(dev):
+    if not dev.port:
+        fatal("Device has no serial port! Check that drivers are installed correctly...")
+    # open channel to dev TODO: sockets
+    conn = ConnectionInfo()
+    conn.set_serial(dev.port,**dev.connection)
+    ch = Channel(conn)
+    try:
+        ch.open(timeout=2)
+    except:
+        fatal("Can't open serial:",dev.port)
+
+    try:
+        version,vmuid,chuid,target = probing(ch,dev.target, True if not dev.fixed_timeouts else False)
+        ch.close()
+        return vmuid,version,target,chuid
+    except Exception as e:
+        warning(e)
+        try:
+            ch.close()
+        except:
+            warning("Error while closing serial")
+        if dev.uplink_reset:
+            fatal("Something wrong during the probing phase: too late reset or serial port already open?")
+        else:
+            fatal("Something wrong during the probing phase:",e)
+
+def retrieve_vm_uid(alias):
+    dev = get_device(alias,5)
+    vm_uid,version,target,chipid = _vmuid_dev(dev)
+    if target!=dev.target:
+        fatal("Target mismatch!",target,"vs",dev.target)
+    return vm_uid,version,target,chipid,dev
+
+
+def retrieve_vm_uid_raw(target,__specs):
+    options = {}
+    for spec in __specs:
+        pc = spec.find(":")
+        if pc<0:
+            fatal("invalid spec format. Give key:value")
+        options[spec[:pc]]=spec[pc+1:]
+    dev = get_device_by_target(target,options)
+    vm_uid,version,target,chipid = _vmuid_dev(dev)
+    if target!=dev.target:
+        fatal("Target mismatch!",target,"vs",dev.target)
+    return vm_uid,version,target,chipid,dev
+
+
+def _reg_owning(dev,remote_uid,chipid):
+    # register device
+    dev = dev.to_dict()
+    dev["chipid"]=chipid
+    dev["remote_id"]=remote_uid
+    env.put_dev(dev,linked=dev.get("sid")=="no_sid")
+
+@vm.command(help="Redeem third party VM by uid")
+@click.argument("vm_uid")
+def own(vm_uid):
+    chipid, devtype, remote_uid = _own_vm(vm_uid)
+
+@vm.command(help="Redeem third party VM by uid taken from device")
+@click.argument("alias")
+def own_alias(alias):
+    vm_uid,version,target,chipid,dev = retrieve_vm_uid(alias)
+    chipid, devtype, remote_uid = _own_vm(vm_uid)
+    _reg_owning(dev,remote_uid,chipid)
+
+@vm.command(help="Redeem third party VM by uid taken from device raw")
+@click.argument("target")
+@click.option("--spec","__specs",default="",multiple=True)
+def own_target(target,__specs):
+    vm_uid,version,target,chipid,dev = retrieve_vm_uid_raw(target,__specs)
+    chipid, devtype, remote_uid = _own_vm(vm_uid)
+    # _reg_owning(dev,remote_uid,chipid)
+
+
+@vm.command(help="Redeem third party VM by uid taken from device by probe")
+@click.argument("target")
+@click.argument("probe")
+def own_by_probe(target,probe):
+    dev = get_device_by_target(target,{},skip_reset=True)
+    if not dev.jtag_capable:
+        fatal("Target does not support probes!")
+    tp = start_temporary_probe(target,probe)
+    try:
+        vm_uid = dev.get_vmuid()
+    except Exception as e:
+        vm_uid = None
+        warning(e)
+    stop_temporary_probe(tp)
+    if vm_uid:
+        chipid, devtype, remote_uid = _own_vm(vm_uid)
+        # _reg_owning(dev,remote_uid,chipid)
+    else:
+        fatal("Can't retrieve vm uid!")
+
+
+@vm.command("download",help="Download VM by uid")
+@click.argument("vm_uid")
+def vm_download(vm_uid):
+    download_vm(vm_uid)
 
 
 @vm.command("list", help="List all owned virtual machines")
@@ -177,7 +295,7 @@ Additional options can be provided to filter the returned virtual machine set:
                     _from += 1
                 log_table(table,headers=["Number","UID","Name","Version","Patch","Dev Type","Rtos","Features"])
             else:
-                log_json(rj["data"])                
+                log_json(rj["data"])
         else:
             critical("Can't get vm list",rj["message"])
     except Exception as e:

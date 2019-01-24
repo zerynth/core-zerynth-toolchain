@@ -2,115 +2,14 @@ from base import *
 from packages import *
 from .relocator import Relocator
 import click
-import devices
 import time
 import re
 import struct
 import base64
 from jtag import *
+import virtualmachines
+from devices import get_device, get_device_by_target,probing
 
-def get_device(alias,loop,perform_reset=True):
-    _dsc = devices.Discover()
-    uids = []
-    adev = _dsc.search_for_device(alias)
-    if not adev:
-        fatal("Can't find device",alias)
-    elif isinstance(adev,list):
-        fatal("Ambiguous alias",[x.alias for x in adev])
-    uid = adev.uid
-
-    # search for device
-    info("Searching for device",uid,"with alias",alias)
-    uids, devs = _dsc.wait_for_uid(uid,loop=loop)
-    if not uids:
-        fatal("No such device",uid)
-    elif len(uids)>1:
-        fatal("Ambiguous uid",uids)
-    uid = uids[0]
-    for k,d in devs.items():
-        if d.uid == uid:
-            dev = d
-            hh = k
-            break
-    else:
-        fatal("Error!",uid)
-    # got dev object!
-
-    if perform_reset:
-
-        if dev.uplink_reset is True:
-            info("Please reset the device!")
-            sleep(dev.reset_time/1000)
-            info("Searching for device",uid,"again")
-            # wait for dev to come back, port/address may change -_-
-            uids,devs = _dsc.wait_for_uid(uid)
-            if len(uids)!=1:
-                fatal("Can't find device",uid)
-        elif dev.uplink_reset == "reset":
-            dev.reset()
-
-    dev = devs[hh]
-    return dev
-
-
-def get_device_by_target(target,options,skip_reset=False):
-    info("Searching for device",target)
-    dev = tools.get_target(target,options)
-    if not dev:
-        fatal("No such target!",target)
-
-    if not skip_reset:
-        if dev.uplink_reset is True:
-            info("Please reset the device!")
-            sleep(dev.reset_time/1000)
-        elif dev.uplink_reset == "reset":
-            dev.reset()
-    return dev
-
-
-def probing(ch,devtarget, adjust_timeouts=True):
-    # PROBING
-    starttime = time.perf_counter()
-    probesent = False
-    hcatcher = re.compile("^(r[0-9]+\.[0-9]+\.[0-9]+) ([0-9A-Za-z_\-]+) ([^ ]+) ([0-9a-fA-F]+) ZERYNTH")
-    # reduce timeout
-    if adjust_timeouts: # Windows Driver for some USB serials (i.e. arduino_due) send simulated DTR (two zeros) when reconfiguring timeout -_- -_- -_-
-        ch.set_timeout(0.5)
-    while time.perf_counter()-starttime<5:
-        line=ch.readline()
-        if not line and not probesent:
-            probesent=True
-            ch.write("V")
-            info("Probe sent")
-        line = line.replace("\n","").strip()
-        if line:
-            info("Got header:",line)
-        if line.endswith("ZERYNTH"):
-            mth = hcatcher.match(line)
-            if mth:
-                version = mth.group(1)
-                vmuid = mth.group(2)
-                chuid = mth.group(4)
-                target = mth.group(3)
-                break
-    else:
-        fatal("No answer to probe")
-
-    # im = ZpmVersion(env.min_vm_dep)                             # minimum vm version compatible with current ztc
-    # ik = ZpmVersion(version)                                    # vm version
-
-    # if compare_versions(version,env.var.version) != 0:
-    #     fatal("VM version [",version,"] is not compatible with this uplinker! Virtualize again with a newer VM...")
-
-    if target!=devtarget:
-        fatal("Wrong VM: uplinking for",devtarget,"and found",target,"instead")
-    else:
-        info("Found VM",vmuid,"for",target)
-
-    # restore timeout
-    if adjust_timeouts:
-        ch.set_timeout(2)
-    return version,vmuid,chuid,target
 
 
 
@@ -130,8 +29,8 @@ def handshake(ch):
 
     # read symbols
     symbols = []
-    nsymbols=3#int(line.strip("\n"),16)
-    info("    symbols:",nsymbols)
+    # nsymbols=3#int(line.strip("\n"),16)
+    # info("    symbols:",nsymbols)
     # for sj in range(0,nsymbols-3):
     #     line=ch.readline()
     #     debug(line)
@@ -294,10 +193,18 @@ def _uplink_dev(dev,bytecode,loop):
     vms = tools.get_vm(vmuid,version,chuid,target)
     if not vms:
         ch.close()
-        fatal("No such vm for",dev.target,"with id",vmuid)
+        warning("No such vm for",dev.target,"with id",vmuid," ==> searching online...")
+        virtualmachines.download_vm(vmuid)
+        info("VM downloaded, retry uplinking!")
+        return
+
     vm = fs.get_json(vms)
 
     symbols,_memstart,_romstart,_flashspace = handshake(ch)
+    _memdelta = _memstart-int(vm["map"]["memstart"],16)
+    info("    memdelta :"+str(_memdelta))
+    if _memdelta != vm["map"]["memdelta"]:
+        debug("memdelta mismatch: fota updates could not work")
 
     relocator = Relocator(bf,vm,dev)
     thebin = relocator.relocate(symbols,_memstart,_romstart)
@@ -380,6 +287,7 @@ def _uplink_dev(dev,bytecode,loop):
         info("Uplink done")
 
 
+
 @cli.command(help="Generate bytecode runnable on a specific VM. \n\n Arguments: \n\n VMUID: VM identifier. \n\n BYTECODE: path to a bytecode file.")
 @click.argument("vmuid")
 @click.argument("bytecode",type=click.Path())
@@ -388,9 +296,10 @@ def _uplink_dev(dev,bytecode,loop):
 @click.option("--vm","vm_ota",default=0, type=int,help="Select OTA VM index")
 @click.option("--bc","bc_ota",default=0, type=int,help="Select OTA VM Bytecode index")
 @click.option("--file",default="", type=str,help="Save binary to specified file")
+@click.option("--vmfile",default="", type=str,help="Save binary to specified file")
 @click.option("--bin",default=False,flag_value=True,help="Save in binary format")
 @click.option("--debug_bytecode",default=False,flag_value=True,help="Save debug info in bytecode")
-def link(vmuid,bytecode,include_vm,vm_ota,bc_ota,file,otavm,bin,debug_bytecode):
+def link(vmuid,bytecode,include_vm,vm_ota,bc_ota,file,otavm,bin,debug_bytecode,vmfile):
     """
 .. _ztc-cmd-link:
 
@@ -449,7 +358,12 @@ For example, assuming a project has been compiled to the bytecode file :samp:`pr
     """
     vms = tools.get_vm_by_uid(vmuid)
     if not vms:
-        fatal("No such vm with uid",vmuid)
+        warning("No such vm with uid",vmuid," ==> searching online...")
+        virtualmachines.download_vm(vmuid)
+        vms = tools.get_vm_by_uid(vmuid)
+        if not vms:
+            fatal("Unexpected error searching for vm",vmuid)
+
     vm = fs.get_json(vms)
 
     try:
@@ -468,7 +382,13 @@ For example, assuming a project has been compiled to the bytecode file :samp:`pr
 
     debug("MEMSTART: ",hex(_memstart))
     debug("ROMSTART: ",hex(_romstart))
-    relocator = Relocator(bf,vm,Var({"relocator":vm["relocator"],"cc":vm["cc"],"rodata_in_ram":vm.get("rodata_in_ram",False)}))
+    relocator = Relocator(bf,vm,Var(
+        {
+            "relocator":vm["relocator"],
+            "cc":vm["cc"],
+            "gccopts":vm["gccopts"],
+            "rodata_in_ram":vm.get("rodata_in_ram",False)
+        },recursive=False))
     addresses = []#[int(symbols[x],16) for x in relocator.vmsym]
     dbginfo = []
     thebin = relocator.relocate(addresses,_memstart,_romstart,dbginfo)
@@ -514,6 +434,12 @@ For example, assuming a project has been compiled to the bytecode file :samp:`pr
                 fs.set_json(res,file)
         else:
             log_json(res)
+
+        if vmfile and otavm and bin:
+            fs.write_file(base64.b64decode(res["vmbin"]),vmfile)
+            info("File",vmfile,"saved")
+            fs.write_file(base64.b64decode(res["bcbin"]),file)
+            info("File",file,"saved")
     else:
         if file:
             fs.write_file(thebin,file)
@@ -531,7 +457,9 @@ def ota_prepare_vm(vm):
         bin = bytearray()
         for i in bin_indexes:   # add one after the other the various vm segments
             b64c = vm["bin"][i]
-            bin.extend(base64.b64decode(bytes(b64c,"utf8")))
+            bb =base64.b64decode(bytes(b64c,"utf8")) 
+            debug("adding segment",i,len(bb),hex(bb[0]))
+            bin.extend(bb)
         return base64.b64encode(bin).decode("utf-8")
         # multi file vm
 
