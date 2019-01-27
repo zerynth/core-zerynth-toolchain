@@ -1,15 +1,15 @@
 {
     "dependencies": {
-        "core.zerynth.stdlib": "r2.1.1",
-        "sys.zerynth.runtime": "r2.1.1"
+        "core.zerynth.stdlib": "r2.2.0",
+        "sys.zerynth.runtime": "r2.2.0"
     },
     "description": "",
     "fullname": "core.zerynth.toolchain",
     "git_pointer": "zerynth://zerynth-core/zerynth-toolchain",
     "keywords": [],
     "repo": "official",
-    "title": "Zerynth Toolchain",
-    "version": "r2.1.2",
     "skinnable": true,
+    "title": "Zerynth Toolchain",
+    "version": "r2.2.0",
     "whatsnew": ""
 }

@@ -66,6 +66,8 @@ class Device():
                     if line.startswith("wrote"):
                         wait_verification=True
                     if wait_verification and line.startswith("** Verified OK"):
+                        if self.get("jtag_burn_end"):
+                            pb.send(self.get("jtag_burn_end"))
                         return True, ""
                     if wait_verification and line.startswith("** Verified Failed"):
                         return False, "Verification failed"

@@ -117,7 +117,9 @@ def start_probe(target,probe):
 
     info("Starting OpenOCD...")
     debug(jtag_interface,jtag_target)
-    e,_,_ = proc.runcmd(dev.jtag_tool or "openocd","-f",jtag_interface,"-f",jtag_target,outfn=log)
+
+    jtag_target_options = dev.jtag_target_options or ""
+    e,_,_ = proc.runcmd(dev.jtag_tool or "openocd","-f",jtag_interface,"-c",jtag_target_options,"-f",jtag_target,outfn=log)
 
 
 
