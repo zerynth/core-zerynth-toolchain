@@ -17,10 +17,12 @@ def handshake(ch):
     # HANDSHAKE 1
     line=""
     ch.write("U") # ask for bytecode uplink
+    debug("=> U")
     info("Handshake")
     frlines = 0
     while not line.endswith("OK\n"):
         line=ch.readline()
+        debug("<=",line)
         if (not line) or frlines>5:
             #timeout without an answer
             fatal("Timeout without answer")

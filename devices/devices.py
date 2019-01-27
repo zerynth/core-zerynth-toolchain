@@ -144,13 +144,17 @@ class Device():
         if not self.jtag_capable and options.get("probe"):
             return False, "Target does not support probes!"
         portbin = None
+        what_to_burn="bin" if not self.burn_hex else "hex"
+        info("Burning",what_to_burn)
         if self.customized:
             portfile = fs.path(self.path,"port.bin")
             portbin = fs.readfile(portfile,"b")
         try:
-            if isinstance(vm["bin"],str):
-                vmbin=bytearray(base64.standard_b64decode(vm["bin"]))
-                if options.get("probe"):
+            if isinstance(vm[what_to_burn],str):
+                vmbin=bytearray(base64.standard_b64decode(vm[what_to_burn]))
+                if options.get("probe") or self.preferred_burn_with_jtag:
+                    if self.preferred_burn_with_jtag:
+                        options = self.preferred_burn_with_jtag
                     tp = start_temporary_probe(self.target,options.get("probe"))
                     res,out = self.burn_with_probe(vmbin,vm["map"]["vm"][0])
                     stop_temporary_probe(tp)
@@ -160,7 +164,7 @@ class Device():
                     else:
                         res,out = self.burn(vmbin,outfn)
             else:
-                vmbin=[ base64.standard_b64decode(x) for x in vm["bin"]]
+                vmbin=[ base64.standard_b64decode(x) for x in vm[what_to_burn]]
                 if options.get("probe"):
                     tp = start_temporary_probe(self.target,options.get("probe"))
                     res,out = self.burn_with_probe(vmbin)

@@ -793,6 +793,7 @@ class Compiler():
 
         #res_table
         if rtable:
+            info("Resource table is at",len(buf),hex(len(buf)))
             buf+=struct.pack("=I",cobsz)
             cobsz+=len(rtable)
         else:
@@ -835,6 +836,7 @@ class Compiler():
 
         #resource table
         buf+=rtable
+        info("Resource table at",len(buf),hex(len(buf)))
 
         bin["info"]={
             "nmodules":len(self.modules),
