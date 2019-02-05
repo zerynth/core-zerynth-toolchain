@@ -886,7 +886,9 @@ def get_device(alias,loop,perform_reset=True):
 
     if perform_reset:
 
-        if dev.uplink_reset is True:
+        if dev.preferred_uplink_with_jtag:
+            pass
+        elif dev.uplink_reset is True:
             info("Please reset the device!")
             sleep(dev.reset_time/1000)
             info("Searching for device",uid,"again")

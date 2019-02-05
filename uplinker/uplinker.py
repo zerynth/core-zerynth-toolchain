@@ -98,7 +98,11 @@ The :command:`uplink` may the additional :option:`--loop times` option that spec
 
     """
     dev = get_device(alias,loop)
-    _uplink_dev(dev,bytecode,loop)
+    if dev.preferred_uplink_with_jtag:
+        # uplink code with jtag
+        _link_uplink_jtag(dev,bytecode)
+    else:
+        _uplink_dev(dev,bytecode,loop)
 
 @cli.command(help="Uplink bytecode to a configured device")
 @click.argument("target")
@@ -162,6 +166,49 @@ It is possible to change the address where the bytecode will be flashed by speci
         info("Uplink done")
     else:
         fatal("Uplink failed:",out)
+
+
+
+def _link_uplink_jtag(dev,bytecode):
+    probe = dev.preferred_uplink_with_jtag["probe"]
+    
+    info("Searching for vm...")
+    tp = start_temporary_probe(dev.target,probe)
+    try:
+        vm_uid = dev.get_vmuid()
+    except Exception as e:
+        vm_uid = None
+        warning(e)
+    stop_temporary_probe(tp)
+
+    if not vm_uid:
+        fatal("Can't read vm uid!")
+    vmfile = tools.get_vm_by_uid(vm_uid)
+    if not vmfile or not fs.exists(vmfile):
+        fatal("Can't find vm",vm_uid)
+    vm = fs.get_json(vmfile)
+
+    info("Linking bytecode...")
+    fwbin = fs.path(env.tmp,"fw.bin")
+    res, out, _ = proc.run_ztc("link",vm_uid,bytecode,"--bin","--file",fwbin,outfn=log)
+    if res:
+        fatal("Can't link!")
+
+    tp = start_temporary_probe(dev.target,probe)
+    try:
+        burned = True
+        fwcontent = fs.readfile(fwbin,"b")
+        dev.burn_with_probe(fwcontent,offset=dev.bytecode_offset)
+    except Exception as e:
+        burned = False
+        warning(e)
+    stop_temporary_probe(tp)
+    if not burned:
+        fatal("Can't write firmware!")
+    info("Done")
+
+
+
 
 def _uplink_dev(dev,bytecode,loop):
     try:

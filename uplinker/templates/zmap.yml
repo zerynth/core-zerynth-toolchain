@@ -1,0 +1,54 @@
+# Zerynth Mass Programming map file
+#
+
+config:
+    # specify the name of the target micro/board
+    target: esp32_devkitc
+    options:
+        port: /dev/ttyUSB0
+    # uid of the VM
+    vm: newidf60
+    # how to register
+    register: target_custom
+    # project to flash
+    project: /path/to/project
+    # shareable vm
+    shareable: False
+
+# provisioning
+provisioning:
+    type: manual  # aws gcp azure zadm
+    subtype: csr
+    options:
+        - precreate
+        - device_name: ascending
+    resources:
+        - resource: private_key
+          type: pvkey
+          generation: openssl
+          parameters: xxx
+        - resource: device_cert
+          type: clicert
+          generation: openssl
+          parameters: xxx
+        - resource: cloud_cert
+          type: cacert
+          generation: file
+          parameters: xxx
+        - resource: endpoint
+          type: endpoint
+          parameters: xxx
+
+
+# flash layout
+layout:
+    - resource: zmap
+      address: 0x31000
+    - resource: private_key
+      address: 0x32000
+    - resource: device_cert
+      address: 0x33000
+    - resource: cloud_cert
+      address: 0x34000
+
+
