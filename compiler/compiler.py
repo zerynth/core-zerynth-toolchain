@@ -851,6 +851,7 @@ class Compiler():
             "header_size": len(buf),
             "version":env.var.version,
             "target":self.board.target,
+            "project":self.curpath,
             "ofiles": [] if not ofiles else ofiles
         }
 

@@ -180,6 +180,33 @@ class Device():
         except Exception as e:
             return False, str(e)
 
+    def do_burn_layout(self,layout,options={},outfn=None):
+        if not self.jtag_capable and options.get("probe"):
+            return False, "Target does not support probes!"
+        # TODO: add support for custom
+        if self.customized:
+            return False, "Layout burning is not supported for custom VMs"
+            # portfile = fs.path(self.path,"port.bin")
+            # portbin = fs.readfile(portfile,"b")
+        try:
+            if self.custom_burn_layout:
+                return self.custom_burn_layout(layout,options,outfn)
+            else:
+                if options.get("probe") or self.preferred_burn_with_jtag:
+                    if self.preferred_burn_with_jtag:
+                        options = self.preferred_burn_with_jtag
+                    tp = start_temporary_probe(self.target,options.get("probe"))
+                    for chunk in layout.chunks():
+                        res,out = self.burn_with_probe(chunk["bin"],chunk["loc"])
+                        if res:
+                            return False,"Burning failed for "+str(chunk["dsc"])
+                    stop_temporary_probe(tp)
+                    return True,""
+                else:
+                    return False, "Layout burning not supported without a probe"
+        except Exception as e:
+            return False, str(e)
+
     def do_get_chipid(self,probe,skip_probe=False):
         if not self.jtag_capable:
             return False, "Target does not support probes!"
