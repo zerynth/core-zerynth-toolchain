@@ -238,7 +238,7 @@ def _uplink_layout(dev,bytecode,dczpath=None):
 
     info("Checking layout...")
     layout = get_layout_at(ppath)
-    if not layout:
+    if layout.is_empty():
         info("No active layout found")
         # no dcz at project location or active:False
         return

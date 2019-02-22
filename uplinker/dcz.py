@@ -97,7 +97,9 @@ class Layout():
     def __repr__(self):
         return self.layout
 
-    
+    def is_empty(self):
+        return bool(self.layout["bin"])
+
     def to_table(self):
         table = []
         for i in range(len(self.layout["bin"])):
@@ -217,11 +219,11 @@ def get_layout_at(ppath,fail=False):
         logm = warning
     mapfile = fs.path(ppath,"dcz.yml")
     if not fs.exists(mapfile):
-        return None
+        return Layout()
     map = fs.get_yaml(mapfile)
     if not map.get("active",False):
         logm("Layout generation skipped, active flag not set")
-        return None
+        return Layout()
     dcz_map = map.get("dcz",{})
     layout = Layout()
     try:
@@ -229,7 +231,7 @@ def get_layout_at(ppath,fail=False):
     except Exception as e:
         warning("Resource parsing failed")
         logm(e)
-        return None
+        return Layout()
     if provisioner:
         try:
             provisioner.finalize(resources)
@@ -237,7 +239,7 @@ def get_layout_at(ppath,fail=False):
         except Exception as e:
             warning("Provisioner failed")
             logm(e)
-            return None
+            return Layout()
     try:
         if dcz_map:
             dczres = dcz_compile(dcz_map,resources)
@@ -245,7 +247,7 @@ def get_layout_at(ppath,fail=False):
     except Exception as e:
         warning("DCZ parsing failed")
         logm(e)
-        return None
+        return Layout()
 
     layout.add_resources(resources)
     # table = layout.to_table()
@@ -255,7 +257,7 @@ def get_layout_at(ppath,fail=False):
     except Exception as e:
         warning("Layout validation failed")
         logm(e)
-        return None
+        return Layout()
 
     return layout
 

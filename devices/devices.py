@@ -198,7 +198,7 @@ class Device():
                     tp = start_temporary_probe(self.target,options.get("probe"))
                     for chunk in layout.chunks():
                         res,out = self.burn_with_probe(chunk["bin"],chunk["loc"])
-                        if res:
+                        if not res:
                             return False,"Burning failed for "+str(chunk["dsc"])
                     stop_temporary_probe(tp)
                     return True,""

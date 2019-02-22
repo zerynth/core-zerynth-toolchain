@@ -221,8 +221,8 @@ from devices import get_device_by_target
 import click
 import base64
 import struct
+from jtag import *
 from .dcz import *
-
 
 
 @cli.group(help="Manage mass programming.")
@@ -321,7 +321,6 @@ The :command:`massprog` may take the additional :option:`--clean` option that fo
             pos = line.rindex(":")
             vm_uid = line[pos+1:].strip()
             print("[",vm_uid,"]")
-            vm_uid="newidf60"
             break
     else:
         fatal("Can't find vm uid!")
