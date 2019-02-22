@@ -223,19 +223,17 @@ class gcc():
 
         # find search path: https://stackoverflow.com/a/21610523
         ret, output = self.run_command(self.gcc,self.archopts+["-print-search-dirs"])
-        lines = output.split()
+        lines = output.split('\n')
         self.libpaths=[]
-        pline=""
         for line in lines:
-            if line.startswith("=") and pline.startswith("libraries:"):
+            if line.startswith("libraries: ="):
                 if env.platform.startswith("win"):  #how cool is that? -_-
-                    paths = line[1:].split(";")
+                    paths = line[12:].split(";")
                 else:
-                    paths = line[1:].split(":")
+                    paths = line[12:].split(":")
                 for path in paths:
                     self.libpaths.append(fs.apath(path))
                 break
-            pline=line
         if not self.libpaths:
             warning("No library path found!")
         # else:
