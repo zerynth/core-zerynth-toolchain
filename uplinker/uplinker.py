@@ -1,6 +1,7 @@
 from base import *
 from packages import *
 from .relocator import Relocator
+from .dcz import *
 import click
 import time
 import re
@@ -17,10 +18,12 @@ def handshake(ch):
     # HANDSHAKE 1
     line=""
     ch.write("U") # ask for bytecode uplink
+    debug("=> U")
     info("Handshake")
     frlines = 0
     while not line.endswith("OK\n"):
         line=ch.readline()
+        debug("<=",line)
         if (not line) or frlines>5:
             #timeout without an answer
             fatal("Timeout without answer")
@@ -61,7 +64,9 @@ def handshake(ch):
 @click.argument("alias")
 @click.argument("bytecode",type=click.Path())
 @click.option("--loop",default=5,type=click.IntRange(1,20),help="number of retries during device discovery.")
-def uplink(alias,bytecode,loop):
+@click.option("--skip-layout","skip_layout",default=False,flag_value=True,help="ignore a device configuration file if present")
+@click.option("--layout-root","layout_root",default=None,type=click.Path(),help="root folder for configuration files")
+def uplink(alias,bytecode,loop,skip_layout,layout_root):
     """
 .. _ztc-cmd-uplink:
 
@@ -96,27 +101,38 @@ The :command:`uplink` may the additional :option:`--loop times` option that spec
 
     """
     dev = get_device(alias,loop)
-    _uplink_dev(dev,bytecode,loop)
+    if not skip_layout:
+        _uplink_layout(dev,bytecode,dczpath=layout_root)
+
+    if dev.preferred_uplink_with_jtag:
+        # uplink code with jtag
+        _link_uplink_jtag(dev,bytecode)
+    else:
+        _uplink_dev(dev,bytecode,loop)
+
+
 
 @cli.command(help="Uplink bytecode to a configured device")
 @click.argument("target")
 @click.argument("bytecode",type=click.Path())
 @click.option("--loop",default=5,type=click.IntRange(1,20),help="number of retries during device discovery.")
 @click.option("--spec","__specs",default="",multiple=True)
-def uplink_raw(target,bytecode,loop,__specs):
+@click.option("--skip-layout","skip_layout",default=False,flag_value=True,help="ignore a device configuration file if present")
+@click.option("--layout-root","layout_root",default=None,type=click.Path(),help="root folder for configuration files")
+def uplink_raw(target,bytecode,loop,__specs,skip_layout,layout_root):
     """
 .. _ztc-cmd-uplink-raw:
 
 Uplink (raw)
 ============
 
-It is possible to perform an uplink against a configured device by specifying th relevant device parameters as in the :ref:`register raw <ztc-cmd-device-register-raw>` command, by specifying the :samp:`port` parameter.
+It is possible to perform an uplink against a configured device by specifying the relevant device parameters as in the :ref:`register raw <ztc-cmd-device-register-raw>` command, by specifying the :samp:`port` parameter.
 
 The command: ::
 
     ztc uplink_raw target bytecode --spec port:the_port
 
-performs an uplink on the device of type :samp:`target` using the bytecode file at :samp:`bytecode` using the serial prot :samp:`port`.
+performs an uplink on the device of type :samp:`target` using the bytecode file at :samp:`bytecode` using the serial port :samp:`port`.
 
     """
     options = {}
@@ -126,6 +142,8 @@ performs an uplink on the device of type :samp:`target` using the bytecode file 
             fatal("invalid spec format. Give key:value")
         options[spec[:pc]]=spec[pc+1:]
     dev = get_device_by_target(target,options)
+    if not skip_layout:
+        _uplink_layout(dev,bytecode,dczpath=layout_root)
     _uplink_dev(dev,bytecode,loop)
 
 @cli.command(help="Uplink bytecode to a device using a probe.")
@@ -133,6 +151,8 @@ performs an uplink on the device of type :samp:`target` using the bytecode file 
 @click.argument("probe")
 @click.argument("linked_bytecode",type=click.Path())
 @click.option("--address",default="")
+@click.option("--skip-layout","skip_layout",default=False,flag_value=True,help="ignore a device configuration file if present")
+@click.option("--layout-root","layout_root",default=None,type=click.Path(),help="root folder for configuration files")
 def uplink_by_probe(target,probe,linked_bytecode,address):
     """
 .. _ztc-cmd-uplink-by-probe:
@@ -153,6 +173,8 @@ It is possible to change the address where the bytecode will be flashed by speci
     dev = get_device_by_target(target,{},skip_reset=True)
     if not dev.jtag_capable:
         fatal("Target does not support probes!")
+    if not skip_layout:
+        _uplink_layout(dev,bytecode,dczpath=layout_root)
     tp = start_temporary_probe(target,probe)
     res,out = dev.burn_with_probe(fs.readfile(linked_bytecode,"b"),offset=address or dev.bytecode_offset)
     stop_temporary_probe(tp)
@@ -160,6 +182,74 @@ It is possible to change the address where the bytecode will be flashed by speci
         info("Uplink done")
     else:
         fatal("Uplink failed:",out)
+
+
+
+def _link_uplink_jtag(dev,bytecode):
+    probe = dev.preferred_uplink_with_jtag["probe"]
+    
+    info("Searching for vm...")
+    tp = start_temporary_probe(dev.target,probe)
+    try:
+        vm_uid = dev.get_vmuid()
+    except Exception as e:
+        vm_uid = None
+        warning(e)
+    stop_temporary_probe(tp)
+
+    if not vm_uid:
+        fatal("Can't read vm uid!")
+    vmfile = tools.get_vm_by_uid(vm_uid)
+    if not vmfile or not fs.exists(vmfile):
+        fatal("Can't find vm",vm_uid)
+    vm = fs.get_json(vmfile)
+
+    info("Linking bytecode...")
+    fwbin = fs.path(env.tmp,"fw.bin")
+    res, out, _ = proc.run_ztc("link",vm_uid,bytecode,"--bin","--file",fwbin,outfn=log)
+    if res:
+        fatal("Can't link!")
+
+    tp = start_temporary_probe(dev.target,probe)
+    try:
+        burned = True
+        fwcontent = fs.readfile(fwbin,"b")
+        dev.burn_with_probe(fwcontent,offset=dev.bytecode_offset)
+    except Exception as e:
+        burned = False
+        warning(e)
+    stop_temporary_probe(tp)
+    if not burned:
+        fatal("Can't write firmware!")
+    info("Done")
+
+
+def _uplink_layout(dev,bytecode,dczpath=None):
+    try:
+        bf = fs.get_json(bytecode)
+    except:
+        fatal("Can't open file",bytecode)
+    if dczpath:
+        ppath = dczpath
+    else:
+        if "project" not in bf["info"]:
+            return
+        ppath = bf["info"]["project"]
+
+    info("Checking layout...")
+    layout = get_layout_at(ppath)
+    if layout.is_empty():
+        info("No active layout found")
+        # no dcz at project location or active:False
+        return
+    info("Burning layout")
+    res, out = dev.do_burn_layout(layout,outfn=log)
+    if not res:
+        warning("Failed to burn layout",out)
+    info("Done")
+
+
+
 
 def _uplink_dev(dev,bytecode,loop):
     try:

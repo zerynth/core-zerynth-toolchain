@@ -15,3 +15,7 @@ jlink:
 stlink:
     script: stlink.cfg
     name: ST Link
+cmsis_dap:
+    script: cmsis-dap.cfg
+    name: SEGGER JLink
+
