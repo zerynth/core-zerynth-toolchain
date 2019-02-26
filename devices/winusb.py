@@ -16,6 +16,7 @@ class WinUsb():
 		self.wmi = WMI()
 		self.pnps = {}
 		self.devs = []
+		self.allusb = []
 
 
 	def find_sid(self,pnps,ssid):
@@ -76,6 +77,8 @@ class WinUsb():
 				mth = self.matchcom.match(usbdev.Name)
 				if mth:
 					dev["port"]=mth.group(1)
+				else:
+					dev["port"]=self._get_com_from_vid_pid(vid,pid)
 				ddisk = self._get_drive_letter_from_id(sid)
 				if ddisk:
 					dev["disk"]=ddisk
@@ -84,7 +87,14 @@ class WinUsb():
 		self.devs = devs
 		return self.devs
 		
-
+	def _get_com_from_vid_pid(self,vid,pid):
+		for usb in self.allusb:
+			v,p,s = self._get_win_device_id(usb.PNPDeviceID)
+			if vid == v and pid == p:
+				mth = self.matchcom.match(usb.Name)
+				if mth:
+					return mth.group(1)
+		return None
 
 	# def stop_win(self):
 	# 	pythoncom.CoUninitialize()
@@ -134,7 +144,8 @@ class WinUsb():
 	def _get_hw(self,sids=[],nouids=[]):
 		pnps = {}
 		curpnp=None
-		for usb in self.wmi.InstancesOf ("Win32_PNPEntity"):
+		self.allusb = self.wmi.InstancesOf ("Win32_PNPEntity")
+		for usb in self.allusb:
 			#unescaped = bytes(usb.PNPDeviceID,"utf-8").decode('unicode_escape')
 			vid,pid,sid = self._get_win_device_id(usb.PNPDeviceID)
 			if sid in sids and sid not in nouids:
