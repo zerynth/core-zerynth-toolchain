@@ -1,6 +1,7 @@
 from .base import *
 from .cfg import *
 from .tools import *
+from .fs import *
 import subprocess
 import shlex
 import sys
@@ -60,6 +61,12 @@ class prc():
         r,out,err = self.run(cmd,*args)
         for line in out.split("\n"):
             yield line
+
+    def run_ztc(self,*args,outfn=None,shell=False):
+        cmd = fs.path(env.ztc,"ztc.py")
+        return self.runcmd("python",cmd,*args,outfn=outfn,shell=shell)
+
+
 
 proc = prc()
 

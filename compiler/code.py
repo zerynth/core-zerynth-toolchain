@@ -505,16 +505,21 @@ class CodeObj():
                 if isinstance(cn, int):
                     #print("Int starting at",len(buf)-cnsts)
                     if sz==8:
-                        if cn<0:
-                            buf += (struct.pack("=q", cn))
-                        else:
-                            buf += (struct.pack("=Q", cn))
+                        try:
+                            if cn<0:
+                                buf += (struct.pack("=q", cn))
+                            else:
+                                buf += (struct.pack("=Q", cn))
+                        except struct.error as e:
+                            raise ValueError("Integer out of bounds")
                     else:
                         if cn<0:
                             buf += (struct.pack("=i", cn))
                         else:
                             buf += (struct.pack("=I", cn))
                 elif isinstance(cn, float):
+                    if cn == float('Inf'):
+                        raise ValueError('Float out of bounds')
                     #print("Float starting at",len(buf)-cnsts)
                     buf += (struct.pack("=d", cn))
                 elif isinstance(cn, str) or isinstance(cn,bytes):

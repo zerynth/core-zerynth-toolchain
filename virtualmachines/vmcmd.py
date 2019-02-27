@@ -132,7 +132,8 @@ def _vm_create(vminfo,custom_target=None):
 @click.option("--custom_target", default="",help="Original target for custom vms")
 @click.option("--share", default=False, flag_value=True, help="Create shareable VM")
 @click.option("--reshare", default=False, flag_value=True, help="Create shareable VM")
-def create_by_uid(dev_uid,version,rtos,feat,name,patch,custom_target,share,reshare):
+@click.option("--locked", default=False, flag_value=True, help="Create a locked VM")
+def create_by_uid(dev_uid,version,rtos,feat,name,patch,custom_target,share,reshare,locked):
     vminfo = {
         "name": "dev:"+dev_uid,
         "dev_uid":dev_uid,
@@ -141,8 +142,10 @@ def create_by_uid(dev_uid,version,rtos,feat,name,patch,custom_target,share,resha
         "patch":patch,
         "features": feat,
         "shared":[] if not share else ["*"],
-        "reshareable":reshare
+        "reshareable":reshare,
+        "locked":locked
         }
+    log_json(vminfo)
     _vm_create(vminfo,custom_target=None if not custom_target else custom_target)
 
 

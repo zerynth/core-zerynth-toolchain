@@ -793,6 +793,7 @@ class Compiler():
 
         #res_table
         if rtable:
+            info("Resource table is at",len(buf),hex(len(buf)))
             buf+=struct.pack("=I",cobsz)
             cobsz+=len(rtable)
         else:
@@ -835,6 +836,7 @@ class Compiler():
 
         #resource table
         buf+=rtable
+        info("Resource table at",len(buf),hex(len(buf)))
 
         bin["info"]={
             "nmodules":len(self.modules),
@@ -849,6 +851,7 @@ class Compiler():
             "header_size": len(buf),
             "version":env.var.version,
             "target":self.board.target,
+            "project":self.curpath,
             "ofiles": [] if not ofiles else ofiles
         }
 

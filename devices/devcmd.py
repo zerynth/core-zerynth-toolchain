@@ -272,46 +272,54 @@ The option :option:`--skip_burn` avoid flashing the device with the registering 
     
     if tgt.virtualizable != tgt.classname:
         fatal("Device must be put in virtualizable mode!")
-
-    # open register.vm
-    reg = fs.get_json(fs.path(tgt.path,"register.vm"))
-
-    info("Starting device registration")
-    # burn register.vm
-    if not skip_burn:
-        info("Burning bootloader...")
-        res,out = tgt.do_burn_vm(reg,outfn=info)
-        if not res:
-            fatal("Can't burn bootloader! -->",out)
-    else:
-        info("Skipping bootloader burning...")
-
+    
     alter_ego = None
-    if tgt.has_alter_ego:
-        alter_ego = tgt
-        clsname = tgt.has_alter_ego
-        uids,devs = _dsc.wait_for_classname(clsname)
-        if not uids:
-            fatal("Can't find this device alter ego!")
-        elif len(uids)>1:
-            fatal("Too many devices matching this device alter ego! Please unplug them all and retry...")
-        tgt = devs[uids[0]]
+
+    if tgt.preferred_register_with_jtag:
+        # with jtags
+        chipid,err = tgt.do_get_chipid(tgt.preferred_register_with_jtag["probe"],False)
+        if err:
+            fatal(err)
     else:
-        # virtualizable device is the same as uplinkable device :)
-        # search for dev again and open serial
-        tgt = _dsc.find_again(tgt)
-        if not tgt:
-            fatal("Can't find device",alias)
+        # open register.vm
+        reg = fs.get_json(fs.path(tgt.path,"register.vm"))
 
-    if tgt.reset_after_register:
-        info("Please reset the device!")
+        info("Starting device registration")
+        # burn register.vm
+        if not skip_burn:
+            info("Burning bootloader...")
+            res,out = tgt.do_burn_vm(reg,outfn=info)
+            if not res:
+                fatal("Can't burn bootloader! -->",out)
+        else:
+            info("Skipping bootloader burning...")
 
-    if tgt.sw_reset_after_register is True:
-        tgt.reset()
+        if tgt.has_alter_ego:
+            alter_ego = tgt
+            clsname = tgt.has_alter_ego
+            uids,devs = _dsc.wait_for_classname(clsname)
+            if not uids:
+                fatal("Can't find this device alter ego!")
+            elif len(uids)>1:
+                fatal("Too many devices matching this device alter ego! Please unplug them all and retry...")
+            tgt = devs[uids[0]]
+        else:
+            # virtualizable device is the same as uplinkable device :)
+            # search for dev again and open serial
+            tgt = _dsc.find_again(tgt)
+            if not tgt:
+                fatal("Can't find device",alias)
 
-    res,chipid = _extract_chipid_from_serial(tgt)
-    if not res:
-        fatal(chipid)
+        if tgt.reset_after_register:
+            info("Please reset the device!")
+
+        if tgt.sw_reset_after_register is True:
+            tgt.reset()
+
+        res,chipid = _extract_chipid_from_serial(tgt)
+        if not res:
+            fatal(chipid)
+    # common execution path
     info("Chip id retrieved:",chipid)
     dinfo = {
         "name": tgt.custom_name or tgt.name,
@@ -878,7 +886,9 @@ def get_device(alias,loop,perform_reset=True):
 
     if perform_reset:
 
-        if dev.uplink_reset is True:
+        if dev.preferred_uplink_with_jtag:
+            pass
+        elif dev.uplink_reset is True:
             info("Please reset the device!")
             sleep(dev.reset_time/1000)
             info("Searching for device",uid,"again")
@@ -917,9 +927,11 @@ def probing(ch,devtarget, adjust_timeouts=True):
         ch.set_timeout(0.5)
     while time.perf_counter()-starttime<5:
         line=ch.readline()
+        debug("<=",line)
         if not line and not probesent:
             probesent=True
             ch.write("V")
+            debug("=> V")
             info("Probe sent")
         line = line.replace("\n","").strip()
         if line:

@@ -109,7 +109,12 @@ def start_probe(target,probe):
         fatal("Target does not support jtag!")
 
     jtag_interface = fs.path(jtagdir,"scripts","interface",interface_script)
-    jtag_target = fs.path(jtagdir,"scripts","target",target_script)
+    if "/" not in target_script:
+        jtag_target = fs.path(jtagdir,"scripts","target",target_script)
+    else:
+        tts = target_script.split("/")
+        jtag_target = fs.path(jtagdir,"scripts",*tts)
+
     info("Starting OpenOCD...")
     debug(jtag_interface,jtag_target)
 
