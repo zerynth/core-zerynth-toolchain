@@ -98,7 +98,7 @@ class Layout():
         return self.layout
 
     def is_empty(self):
-        return bool(self.layout["bin"])
+        return not bool(self.layout["bin"])
 
     def to_table(self):
         table = []
