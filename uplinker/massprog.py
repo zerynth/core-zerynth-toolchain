@@ -256,9 +256,9 @@ The :command:`massprog` may take the additional :option:`--clean` option that fo
     target = config["target"]
     register = config["register"]
     project = config["project"]
-    shareable = config.get("sharable",False)
-    locked = config.get("locked",False)
     vmopts = config["vm"]
+    shareable = vmopts.get("shareable", False)
+    locked = vmopts.get("locked", False)
     vm_rtos = vmopts["rtos"]
     vm_version = vmopts["version"]
     vm_patch = vmopts["patch"]
@@ -283,13 +283,18 @@ The :command:`massprog` may take the additional :option:`--clean` option that fo
         tp = start_temporary_probe(target,probe)
         chipid = dev.get_chipid()
         stop_temporary_probe(tp)
+    elif register=="standard":
+        chipid = True
     else:
         fatal("Unknown registration method!")
 
     if not chipid:
         fatal("Can't find chipid!")
 
-    res, out, _ = proc.run_ztc("device","register_by_uid",chipid,target,outfn=log)
+    if register == "standard":
+        res, out, _ = proc.run_ztc("device","register_raw",target,"--spec", "port:%s" % dev_options["port"], "--spec", "baud:%s" % dev_options["baud"], outfn=log)
+    else:
+        res, out, _ = proc.run_ztc("device","register_by_uid",chipid,target,outfn=log)
     if res:
         fatal("Can't register!")
     lines = out.split("\n")
@@ -309,6 +314,7 @@ The :command:`massprog` may take the additional :option:`--clean` option that fo
         args.append(feat)
     if shareable:
         args.append("--reshare")
+        args.append("--share")
     if locked:
         args.append("--locked")
     info("Getting vm for",dev_uid,vm_version,vm_rtos,vm_patch,*args)
