@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # @Author: Lorenzo
 # @Date:   2018-06-05 17:31:01
-# @Last Modified by:   Lorenzo
-# @Last Modified time: 2018-09-04 10:54:14
+# @Last Modified by:   l.rizzello
+# @Last Modified time: 2019-03-22 15:27:32
 
 """
 .. _ztc-cmd-provisioning:
@@ -103,7 +103,11 @@ Available command options are:
 
     # reset before uplink
     dev = uplinker.get_device(alias,loop)
-    uplinker._uplink_dev(dev,fs.path(tmpdir, "main.vbo"), loop)
+    if dev.preferred_uplink_with_jtag:
+        # uplink code with jtag
+        uplinker._link_uplink_jtag(dev,fs.path(tmpdir, "main.vbo"))
+    else:
+        uplinker._uplink_dev(dev,fs.path(tmpdir, "main.vbo"), loop)
 
     fs.del_tempdir(tmpdir)
 
