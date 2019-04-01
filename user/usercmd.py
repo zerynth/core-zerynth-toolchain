@@ -150,6 +150,23 @@ where :samp:`email` is the email address used in the manual registration flow. A
     except Exception as e:
         fatal("Can't reset password:",e)
 
+@cli.command("logout",help="Close current session. A new login is needed")
+def __logout():
+    """
+.. _ztc-cmd-user-logout:
+
+Logout
+------
+
+Delete current session with the following command ::
+
+    ztc logout
+
+
+.. note:: it will be necessary to login again.
+
+    """
+    env.rm_token()
 
 
 @cli.command(help="Manage account info.\n\n")

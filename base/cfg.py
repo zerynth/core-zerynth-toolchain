@@ -184,6 +184,9 @@ class Environment():
         fs.makedirs(self.examples_dir(distpath))
         fs.makedirs(self.idb_dir(distpath))
 
+    def rm_token(self):
+        # get token
+        fs.rm_file(fs.path(env.cfg,"token.json"))
 
     def get_token(self):
         # get token
