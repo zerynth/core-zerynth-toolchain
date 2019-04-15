@@ -515,7 +515,8 @@ For example, assuming a project has been compiled to the bytecode file :samp:`pr
             "vm_idx": vm_ota,
             "vm": vm["map"]["vm"][vm_ota],
             "has_vm": include_vm,
-            "vmuid":vmuid
+            "vmuid":vmuid,
+            "info": bf["info"]
         }
         if file:
             if bin:

@@ -18,4 +18,6 @@ stlink:
 cmsis_dap:
     script: cmsis-dap.cfg
     name: SEGGER JLink
-
+kitprog2:
+    script: cmsis-dap.cfg
+    name: KitProg2 PSoC Programmer
