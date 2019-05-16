@@ -70,15 +70,20 @@ class Discover():
         return [],{}
 
     def wait_for_classname(self,classname,loop=5,matchdb=True):
+        devs = {}
+        uids = []
         for l in range(loop):
             devs = self.run_one(matchdb)
             uids = [uid for uid,dev in devs.items() if dev.classname==classname]
             if len(uids)>=1:
-                return uids,devs
+                tgt = devs[uids[0]]
+                if tgt.port is not None:
+                    return uids,devs
             sleep(1)
             info("attempt",l+1)
+        if len(uids)>=1:
+            return uids,devs
         return [],{}
-
 
     def parse(self):
         devices = self.devsrc.parse()
