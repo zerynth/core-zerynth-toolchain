@@ -158,7 +158,8 @@ class Relocator():
                     ".data":new_data_start,
                     ".romdata":new_romdata_start,
                     ".rodata":new_rodata_start,
-                    ".bss":new_bss_start
+                    ".bss":new_bss_start,
+                    ".ctors":new_romdata_end
                 }
                 symreloc.update(sects)
 
