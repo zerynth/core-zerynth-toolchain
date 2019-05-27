@@ -70,15 +70,20 @@ class Discover():
         return [],{}
 
     def wait_for_classname(self,classname,loop=5,matchdb=True):
+        devs = {}
+        uids = []
         for l in range(loop):
             devs = self.run_one(matchdb)
             uids = [uid for uid,dev in devs.items() if dev.classname==classname]
             if len(uids)>=1:
-                return uids,devs
+                tgt = devs[uids[0]]
+                if tgt.port is not None:
+                    return uids,devs
             sleep(1)
             info("attempt",l+1)
+        if len(uids)>=1:
+            return uids,devs
         return [],{}
-
 
     def parse(self):
         devices = self.devsrc.parse()
@@ -179,6 +184,18 @@ class Discover():
                     obj = cls(dinfo,dev)
                     ndb[obj.hash()]=obj
         # augment no_sid/linked devices -_-
+        ddevs={}
+        for h,obj in ndb.items():
+            if obj.has_double_dev and "ser" in obj.cls.__name__:
+                ddevs[h]=obj
+                for h2,obj2 in ndb.items():
+                    if obj.target == obj2.target and "ser" not in obj2.cls.__name__:
+                        ndb[h2].set("port",obj.port)
+                        for h3, obj3 in ndb.items():
+                            if obj.vid == obj3.vid and obj.pid == obj3.pid and "ser" not in obj3.cls.__name__:
+                                ddevs[h3]=obj3
+        for h,obj in ddevs.items():
+            del ndb[h]
         for h,obj in ndb.items():
             if obj.sid == "no_sid" or obj.has_linked_devs:
                 # get all registered linked devices

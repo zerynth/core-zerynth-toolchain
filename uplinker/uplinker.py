@@ -153,7 +153,7 @@ performs an uplink on the device of type :samp:`target` using the bytecode file 
 @click.option("--address",default="")
 @click.option("--skip-layout","skip_layout",default=False,flag_value=True,help="ignore a device configuration file if present")
 @click.option("--layout-root","layout_root",default=None,type=click.Path(),help="root folder for configuration files")
-def uplink_by_probe(target,probe,linked_bytecode,address):
+def uplink_by_probe(target,probe,linked_bytecode,address,skip_layout,layout_root):
     """
 .. _ztc-cmd-uplink-by-probe:
 
@@ -174,7 +174,7 @@ It is possible to change the address where the bytecode will be flashed by speci
     if not dev.jtag_capable:
         fatal("Target does not support probes!")
     if not skip_layout:
-        _uplink_layout(dev,bytecode,dczpath=layout_root)
+        _uplink_layout(dev,linked_bytecode,dczpath=layout_root)
     tp = start_temporary_probe(target,probe)
     res,out = dev.burn_with_probe(fs.readfile(linked_bytecode,"b"),offset=address or dev.bytecode_offset)
     stop_temporary_probe(tp)
@@ -225,13 +225,13 @@ def _link_uplink_jtag(dev,bytecode):
 
 
 def _uplink_layout(dev,bytecode,dczpath=None):
-    try:
-        bf = fs.get_json(bytecode)
-    except:
-        fatal("Can't open file",bytecode)
     if dczpath:
         ppath = dczpath
     else:
+        try:
+            bf = fs.get_json(bytecode)
+        except:
+            fatal("Can't open file",bytecode)
         if "project" not in bf["info"]:
             return
         ppath = bf["info"]["project"]
@@ -515,7 +515,8 @@ For example, assuming a project has been compiled to the bytecode file :samp:`pr
             "vm_idx": vm_ota,
             "vm": vm["map"]["vm"][vm_ota],
             "has_vm": include_vm,
-            "vmuid":vmuid
+            "vmuid":vmuid,
+            "info": bf["info"]
         }
         if file:
             if bin:
