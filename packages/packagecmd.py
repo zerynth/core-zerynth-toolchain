@@ -91,7 +91,7 @@ Details about patches for each version are also contained in the database.
                 res = {
                     "versions":{},
                     "latest":env.var.version,
-                    "last_patch": env.patches[env.var.version],
+                    "last_hotfix": env.repo.get("hotfix","base"),
                     "major_update":False,
                     "minor_update":False
                 }
@@ -100,18 +100,18 @@ Details about patches for each version are also contained in the database.
                     if compare_versions(v,env.var.version)>0:
                         if compare_versions(res["latest"],v)<0:
                             res["latest"]=v
-                            res["last_patch"]=p[-1]
+                            res["last_hotfix"]=0
                             res["major_update"]=True
                 if not res["major_update"]:
-                    res["last_patch"]=res["versions"][env.var.version][-1]
-                    res["minor_update"] = env.patches[env.var.version]!=res["last_patch"]
+                    res["last_hotfix"]=res["versions"][env.var.version][-1]
+                    res["minor_update"] = env.repo.get("hotfix","base")<res["last_hotfix"]
 
                 log_json(res)
             else:
                 table = []
                 for v,p in vrs.items():
                     table.append([v,p])
-                log_table(table,headers=["version","patches"])
+                log_table(table,headers=["version","hotfixes"])
     except Exception as e:
         fatal("Can't check versions",e)
 
@@ -163,50 +163,64 @@ def get_info(fullname):
         fatal("Can't find package",fullname)
 
 
+@package.command(help="Retrieve and store current available packages")
+@click.argument("fullname")
+def install_deps(fullname):
+    pack = tools.get_package(fullname)
+    has_deps = tools.has_all_deps(fullname)
+    if has_deps:
+        info("All dependencies already installed!")
+        return
+    args = ["--keep","--no_runtime","--no_skip_msg","--no_progress"]
+    for dep in pack.get("deps",[]):
+        args.append("--tag")
+        args.append(dep)
+    for dep in tools.get_package_deps(fullname):
+        args.append("--pack")
+        args.append(dep)
+    if not env.root:
+        fatal("oops, something wrong with the installer!")
+    zpm = fs.path(env.root,"zpm.py")
+    info(zpm)
+    e,out,_ = proc.runcmd("python",zpm,"install",env.repofile,*args,outfn=log)
+    if e:
+        fatal("oops, can't install dependencies!")
+    info("All dependencies installed!")
 
 
-# @package.command(help="Describe a patch relative to current installation")
-# @click.argument("patch")
-# def describe(patch):
-#     try:
-#         curpatch = env.patches[env.var.version]
-#         if patch<=curpatch:
-#             return
-#         nfo = retrieve_packages_info()
-#         if nfo:
-#             res = {
-#                 "packs":[],
-#                 "changelog":""
-#             }
-#             res["changelog"]=nfo["changelogs"][patch]
-#             for pack in nfo["packs"]:
-#                 fullname = pack["fullname"]
-#                 patches = pack["patches"]
-#                 # retrieve valid patches
-#                 packpatches = [ (x,pack["hashes"][i]) for i,x in enumerate(patches) if x>curpatch and x<=patch ]
-#                 if not packpatches:
-#                     #this package must be skipped, already installed or newer 
-#                     continue
-#                 if pack.get("sys",env.platform)!=env.platform:
-#                     # skip, not for this platform
-#                     continue
-#                 res["packs"].append({
-#                     "fullname":fullname,
-#                     "size":pack["size"],
-#                     "hash":pack["hashes"][patches.index(packpatches[-1][0])]
-#                 })
+@package.command(help="Describe a hotfix relative to current installation")
+@click.argument("hotfix")
+def describe(hotfix):
+    try:
+        nfo = retrieve_packages_info()
+        if nfo:
+            res = {
+                "packs":[],
+                "changelog":""
+            }
+            res["changelog"]=nfo["changelogs"][hotfix]
+            for fullname in nfo.get("hotfixes",[]):
+                pack = nfo["packs"][nfo["byname"][fullname]]
+                if pack.get("sys",env.platform)!=env.platform:
+                    # skip, not for this platform
+                    continue
+                res["packs"].append({
+                    "fullname":fullname,
+                    "size":pack["size"],
+                    "hash":pack["hashes"][-1]
+                })
 
-#             if not env.human:
-#                 log_json(res)
-#             else:
-#                 table = []
+            if not env.human:
+                log_json(res)
+            else:
+                table = []
 
-#                 for pack in res["packs"]:
-#                     table.append([pack["fullname"],pack["hash"],pack["size"]//1024 if pack["hash"]!="-" else "-"])
-#                 table.sort()
-#                 log_table(table,headers=["fullname","hash","size Kb"])
-#     except Exception as e:
-#         fatal("Can't describe patch",e)
+                for pack in res["packs"]:
+                    table.append([pack["fullname"],pack["hash"],pack["size"]//1024 if pack["hash"]!="-" else "-"])
+                table.sort()
+                log_table(table,headers=["fullname","hash","size Kb"])
+    except Exception as e:
+        fatal("Can't describe patch",exc=e)
 
 @package.command(help="Triggers a major Zerynth update")
 def trigger_update():
@@ -653,97 +667,97 @@ The list of currently installed official and community packages (of type lib) ca
     else:
         log_json(inst)
 
-@package.command(help="Checks and prepares updates")
-@click.option("--finalize",flag_value=True,default=False)
-def patches(finalize):
+# @package.command(help="Checks and prepares updates")
+# @click.option("--finalize",flag_value=True,default=False)
+# def patches(finalize):
 
-    versions = env.versions
-    print(env.var.version)
-    curpatch = env.patches[env.var.version]
+#     versions = env.versions
+#     print(env.var.version)
+#     curpatch = env.patches[env.var.version]
     
-    if not curpatch:
-        warning("Can't retrieve patch info")
-        return
+#     if not curpatch:
+#         warning("Can't retrieve patch info")
+#         return
    
-    patchid = curpatch
-    lastpatchid = versions[env.var.version][-1]
+#     patchid = curpatch
+#     lastpatchid = versions[env.var.version][-1]
 
-    if lastpatchid==patchid:
-        info("No updates to apply")
-        return
+#     if lastpatchid==patchid:
+#         info("No updates to apply")
+#         return
    
-    npth = retrieve_packages_info()
-    if not npth:
-        warning("Can't retrieve current patch")
-        return
+#     npth = retrieve_packages_info()
+#     if not npth:
+#         warning("Can't retrieve current patch")
+#         return
 
-    # create the patches
-    ppath=fs.path(env.tmp,"patch")
-    fs.rmtree(ppath)
-    fs.makedirs(ppath)
-    to_update = []
-    pres = {"packs":[]}
-    for pack in npth["packs"]:
-        fullname = pack["fullname"]
-        patches = pack["patches"]
-        # retrieve valid patches
-        packpatches = [ (x,pack["hashes"][i]) for i,x in enumerate(patches) if x>patchid and x<=lastpatchid ]
-        if not packpatches:
-            #this package must be skipped, already installed or newer 
-            continue
-        if pack.get("sys",env.platform)!=env.platform:
-            # skip, not for this platform
-            continue
-        to_update.append(pack)
-        if not finalize:
-            # skip donwload and install if not finalizing
-            continue
-        #finalize
-        pack = Var({
-            "fullname":fullname,
-            "version":env.var.version,
-            "repo":"official",
-            "type":fullname.split(".")[0],
-            "file":fs.path(env.tmp,fullname+"-"+env.var.version+".tar.xz")
-        })
-        packpatch,packhash = packpatches[-1]
-        todelete = packhash=="-"
-        if not todelete:
-            # download and unpack
-            info("Downloading",fullname)
-            if download_package(pack,env.var.version,packpatch) is not True:
-                fatal("Error while downloading",fullname)
-        else:
-            info("Deleting",fullname)
+#     # create the patches
+#     ppath=fs.path(env.tmp,"patch")
+#     fs.rmtree(ppath)
+#     fs.makedirs(ppath)
+#     to_update = []
+#     pres = {"packs":[]}
+#     for pack in npth["packs"]:
+#         fullname = pack["fullname"]
+#         patches = pack["patches"]
+#         # retrieve valid patches
+#         packpatches = [ (x,pack["hashes"][i]) for i,x in enumerate(patches) if x>patchid and x<=lastpatchid ]
+#         if not packpatches:
+#             #this package must be skipped, already installed or newer 
+#             continue
+#         if pack.get("sys",env.platform)!=env.platform:
+#             # skip, not for this platform
+#             continue
+#         to_update.append(pack)
+#         if not finalize:
+#             # skip donwload and install if not finalizing
+#             continue
+#         #finalize
+#         pack = Var({
+#             "fullname":fullname,
+#             "version":env.var.version,
+#             "repo":"official",
+#             "type":fullname.split(".")[0],
+#             "file":fs.path(env.tmp,fullname+"-"+env.var.version+".tar.xz")
+#         })
+#         packpatch,packhash = packpatches[-1]
+#         todelete = packhash=="-"
+#         if not todelete:
+#             # download and unpack
+#             info("Downloading",fullname)
+#             if download_package(pack,env.var.version,packpatch) is not True:
+#                 fatal("Error while downloading",fullname)
+#         else:
+#             info("Deleting",fullname)
 
-        if pack.type=="lib":
-            src,dst =  install_lib_patch(pack,pack.version,ppath,simulate = todelete)
-        elif pack.type=="core":
-            src,dst =  install_core_patch(pack,pack.version,ppath)
-        elif pack.type=="board":
-            src,dst =  install_device_patch(pack,pack.version,ppath,simulate = todelete)
-        elif pack.type=="vhal":
-            src,dst =  install_vhal_patch(pack,pack.version,ppath)
-        elif pack.type=="sys":
-            src,dst =  install_sys_patch(pack,pack.version,ppath)
-        else:
-            warning("unpatchable package",pack.fullname)
-            continue
-        pres["packs"].append({
-            "destdir":dst,
-            "srcdir":src  #src is empty if package need to be deleted
-        })
+#         if pack.type=="lib":
+#             src,dst =  install_lib_patch(pack,pack.version,ppath,simulate = todelete)
+#         elif pack.type=="core":
+#             src,dst =  install_core_patch(pack,pack.version,ppath)
+#         elif pack.type=="board":
+#             src,dst =  install_device_patch(pack,pack.version,ppath,simulate = todelete)
+#         elif pack.type=="vhal":
+#             src,dst =  install_vhal_patch(pack,pack.version,ppath)
+#         elif pack.type=="sys":
+#             src,dst =  install_sys_patch(pack,pack.version,ppath)
+#         else:
+#             warning("unpatchable package",pack.fullname)
+#             continue
+#         pres["packs"].append({
+#             "destdir":dst,
+#             "srcdir":src  #src is empty if package need to be deleted
+#         })
         
 
-    pres["patch"]=npth
-    pres["version"]=env.var.version
-    if finalize:
-        fs.set_json(pres,fs.path(env.tmp,"patchfile.json"))
-        # fs.set_json(npth,patchfile)
-        info("Update ready!")
-    else:
-        npth["packs"]=to_update
-        log_json(npth)
+#     pres["patch"]=npth
+#     pres["version"]=env.var.version
+#     if finalize:
+#         fs.set_json(pres,fs.path(env.tmp,"patchfile.json"))
+#         # fs.set_json(npth,patchfile)
+#         info("Update ready!")
+#     else:
+#         npth["packs"]=to_update
+#         log_json(npth)
 
     
 

@@ -417,6 +417,8 @@ def init_cfg():
     except:
         warning("Can't load root.json at",env.cfg)
 
+
+
     #load patches
     # try:
     #     env.patches = fs.get_json(fs.path(env.cfg,"patches.json"))

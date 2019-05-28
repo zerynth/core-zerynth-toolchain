@@ -10,6 +10,7 @@ __all__ = ["tools"]
 class Tools():
     def __init__(self):
         self.tools = {}
+        self.installed = {}
 
     def init(self):
         #register platform tools
@@ -21,29 +22,81 @@ class Tools():
             self.tools["stty"]="/bin/stty -f"
 
         for tooldir in fs.dirs(env.sys):
-            if fs.basename(tooldir) in ["browser","newbrowser","newpython"]:
-                # ignore some sys packages
+            self.add_tool(tooldir)
+
+        for tooldir in fs.dirs(fs.path(env.dist,"sys")):
+            self.add_tool(tooldir)
+
+        ifile = fs.path(env.dist,"installed.json")
+        self.installed = fs.get_json(ifile)
+
+    def get_package(self,fullname):
+        return env.repo["packs"][env.repo["byname"][fullname]]
+
+    def get_packages_by_tag(self,tag):
+        idx = env.repo["bytag"][tag]
+        res = set()
+        for i in idx:
+            pack = env.repo["packs"][i]
+            if pack.get("sys") and pack.get("sys")!=env.platform:
+                # skip other platforms
                 continue
-            try:
-                pkg = fs.get_json(fs.path(tooldir,"package.json"))
+            res.add(pack["fullname"])
+        return sorted(list(res))
+
+    def get_package_deps(self,fullname):
+        pack = self.get_package(fullname)
+        res = []
+        for dep in pack.get("deps",[]):
+            res.extend(self.get_packages_by_tag(dep))
+        res = sorted(list(set(res)))
+        return res
+
+    def has_all_deps(self,fullname):
+        deps = self.get_package_deps(fullname)
+        for fname in deps:
+            if fname not in self.installed:
+                return False
+        return True
+
+    def get_pack_info(self,packdir):
+        pfiles = [fs.path(packdir,"z.yml"), fs.path(packdir,"package.json")]
+        for pfile in pfiles:
+            if fs.exists(pfile):
+                pkg = fs.get_yaml_or_json(pfile)
+                return pkg
+        return None
+
+
+    def add_tool(self,tooldir):
+        if fs.basename(tooldir) in ["browser","newbrowser","newpython"]:
+            # ignore some sys packages
+            return
+        try:
+            pkg = self.get_pack_info(tooldir)
+            if pkg is None:
+                warning("Can't load tool package",tooldir)
+                return
+            else:
+                fullname = pkg["fullname"]
                 toolname = pkg.get("tool")
                 pkg = pkg["sys"]
-            except Exception as e:
-                warning("Can't load tool",tooldir,e)
-                continue
-            if toolname:
-                self.tools[toolname]={}
-                addto = self.tools[toolname]
-            else:
-                addto = self.tools
-            if isinstance(pkg,dict):
-                for k,v in pkg.items():
-                    addto[k]=fs.path(env.sys,tooldir,v)
-            elif isinstance(pkg,list) or isinstance(pkg,tuple):
-                for k,v in pkg:
-                    addto[k]=fs.path(env.sys,tooldir,v)
-            else:
-                warning("Can't load tool info",tooldir,err=True)
+        except Exception as e:
+            warning("Can't load tool",tooldir,e)
+            return
+        if toolname:
+            self.tools[toolname]={}
+            addto = self.tools[toolname]
+        else:
+            addto = self.tools
+        if isinstance(pkg,dict):
+            for k,v in pkg.items():
+                addto[k]=fs.path(env.sys,tooldir,v)
+        elif isinstance(pkg,list) or isinstance(pkg,tuple):
+            for k,v in pkg:
+                addto[k]=fs.path(env.sys,tooldir,v)
+        else:
+            warning("Can't load tool info",tooldir,err=True)
         #print(self.tools)
 
     def get_tool_dir(self,toolname):
@@ -182,8 +235,14 @@ class Tools():
         bdirs = fs.dirs(env.devices)
         for bdir in bdirs:
             try:
+                pkg = self.get_pack_info(bdir)
+                if pkg is None:
+                    continue
                 bj = fs.get_json(fs.path(bdir,"device.json"))
                 bj["path"] = bdir
+                bj["deps"] = self.get_package_deps(pkg["fullname"])
+                bj["has_all_deps"] = self.has_all_deps(pkg["fullname"])
+                bj["fullname"] = pkg["fullname"]
                 yield bj
             except Exception as e:
                 warning(e)
@@ -266,4 +325,4 @@ class Tools():
 tools = Tools()
 
 
-add_init(tools.init)
+# add_init(tools.init)

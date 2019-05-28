@@ -55,7 +55,7 @@ class zfs():
         try:
             self.check_path(src)
             with open(src,"r",encoding="utf8") as ff:
-                return yaml.load(ff) 
+                return yaml.safe_load(ff) 
         except Exception as e:
             if failsafe:
                 return {}
@@ -70,6 +70,12 @@ class zfs():
         else:
             return yaml.dump(ym,indent=4,encoding="utf-8",explicit_start=True,explicit_end=True,default_flow_style=flow_style,allow_unicode=True).decode("utf-8")
 
+    def get_yaml_or_json(self,src):
+        try:
+            data = self.get_yaml(src)
+            return data
+        except:
+            return self.get_json(src)
 
 
     def get_json(self,src,strict=True):
