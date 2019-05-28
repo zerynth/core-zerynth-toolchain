@@ -41,7 +41,7 @@ import time
 import hashlib
 import webbrowser
 from urllib.parse import quote_plus, unquote
-from .zpm import *
+# from .zpm import *
 
 def check_versions():
     try:
@@ -165,48 +165,48 @@ def get_info(fullname):
 
 
 
-@package.command(help="Describe a patch relative to current installation")
-@click.argument("patch")
-def describe(patch):
-    try:
-        curpatch = env.patches[env.var.version]
-        if patch<=curpatch:
-            return
-        nfo = retrieve_packages_info()
-        if nfo:
-            res = {
-                "packs":[],
-                "changelog":""
-            }
-            res["changelog"]=nfo["changelogs"][patch]
-            for pack in nfo["packs"]:
-                fullname = pack["fullname"]
-                patches = pack["patches"]
-                # retrieve valid patches
-                packpatches = [ (x,pack["hashes"][i]) for i,x in enumerate(patches) if x>curpatch and x<=patch ]
-                if not packpatches:
-                    #this package must be skipped, already installed or newer 
-                    continue
-                if pack.get("sys",env.platform)!=env.platform:
-                    # skip, not for this platform
-                    continue
-                res["packs"].append({
-                    "fullname":fullname,
-                    "size":pack["size"],
-                    "hash":pack["hashes"][patches.index(packpatches[-1][0])]
-                })
+# @package.command(help="Describe a patch relative to current installation")
+# @click.argument("patch")
+# def describe(patch):
+#     try:
+#         curpatch = env.patches[env.var.version]
+#         if patch<=curpatch:
+#             return
+#         nfo = retrieve_packages_info()
+#         if nfo:
+#             res = {
+#                 "packs":[],
+#                 "changelog":""
+#             }
+#             res["changelog"]=nfo["changelogs"][patch]
+#             for pack in nfo["packs"]:
+#                 fullname = pack["fullname"]
+#                 patches = pack["patches"]
+#                 # retrieve valid patches
+#                 packpatches = [ (x,pack["hashes"][i]) for i,x in enumerate(patches) if x>curpatch and x<=patch ]
+#                 if not packpatches:
+#                     #this package must be skipped, already installed or newer 
+#                     continue
+#                 if pack.get("sys",env.platform)!=env.platform:
+#                     # skip, not for this platform
+#                     continue
+#                 res["packs"].append({
+#                     "fullname":fullname,
+#                     "size":pack["size"],
+#                     "hash":pack["hashes"][patches.index(packpatches[-1][0])]
+#                 })
 
-            if not env.human:
-                log_json(res)
-            else:
-                table = []
+#             if not env.human:
+#                 log_json(res)
+#             else:
+#                 table = []
 
-                for pack in res["packs"]:
-                    table.append([pack["fullname"],pack["hash"],pack["size"]//1024 if pack["hash"]!="-" else "-"])
-                table.sort()
-                log_table(table,headers=["fullname","hash","size Kb"])
-    except Exception as e:
-        fatal("Can't describe patch",e)
+#                 for pack in res["packs"]:
+#                     table.append([pack["fullname"],pack["hash"],pack["size"]//1024 if pack["hash"]!="-" else "-"])
+#                 table.sort()
+#                 log_table(table,headers=["fullname","hash","size Kb"])
+#     except Exception as e:
+#         fatal("Can't describe patch",e)
 
 @package.command(help="Triggers a major Zerynth update")
 def trigger_update():

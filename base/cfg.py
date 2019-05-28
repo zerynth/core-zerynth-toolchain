@@ -403,16 +403,30 @@ def init_cfg():
         except:
             warning("Bad json in",env.proxyfile)
 
-    #load patches
+    #load repository
+    env.repofile = fs.path(env.dist,"repository.json")
     try:
-        env.patches = fs.get_json(fs.path(env.cfg,"patches.json"))
-        if fs.exists(fs.path(env.dist,"patches.json")):
-            curpatch = env.patches[env.var.version]
-            instpatch = fs.get_json(fs.path(env.dist,"patches.json"))["patch"]
-            if curpatch != instpatch:
-                env.patches[env.var.version] = instpatch
-                fs.set_json(env.patches,fs.path(env.cfg,"patches.json"))
+        env.repo = fs.get_json(env.repofile)
     except:
-        env.patches = {env.var.version:"base"}
+        warning("Can't load repository.json at",env.dist)
+
+    # load installer folder
+    env.root = ""
+    try:
+        env.root=fs.get_json(fs.path(env.cfg,"root.json"))["root"]
+    except:
+        warning("Can't load root.json at",env.cfg)
+
+    #load patches
+    # try:
+    #     env.patches = fs.get_json(fs.path(env.cfg,"patches.json"))
+    #     if fs.exists(fs.path(env.dist,"patches.json")):
+    #         curpatch = env.patches[env.var.version]
+    #         instpatch = fs.get_json(fs.path(env.dist,"patches.json"))["patch"]
+    #         if curpatch != instpatch:
+    #             env.patches[env.var.version] = instpatch
+    #             fs.set_json(env.patches,fs.path(env.cfg,"patches.json"))
+    # except:
+    #     env.patches = {env.var.version:"base"}
 
 add_init(init_cfg,prio=0)
