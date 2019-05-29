@@ -181,7 +181,6 @@ def install_deps(fullname):
     if not env.root:
         fatal("oops, something wrong with the installer!")
     zpm = fs.path(env.root,"zpm.py")
-    info(zpm)
     e,out,_ = proc.runcmd("python",zpm,"install",env.repofile,*args,outfn=log)
     if e:
         fatal("oops, can't install dependencies!")

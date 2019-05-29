@@ -316,6 +316,11 @@ class Tools():
                     vhal.update(vj)
         return vhal
 
+    def disk_usage(self):
+        bytes = fs.dir_size(env.home)
+        return bytes
+
+
 
 
 

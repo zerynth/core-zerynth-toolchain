@@ -343,6 +343,14 @@ class zfs():
         mt = self.mtime(src)
         return time.time()-mt>seconds
 
+    def dir_size(self,thedir):
+        total_size = 0
+        for dirpath, dirnames, filenames in os.walk(thedir):
+            for f in filenames:
+                fp = os.path.join(dirpath, f)
+                total_size += os.path.getsize(fp)
+        return total_size
+
     # def remove_readonly_no_output(self, func, path, excinfo):
     #     #used to hide the whooosh bug when updating the index in, guess.., windows -_-
     #     try:
