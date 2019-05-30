@@ -107,7 +107,10 @@ Details about patches for each version are also contained in the database.
                     res["minor_update"] = env.repo.get("hotfix","base")<res["last_hotfix"]
 
                 if res["major_update"] or res["minor_update"]:
-                    nfo = retrieve_packages_info()
+                    if res["major_update"]:
+                        nfo = retrieve_packages_info(res["latest"])
+                    else:
+                        nfo = retrieve_packages_info()
                     res["changelog"] = nfo.get("changelogs",{}).get(res["last_hotfix"],"")
                     res["hotfixes"] = nfo.get("hotfixes",[])
 
@@ -192,39 +195,39 @@ def install_deps(fullname):
     info("All dependencies installed!")
 
 
-@package.command(help="Describe a hotfix relative to current installation")
-@click.argument("hotfix")
-def describe(hotfix):
-    try:
-        nfo = retrieve_packages_info()
-        if nfo:
-            res = {
-                "packs":[],
-                "changelog":""
-            }
-            res["changelog"]=nfo["changelogs"][hotfix]
-            for fullname in nfo.get("hotfixes",[]):
-                pack = nfo["packs"][nfo["byname"][fullname]]
-                if pack.get("sys",env.platform)!=env.platform:
-                    # skip, not for this platform
-                    continue
-                res["packs"].append({
-                    "fullname":fullname,
-                    "size":pack["size"],
-                    "hash":pack["hashes"][-1]
-                })
+# @package.command(help="Describe a hotfix relative to current installation")
+# @click.argument("hotfix")
+# def describe(hotfix):
+#     try:
+#         nfo = retrieve_packages_info()
+#         if nfo:
+#             res = {
+#                 "packs":[],
+#                 "changelog":""
+#             }
+#             res["changelog"]=nfo["changelogs"][hotfix]
+#             for fullname in nfo.get("hotfixes",[]):
+#                 pack = nfo["packs"][nfo["byname"][fullname]]
+#                 if pack.get("sys",env.platform)!=env.platform:
+#                     # skip, not for this platform
+#                     continue
+#                 res["packs"].append({
+#                     "fullname":fullname,
+#                     "size":pack["size"],
+#                     "hash":pack["hashes"][-1]
+#                 })
 
-            if not env.human:
-                log_json(res)
-            else:
-                table = []
+#             if not env.human:
+#                 log_json(res)
+#             else:
+#                 table = []
 
-                for pack in res["packs"]:
-                    table.append([pack["fullname"],pack["hash"],pack["size"]//1024 if pack["hash"]!="-" else "-"])
-                table.sort()
-                log_table(table,headers=["fullname","hash","size Kb"])
-    except Exception as e:
-        fatal("Can't describe patch",exc=e)
+#                 for pack in res["packs"]:
+#                     table.append([pack["fullname"],pack["hash"],pack["size"]//1024 if pack["hash"]!="-" else "-"])
+#                 table.sort()
+#                 log_table(table,headers=["fullname","hash","size Kb"])
+#     except Exception as e:
+#         fatal("Can't describe patch",exc=e)
 
 @package.command(help="Triggers a Zerynth update")
 def trigger_update():
