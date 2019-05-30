@@ -210,6 +210,18 @@ class Environment():
         }
         fs.set_json(token,fs.path(env.cfg,"token.json"))
 
+    def get_latest_installed_version(self):
+        res = self.var.version
+        for dir in fs.dirs(fs.path(self.dist,"..")):
+            bdir = fs.basename(dir)
+            if match_version(bdir):
+                if compare_versions(bdir,res)>0:
+                    res = bdir
+        return res
+
+
+
+
 
 def decode_base64(data):
     missing_padding = len(data) % 4

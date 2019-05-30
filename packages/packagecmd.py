@@ -87,23 +87,29 @@ Details about patches for each version are also contained in the database.
         vrs = update_versions()
         if vrs:
             if not env.human:
+                latest_installed = env.get_latest_installed_version()
                 res = {
                     "versions":{},
-                    "latest":env.var.version,
+                    "latest":latest_installed,
                     "last_hotfix": env.repo.get("hotfix","base"),
                     "major_update":False,
                     "minor_update":False
                 }
                 for v,p in vrs.items():
                     res["versions"][v]=p
-                    if compare_versions(v,env.var.version)>0:
+                    if compare_versions(v,latest_installed)>0:
                         if compare_versions(res["latest"],v)<0:
                             res["latest"]=v
-                            res["last_hotfix"]=0
+                            res["last_hotfix"]="base"
                             res["major_update"]=True
                 if not res["major_update"]:
                     res["last_hotfix"]=res["versions"][env.var.version][-1]
                     res["minor_update"] = env.repo.get("hotfix","base")<res["last_hotfix"]
+
+                if res["major_update"] or res["minor_update"]:
+                    nfo = retrieve_packages_info()
+                    res["changelog"] = nfo.get("changelogs",{}).get(res["last_hotfix"],"")
+                    res["hotfixes"] = nfo.get("hotfixes",[])
 
                 log_json(res)
             else:
