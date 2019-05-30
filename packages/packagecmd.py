@@ -41,7 +41,6 @@ import time
 import hashlib
 import webbrowser
 from urllib.parse import quote_plus, unquote
-# from .zpm import *
 
 def check_versions():
     try:
@@ -221,7 +220,7 @@ def describe(hotfix):
     except Exception as e:
         fatal("Can't describe patch",exc=e)
 
-@package.command(help="Triggers a major Zerynth update")
+@package.command(help="Triggers a Zerynth update")
 def trigger_update():
     """
 .. _ztc-cmd-package-trigger:
@@ -237,6 +236,9 @@ The next time the Zerynth installer is started, it will try to install the new v
     """
     fs.set_json({"version":env.var.version},fs.path(env.tmp,"major_release.json"))
 
+@package.command(help="Triggers a Zerynth hotfix")
+def trigger_hotfix():
+    fs.set_json({"version":env.var.version},fs.path(env.tmp,"hotfix.json"))
 
 
 
