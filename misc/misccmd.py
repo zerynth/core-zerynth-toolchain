@@ -141,7 +141,7 @@ It takes the following options (one at a time):
         return
 
     if __version or __fullversion:
-        vrs = env.var.version
+        vrs = env.var.version+"-"+env.repo.get("hotfix","base")
         if env.skin:
             vrs = vrs + " "+env.skin
         if __fullversion:
