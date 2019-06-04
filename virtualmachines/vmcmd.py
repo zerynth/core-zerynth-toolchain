@@ -331,14 +331,12 @@ For the device target, a list of possible virtual machine configurations is retu
         rj = res.json()
         if rj["status"]=="success":
             if env.human:
-                vmt = rj["data"]["vms"]
-                for patch in rj["data"]["patches"]:
-                    if patch not in vmt:
-                        #skip 
-                        continue
-                    for vm in vmt[patch]:
-                        table.append([vm["title"],vm["description"],vm["rtos"],vm["features"],"Premium" if vm["pro"] else "Starter",env.var.version,patch])
-                log_table(table,headers=["Title","Description","Rtos","Features","Type","Version","Patch"])
+                vml = rj["data"]["versions"]
+                for vv, vmm in vml.items():
+                    vmt = vmm["vms"]["base"]
+                    for vm in vmt:
+                        table.append([vm["title"],vm["description"],vm["rtos"],vm["features"],"Premium" if vm["pro"] else "Starter",vv])
+                    log_table(table,headers=["Title","Description","Rtos","Features","Type","Version"])
             else:
                 log_json(rj["data"])
         else:

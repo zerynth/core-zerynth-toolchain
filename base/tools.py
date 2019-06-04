@@ -103,6 +103,9 @@ class Tools():
         for tooldir in fs.dirs(env.sys):
             if fs.basename(tooldir)==toolname:
                 return tooldir
+        for tooldir in fs.dirs(fs.path(env.dist,"sys")):
+            if fs.basename(tooldir)==toolname:
+                return tooldir
         return None
 
     def __getattr__(self,attr):
