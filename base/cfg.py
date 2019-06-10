@@ -222,10 +222,31 @@ class Environment():
     def load_matrix(self):
         mtxfile = fs.path(self.dist,"matrix.json")
         try:
-            return self.get_json(mtxfile)
+            return fs.get_json(mtxfile)
         except:
             return {}
 
+    def check_vm_compat(self,target,vmver,nooutput=False):
+        # check previous VM versioning scheme
+        if int32_version(vmver)<=int32_version("r2.2.0"):
+            if not nooutput:
+                warning("This virtual machine ("+vmver+") is not compatible with the running version of Zerynth! A version before r2.3.0 is needed")
+            return False
+
+        matrix = env.load_matrix()
+        if not matrix:
+            if not nooutput:
+                warning("Can't load compatibility matrix! Uplink at your own risk...")
+            return True
+        t2v = matrix["t2v"]
+        v2t = matrix["v2t"]
+        vmrange = t2v[target][env.var.version]
+        if vmver>=vmrange[0] and vmver<=vmrange[1]:
+            return True
+        toolrange = v2t[target][vmver]
+        if not noutput:
+            warning("This virtual machine ("+vmver+") is not compatible with the running version of Zerynth! A version between",toolrange[0],"and",toolrange[1],"is needed")
+        return False
 
 
 def decode_base64(data):

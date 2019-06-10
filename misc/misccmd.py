@@ -95,7 +95,7 @@ It takes the following options (one at a time):
             # ik = ZpmVersion(vv)   # vm version
             #if ik<im
             #log(vv)
-            if compare_versions(vv,env.var.version) != 0:
+            if not env.check_vm_compat(__vms,vv,True):
                 # skip versions lower than min_dep
                 continue
             # load vm

@@ -19,24 +19,6 @@ def extract_bcode_version(bcode):
     return version_int32(iv)
 
 
-def check_vm_compat(target,vmver):
-    # check previous VM versioning scheme
-    if int32_version(vmver)<=int32_version("r2.2.0"):
-        warning("This virtual machine ("+vmver+") is not compatible with the running version of Zerynth! A version before r2.3.0 is needed")
-        return False
-
-    matrix = env.load_matrix()
-    if not matrix:
-        warning("Can't load compatibility matrix! Uplink at your own risk...")
-        return True
-    t2v = matrix["t2v"]
-    v2t = matrix["v2t"]
-    vmrange = t2v[target][env.var.version]
-    if vmver>=vmrange[0] and vmver<=vmrange[1]:
-        return True
-    toolrange = v2t[target][vmver]
-    warning("This virtual machine ("+vmver+") is not compatible with the running version of Zerynth! A version between",toolrange[0],"and",toolrange[1],"is needed")
-    return False
 
 def check_bc_incompat(bcode):
     # you can pass bcode both as a bytecode struct or as a binary
@@ -238,7 +220,7 @@ def _link_uplink_jtag(dev,bytecode):
     if not vmfile or not fs.exists(vmfile):
         fatal("Can't find vm",vm_uid)
     vm = fs.get_json(vmfile)
-    if not check_vm_compat(dev.target,vm["version"]):
+    if not env.check_vm_compat(dev.target,vm["version"]):
         fatal("Please switch to the correct version of Zerynth or virtualize the device with a compatible VM...")
 
     info("Linking bytecode...")
@@ -324,7 +306,7 @@ def _uplink_dev(dev,bytecode,loop):
 
     # we have vm version, check compatibility with current tool version
     # TODO: bytecode *could* be compiled with a different version than current?
-    if check_vm_compat(target,version):
+    if not env.check_vm_compat(target,version):
         fatal("Please switch to the correct version of Zerynth or virtualize the device with a compatible VM...")
 
     vms = tools.get_vm(vmuid,version,chuid,target)

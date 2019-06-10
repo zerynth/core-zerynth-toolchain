@@ -154,7 +154,7 @@ def md5b(file_or_data):
         hh.update(file_or_data)
     return hh.digest()
 
-_re = re.compile("r(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)")
+_re = re.compile("r([0-9][0-9]*)\.([0-9][0-9]*)\.([0-9][0-9]*)")
 def compare_versions(v1,v2):
     mv1 = _re.match(v1)
     mv2 = _re.match(v2)
