@@ -62,6 +62,27 @@ def update_versions():
     else:
         warning("Error checking updates",res.status_code)
 
+def check_matrix():
+    try:
+        res = zget(url=env.patchurl+"/matrix.json", auth=None)
+        return res
+    except Exception as e:
+        warning("Error while checking for updates",e)
+
+def update_matrix():
+    mtxpath = fs.path(env.dist,"matrix.json")
+    res = check_matrix()
+    if not res:
+        warning("Can't retrieve compatibility matrix")
+    elif res.status_code == 304:
+        pass
+    elif res.status_code == 200:
+        fs.set_json(res.json(),mtxpath)
+        return res.json()
+    else:
+        warning("Error checking updates",res.status_code)
+
+
 @cli.group(help="Manage packages.")
 def package():
     pass
@@ -85,6 +106,7 @@ Details about patches for each version are also contained in the database.
     """
     try:
         vrs = update_versions()
+        update_matrix()
         if vrs:
             if not env.human:
                 latest_installed = env.get_latest_installed_version()

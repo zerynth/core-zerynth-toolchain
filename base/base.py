@@ -9,7 +9,7 @@ from . import tabulate
 from . import websocket as ws
 from . import commentjson as commentjson
 
-__all__ =['Critical','Error','Warning','Info','echo','cli','error','warning','debug','info','log','log_json','log_table','critical','fatal','add_init','init_all','sleep','set_output_filter','ws','commentjson',"md5","md5b","compare_versions","match_version"]
+__all__ =['Critical','Error','Warning','Info','echo','cli','error','warning','debug','info','log','log_json','log_table','critical','fatal','add_init','init_all','sleep','set_output_filter','ws','commentjson',"md5","md5b","compare_versions","match_version","int32_version","version_int32"]
 
 
 ## GLOBAL OPTIONS
@@ -166,6 +166,16 @@ def compare_versions(v1,v2):
 def match_version(v1):
     return _re.match(v1)
 
+def int32_version(v):
+    mv = _re.match(v)
+    iv = (int(mv.group(1))<<24)+(int(mv.group(2))<<16)+(int(mv.group(3)))
+    return iv
+
+def version_int32(iv):
+    x = iv>>24
+    y = (iv>>16)&0xff
+    z = iv&0xffff
+    return "r"+str(x)+"."+str(y)+"."+str(z)
 
 ## Main entrypoint gathering 
 

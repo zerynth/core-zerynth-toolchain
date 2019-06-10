@@ -783,7 +783,7 @@ class Compiler():
         #blen
         buf+=struct.pack("=I",0)
         #vversion
-        buf+=struct.pack("=I",0)
+        buf+=struct.pack("=I",int32_version(env.var.version))
         #bversion
         buf+=struct.pack("=I",env.var.bytecode_version)
         #bcoptions
@@ -850,6 +850,7 @@ class Compiler():
             "rtable_elements": len(self.resources),
             "header_size": len(buf),
             "version":env.var.version,
+            "bversion":env.var.bytecode_version,
             "target":self.board.target,
             "project":self.curpath,
             "ofiles": [] if not ofiles else ofiles

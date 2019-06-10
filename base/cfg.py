@@ -219,7 +219,12 @@ class Environment():
                     res = bdir
         return res
 
-
+    def load_matrix(self):
+        mtxfile = fs.path(self.dist,"matrix.json")
+        try:
+            return self.get_json(mtxfile)
+        except:
+            return {}
 
 
 
@@ -300,7 +305,7 @@ def init_cfg():
     #env.load_zpack_db(env.zdb,"packages.db")
     #env.load_ipack_db(env.idb,"packages.db")
     version = env.var.version
-    env.var.bytecode_version=1
+    env.var.bytecode_version=2
     if testmode==1:
         # local
         env.git_url   = os.environ.get("ZERYNTH_GIT_URL","http://localhost/git")
@@ -328,6 +333,7 @@ def init_cfg():
 
     if env.skin:
         env.packurl=env.packurl+"/"+env.skin
+        env.patchurl=env.patchurl+"/"+env.skin
 
     # dist directories
     env.dist          = fs.path(env.home,"dist",version)
