@@ -45,7 +45,10 @@ class Tools():
         return sorted(list(res))
 
     def get_package_deps(self,fullname):
-        pack = self.get_package(fullname)
+        try:
+            pack = self.get_package(fullname)
+        except:
+            pack = {}
         res = []
         for dep in pack.get("deps",[]):
             res.extend(self.get_packages_by_tag(dep))
