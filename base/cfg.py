@@ -240,6 +240,9 @@ class Environment():
             return True
         t2v = matrix["t2v"]
         v2t = matrix["v2t"]
+        if target not in t2v:
+            warning("Can't find target in matrix, assuming compatibility...")
+            return True
         vmrange = t2v[target][env.var.version]
         if vmver>=vmrange[0] and vmver<=vmrange[1]:
             return True
