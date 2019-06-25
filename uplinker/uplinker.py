@@ -292,14 +292,14 @@ def _uplink_dev(dev,bytecode,loop):
     conn.set_serial(dev.port,**dev.connection)
     ch = Channel(conn)
     for i in range(3):
-    try:
-        ch.open(timeout=2)
-        break
-    except:
-            info("Probing attempt:", i + 1)
-            sleep(1)
-    else:
-        fatal("Can't open serial:",dev.port)
+        try:
+            ch.open(timeout=2)
+            break
+        except:
+                info("Probing attempt:", i + 1)
+                sleep(1)
+        else:
+            fatal("Can't open serial:",dev.port)
 
     try:
         version,vmuid,chuid,target = probing(ch,dev.target, True if not dev.fixed_timeouts else False)
