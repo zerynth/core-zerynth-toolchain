@@ -294,7 +294,7 @@ def _uplink_dev(dev,bytecode,loop):
     for i in range(3):
     try:
         ch.open(timeout=2)
-            break
+        break
     except:
             info("Probing attempt:", i + 1)
             sleep(1)
