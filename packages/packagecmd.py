@@ -667,10 +667,10 @@ The list of currently installed official and community packages (of type lib) ca
     """
     table = []
     inst = []
-    official = fs.all_files(fs.path(env.libs,"official"),filter="package.json")
+    official = fs.all_files(fs.path(env.libs,"official"),filter="z.yml")
     for p in official:
         try:
-            pp = fs.get_json(p)
+            pp = fs.get_yaml(p)
             inst.append({
                 "fullname":pp["fullname"],
                 "last_version":env.var.version,
