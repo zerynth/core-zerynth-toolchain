@@ -348,7 +348,8 @@ class zfs():
         for dirpath, dirnames, filenames in os.walk(thedir):
             for f in filenames:
                 fp = os.path.join(dirpath, f)
-                total_size += os.path.getsize(fp)
+                if os.path.isfile(fp):
+                    total_size += os.path.getsize(fp)
         return total_size
 
     # def remove_readonly_no_output(self, func, path, excinfo):
