@@ -240,6 +240,9 @@ class Environment():
             return True
         t2v = matrix["t2v"]
         v2t = matrix["v2t"]
+        if target not in t2v:
+            warning("Can't find target in matrix, assuming compatibility...")
+            return True
         vmrange = t2v[target][env.var.version]
         if vmver>=vmrange[0] and vmver<=vmrange[1]:
             return True
@@ -365,6 +368,7 @@ def init_cfg():
     env.stdlib        = fs.path(env.home,"dist",version,"stdlib")
     env.vhal          = fs.path(env.home,"dist",version,"vhal")
     env.studio        = fs.path(env.home,"dist",version,"studio")
+    env.distsys       = fs.path(env.home,"dist",version,"sys")
     env.docs          = fs.path(env.home,"dist",version,"docs")
     env.examples      = fs.path(env.home,"dist",version,"examples")
     env.devices       = fs.path(env.home,"dist",version,"devices")
