@@ -32,8 +32,9 @@ import click
 @click.option("--devices","__devices",flag_value=True, default=False,help="Display supported devices currently installed")
 @click.option("--vms","__vms", help="Display installed virtual machines for a specific target")
 @click.option("--examples","__examples",flag_value=True, default=False,help="Display the list of installed examples")
+@click.option("--disk_usage","__disk_usage",flag_value=True, default=False,help="Display the disk used up by Zerynth installation")
 @click.option("--messages","__messages",flag_value=True, default=False,help="Display the list of system messages")
-def __info(__tools,__devices,__vms,__examples,__version,__fullversion,__modules,__messages):
+def __info(__tools,__devices,__vms,__examples,__version,__fullversion,__modules,__messages,__disk_usage):
     """ 
 Info
 ----
@@ -94,7 +95,7 @@ It takes the following options (one at a time):
             # ik = ZpmVersion(vv)   # vm version
             #if ik<im
             #log(vv)
-            if compare_versions(vv,env.var.version) != 0:
+            if not env.check_vm_compat(__vms,vv,True):
                 # skip versions lower than min_dep
                 continue
             # load vm
@@ -140,14 +141,19 @@ It takes the following options (one at a time):
         return
 
     if __version or __fullversion:
-        patchid = env.patches[env.var.version]
-        vrs = env.var.version+"-"+patchid
+        vrs = env.var.version+"-"+env.repo.get("hotfix","base")
         if env.skin:
             vrs = vrs + " "+env.skin
         if __fullversion:
             log(vrs)
         else:
             log(env.var.version)
+        return
+
+    if __disk_usage:
+        bytes= tools.disk_usage()
+        bytes = int(bytes/1024/1024/1024*100)/100  # in Gb
+        log(bytes)
         return
 
     if __modules:
@@ -202,7 +208,8 @@ It takes the following options (one at a time):
 @click.option("--tmp",default=False,flag_value =True,help="clear temporary folder")
 @click.option("--inst",multiple=True,type=str,help="delete previous installed version (can be repeated multiple times)")
 @click.option("--db",default=False,flag_value =True,help="forget all devices")
-def __clean(tmp,inst,db):
+@click.option("--older",default=False,flag_value =True,help="delete all previous installations")
+def __clean(tmp,inst,db,older):
     """ 
 Clean
 -----
@@ -216,15 +223,31 @@ The :command:`clean` command behave differently based on the following options:
     """
     if tmp:
         info("Cleaning temp folder...")
+        sz = fs.dir_size(env.tmp)
         fs.rmtree(env.tmp)
         fs.makedirs(env.tmp)
-        info("Ok")
-    for ii in inst:
-        if fs.exists(env.dist_dir(ii)):
-            info("Removing installation",ii)
-            fs.rmtree(env.dist_dir(ii))
-            info("Ok")
+        info("Cleaned up",sz//(1024*1024),"Mb")
     if db:
         info("Forgetting all devices...")
         env.clean_db()
         info("Ok")
+
+    inst = list(inst)
+    if older:
+        vdirs = fs.dirs(fs.path(env.dist,".."))
+        for dir in vdirs:
+            bdir = fs.basename(dir)
+            if not match_version(bdir):
+                continue
+            if compare_versions(bdir,env.var.version)<0:
+                inst.append(bdir)
+
+    inst = set(inst)
+    for ii in inst:
+        if fs.exists(env.dist_dir(ii)):
+            sz = fs.dir_size(env.dist_dir(ii))
+            info("Removing installation",ii)
+            fs.rmtree(env.dist_dir(ii))
+            info("Cleaned up",sz//(1024*1024),"Mb")
+
+

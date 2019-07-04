@@ -109,4 +109,6 @@ import provisioning
 
 if __name__=="__main__":
     init_all()
+    # load tools
+    tools.init()
     cli()

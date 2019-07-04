@@ -55,7 +55,7 @@ class zfs():
         try:
             self.check_path(src)
             with open(src,"r",encoding="utf8") as ff:
-                return yaml.load(ff) 
+                return yaml.safe_load(ff) 
         except Exception as e:
             if failsafe:
                 return {}
@@ -70,6 +70,12 @@ class zfs():
         else:
             return yaml.dump(ym,indent=4,encoding="utf-8",explicit_start=True,explicit_end=True,default_flow_style=flow_style,allow_unicode=True).decode("utf-8")
 
+    def get_yaml_or_json(self,src):
+        try:
+            data = self.get_yaml(src)
+            return data
+        except:
+            return self.get_json(src)
 
 
     def get_json(self,src,strict=True):
@@ -336,6 +342,15 @@ class zfs():
     def unchanged_since(self,src,seconds):
         mt = self.mtime(src)
         return time.time()-mt>seconds
+
+    def dir_size(self,thedir):
+        total_size = 0
+        for dirpath, dirnames, filenames in os.walk(thedir):
+            for f in filenames:
+                fp = os.path.join(dirpath, f)
+                if os.path.isfile(fp):
+                    total_size += os.path.getsize(fp)
+        return total_size
 
     # def remove_readonly_no_output(self, func, path, excinfo):
     #     #used to hide the whooosh bug when updating the index in, guess.., windows -_-

@@ -210,6 +210,47 @@ class Environment():
         }
         fs.set_json(token,fs.path(env.cfg,"token.json"))
 
+    def get_latest_installed_version(self):
+        res = self.var.version
+        for dir in fs.dirs(fs.path(self.dist,"..")):
+            bdir = fs.basename(dir)
+            if match_version(bdir):
+                if compare_versions(bdir,res)>0:
+                    res = bdir
+        return res
+
+    def load_matrix(self):
+        mtxfile = fs.path(self.dist,"matrix.json")
+        try:
+            return fs.get_json(mtxfile)
+        except:
+            return {}
+
+    def check_vm_compat(self,target,vmver,nooutput=False):
+        # check previous VM versioning scheme
+        if int32_version(vmver)<=int32_version("r2.2.0"):
+            if not nooutput:
+                warning("This virtual machine ("+vmver+") is not compatible with the running version of Zerynth! A version before r2.3.0 is needed")
+            return False
+
+        matrix = env.load_matrix()
+        if not matrix:
+            if not nooutput:
+                warning("Can't load compatibility matrix! Uplink at your own risk...")
+            return True
+        t2v = matrix["t2v"]
+        v2t = matrix["v2t"]
+        if target not in t2v:
+            warning("Can't find target in matrix, assuming compatibility...")
+            return True
+        vmrange = t2v[target][env.var.version]
+        if vmver>=vmrange[0] and vmver<=vmrange[1]:
+            return True
+        toolrange = v2t[target][vmver]
+        if not noutput:
+            warning("This virtual machine ("+vmver+") is not compatible with the running version of Zerynth! A version between",toolrange[0],"and",toolrange[1],"is needed")
+        return False
+
 
 def decode_base64(data):
     missing_padding = len(data) % 4
@@ -288,7 +329,7 @@ def init_cfg():
     #env.load_zpack_db(env.zdb,"packages.db")
     #env.load_ipack_db(env.idb,"packages.db")
     version = env.var.version
-    env.var.bytecode_version=1
+    env.var.bytecode_version=2
     if testmode==1:
         # local
         env.git_url   = os.environ.get("ZERYNTH_GIT_URL","http://localhost/git")
@@ -316,6 +357,7 @@ def init_cfg():
 
     if env.skin:
         env.packurl=env.packurl+"/"+env.skin
+        env.patchurl=env.patchurl+"/"+env.skin
 
     # dist directories
     env.dist          = fs.path(env.home,"dist",version)
@@ -326,6 +368,7 @@ def init_cfg():
     env.stdlib        = fs.path(env.home,"dist",version,"stdlib")
     env.vhal          = fs.path(env.home,"dist",version,"vhal")
     env.studio        = fs.path(env.home,"dist",version,"studio")
+    env.distsys       = fs.path(env.home,"dist",version,"sys")
     env.docs          = fs.path(env.home,"dist",version,"docs")
     env.examples      = fs.path(env.home,"dist",version,"examples")
     env.devices       = fs.path(env.home,"dist",version,"devices")
@@ -403,16 +446,32 @@ def init_cfg():
         except:
             warning("Bad json in",env.proxyfile)
 
-    #load patches
+    #load repository
+    env.repofile = fs.path(env.dist,"repository.json")
     try:
-        env.patches = fs.get_json(fs.path(env.cfg,"patches.json"))
-        if fs.exists(fs.path(env.dist,"patches.json")):
-            curpatch = env.patches[env.var.version]
-            instpatch = fs.get_json(fs.path(env.dist,"patches.json"))["patch"]
-            if curpatch != instpatch:
-                env.patches[env.var.version] = instpatch
-                fs.set_json(env.patches,fs.path(env.cfg,"patches.json"))
+        env.repo = fs.get_json(env.repofile)
     except:
-        env.patches = {env.var.version:"base"}
+        warning("Can't load repository.json at",env.dist)
+
+    # load installer folder
+    env.root = ""
+    try:
+        env.root=fs.get_json(fs.path(env.cfg,"root.json"))["root"]
+    except:
+        warning("Can't load root.json at",env.cfg)
+
+
+
+    #load patches
+    # try:
+    #     env.patches = fs.get_json(fs.path(env.cfg,"patches.json"))
+    #     if fs.exists(fs.path(env.dist,"patches.json")):
+    #         curpatch = env.patches[env.var.version]
+    #         instpatch = fs.get_json(fs.path(env.dist,"patches.json"))["patch"]
+    #         if curpatch != instpatch:
+    #             env.patches[env.var.version] = instpatch
+    #             fs.set_json(env.patches,fs.path(env.cfg,"patches.json"))
+    # except:
+    #     env.patches = {env.var.version:"base"}
 
 add_init(init_cfg,prio=0)
