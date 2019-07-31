@@ -917,7 +917,8 @@ def get_device_by_target(target,options,skip_reset=False):
             dev.reset()
     return dev
 
-def probing(ch,devtarget, adjust_timeouts=True):
+def probing(ch,devtarget_obj, adjust_timeouts=True):
+    devtarget = devtarget_obj.target
     # PROBING
     starttime = time.perf_counter()
     probesent = False
@@ -929,6 +930,8 @@ def probing(ch,devtarget, adjust_timeouts=True):
         line=ch.readline()
         debug("<=",line)
         if not line and not probesent:
+            if hasattr(devtarget_obj, "probing_pre_v_hook"):
+                devtarget_obj.probing_pre_v_hook()
             probesent=True
             ch.write("V")
             debug("=> V")

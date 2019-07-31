@@ -172,7 +172,7 @@ def _vmuid_dev(dev):
         fatal("Can't open serial:",dev.port)
 
     try:
-        version,vmuid,chuid,target = probing(ch,dev.target, True if not dev.fixed_timeouts else False)
+        version,vmuid,chuid,target = probing(ch,dev, True if not dev.fixed_timeouts else False)
         ch.close()
         return vmuid,version,target,chuid
     except Exception as e:
