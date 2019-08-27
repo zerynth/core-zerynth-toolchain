@@ -318,8 +318,9 @@ class Compiler():
         # add CDEFS in board port.def to CFG options
         for opt in self.prepdefines["CDEFS"]:
             self.prepdefines["CFG"][opt]=1
+        self.prepdefines["CFG"]["TARGET"]=self.prepdefines["BOARD"]
 
-        preg = re.compile("\s*(#+-)(if|else|endif)\s*(!{0,1}[a-zA-Z0-9_]*)(?:\s+(>=|<=|==|!=|>|<)\s+([A-Za-z0-9_]+)){0,1}")
+        preg = re.compile("\s*(#+-)(if|else|endif|warning)\s*(!{0,1}[a-zA-Z0-9_]*)(?:\s+(>=|<=|==|!=|>|<)\s+([A-Za-z0-9_]+)){0,1}")
         stack = []
         modprg = fs.readfile(file)
         lines = modprg.split("\n")
@@ -385,19 +386,26 @@ class Compiler():
                     kl = all(stack) and kl
                     keepline = kl
                     stack.append(kl)
+                    # debug
+                    info("PREP:",cmacro,"=",vmacro,"(",keepline,")","[ if",lvl+1,"]","@",nline+1)
                 elif op=="else":
                     if len(stack)!=lvl+1:
                         raise CSyntaxError(nline,0,file,"Bad preprocessor else! Probably missing some endif")
                     if all(stack[:-1]):
                         keepline=not stack[-1]
                         stack[-1]=keepline
+                        info("PREP:","(",keepline,")","[ else",lvl+1,"]","@",nline+1)
 
-                else:
+                elif op=="endif":
                     ## endif
                     if len(stack)!=lvl+1:
                         raise CSyntaxError(nline,0,file,"Bad preprocessor endif! Check nesting")
                     stack.pop()
                     keepline = True if not stack else stack[-1]
+                else:
+                    # warning
+                    warning("PREP:",cmacro,"=",vmacro,"@",nline+1)
+
             else:
                 if keepline:
                     result.append(line)
