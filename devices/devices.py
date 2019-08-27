@@ -235,16 +235,19 @@ class Device():
             warning(e)
             return None,"Can't erase flash"
 
-    def do_put_mode(self, mode, outfn=None):
+    def do_custom_action(self, action, outfn=None, action_param=None):
         try:
-            mode_meth = getattr(self, 'put_' + mode.lower())
-            if not mode_meth:
-                return None,"unsupported mode '%s'" % mode
-            res,out = mode_meth(outfn=outfn)
+            action_meth = getattr(self, action.lower())
+            if not action_meth:
+                return None,"unsupported action '%s'" % action
+            if not action_param:
+                res,out = action_meth(outfn=outfn)
+            else:
+                res,out = action_meth(action_param, outfn=outfn)
             return res,out
         except Exception as e:
             warning(e)
-            return None,"exception while putting in selected mode"
+            return None,"exception while executing custom action"
 
     def reset(self):
         pass
