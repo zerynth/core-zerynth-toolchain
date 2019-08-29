@@ -940,7 +940,8 @@ def probing(ch,devtarget_obj, adjust_timeouts=True):
         line=ch.readline()
         debug("<=",line)
         if not line and not probesent:
-            if hasattr(devtarget_obj, "probing_pre_v_hook"):
+            # Board class in devices redefines __getattr__
+            if devtarget_obj.probing_pre_v_hook is not None:
                 devtarget_obj.probing_pre_v_hook()
             probesent=True
             ch.write("V")
