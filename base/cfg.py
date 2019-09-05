@@ -247,7 +247,7 @@ class Environment():
         if vmver>=vmrange[0] and vmver<=vmrange[1]:
             return True
         toolrange = v2t[target][vmver]
-        if not noutput:
+        if not nooutput:
             warning("This virtual machine ("+vmver+") is not compatible with the running version of Zerynth! A version between",toolrange[0],"and",toolrange[1],"is needed")
         return False
 

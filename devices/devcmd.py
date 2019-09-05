@@ -713,23 +713,23 @@ where :samp:`alias` is the device alias previously set (or just the initial part
         fatal("Can't erase flash! -->",out)
     info("Memory flash erased")
 
-@device.command(help="Put the device in a selected operating mode. \n\n Arguments: \n\n ALIAS: device alias \n\n MODE: selected mode")
+@device.command(help="Execute a custom action for the device. \n\n Arguments: \n\n ALIAS: device alias \n\n ACTION: selected action")
 @click.argument("alias")
-@click.argument("mode")
-def put_mode(alias, mode):
+@click.argument("action")
+@click.option("--action-param",default="",type=str,multiple=True,help="action parameter")
+def custom_action(alias, action, action_param):
     """ 
-.. _ztc-cmd-device-put-mode:
+.. _ztc-cmd-device-custom-action:
 
-Put the device in a selected mode
----------------------------------
+Execute a device custom action
+------------------------------
 
-Erase completely the flash memory of the device (all data stored will be deleted).
+Some devices provide custom actions to be executed (e.g., burn proprietary bootloaders, put the device in a specific mode).
+These actions are performed by issuing the command: ::
 
-This operation is performed by issuing the command: ::
+    ztc device custom_action alias action
 
-    ztc device put_mode alias mode
-
-where :samp:`alias` is the device alias previously set (or just the initial part of it).
+where :samp:`alias` is the device alias previously set (or just the initial part of it) and :samp:`action` is the selected action.
 
     """
     tgt = _dsc.search_for_device(alias)
@@ -738,11 +738,21 @@ where :samp:`alias` is the device alias previously set (or just the initial part
     elif isinstance(tgt,list):
         fatal("Ambiguous alias",[x.alias for x in tgt])
 
-    info("Putting the device in %s mode" % mode)
-    res,out = tgt.do_put_mode(mode, outfn=info)
+    if env.human:
+        info("Executing action: %s" % action)
+    def outfn(*args,**kwargs):
+        echo("###",*args,**kwargs)
+    res,out = tgt.do_custom_action(action, outfn=outfn, action_param=action_param)
     if not res:
-        fatal("Cannot put the device in selected mode! -->",out)
-    info("Device put in selected mode")
+        fatal("Cannot execute selected action! -->",out)
+    if out:
+        if env.human:
+            for key, val in out.items():
+                print(key,':', val)
+        else:
+            click.echo(json.dumps(out))
+    if env.human:
+        info("Action successfully executed")
 
 @device.group(help="Manage device configurations manually.")
 def db():
@@ -917,7 +927,8 @@ def get_device_by_target(target,options,skip_reset=False):
             dev.reset()
     return dev
 
-def probing(ch,devtarget, adjust_timeouts=True):
+def probing(ch,devtarget_obj, adjust_timeouts=True):
+    devtarget = devtarget_obj.target
     # PROBING
     starttime = time.perf_counter()
     probesent = False
@@ -929,6 +940,9 @@ def probing(ch,devtarget, adjust_timeouts=True):
         line=ch.readline()
         debug("<=",line)
         if not line and not probesent:
+            # Board class in devices redefines __getattr__
+            if devtarget_obj.probing_pre_v_hook is not None:
+                devtarget_obj.probing_pre_v_hook()
             probesent=True
             ch.write("V")
             debug("=> V")

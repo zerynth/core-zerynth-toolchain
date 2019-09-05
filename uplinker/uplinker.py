@@ -302,7 +302,7 @@ def _uplink_dev(dev,bytecode,loop):
             fatal("Can't open serial:",dev.port)
 
     try:
-        version,vmuid,chuid,target = probing(ch,dev.target, True if not dev.fixed_timeouts else False)
+        version,vmuid,chuid,target = probing(ch,dev, True if not dev.fixed_timeouts else False)
     except Exception as e:
         if dev.uplink_reset:
             fatal("Something wrong during the probing phase: too late reset or serial port already open?")
