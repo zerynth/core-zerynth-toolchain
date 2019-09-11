@@ -8,7 +8,7 @@ import serial.tools.list_ports
 class WinUsb():
 	def __init__(self):
 		self.smth = re.compile("USB\\\\(?:[^\\\\]*&)*VID_([0-9a-fA-F]*)&PID_([0-9a-fA-F]*)(?:&[^\\\\]*)*\\\\([^\\\\]*)")
-		self.ftdimth = re.compile("FTDIBUS\\\\(?:[^\\\\]*&)*VID_([0-9a-fA-F]*)\+PID_([0-9a-fA-F]*)\+([^\\\\]*)\\\\(?:[^\\\\]*)")
+		self.ftdimth = re.compile("FTDIBUS\\\\(?:[^\\\\]*&)*VID_([0-9a-fA-F]*)\+PID_([0-9a-fA-F]*)\+([^\\\\]*).\\\\(?:[^\\\\]*)")
 		self.hmth = re.compile('.*="(.*)"')
 		self.matchcom = re.compile(".*\((COM[0-9]+)\).*")
 		pythoncom.CoInitialize()
