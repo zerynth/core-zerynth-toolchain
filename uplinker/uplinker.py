@@ -309,10 +309,6 @@ def _uplink_dev(dev,bytecode,loop):
         else:
             fatal("Something wrong during the probing phase:",e)
 
-    # we have vm version, check compatibility with current tool version
-    # TODO: bytecode *could* be compiled with a different version than current?
-    if not env.check_vm_compat(target,version):
-        fatal("Please switch to the correct version of Zerynth or virtualize the device with a compatible VM...")
 
     vms = tools.get_vm(vmuid,version,chuid,target)
     if not vms:
@@ -322,16 +318,24 @@ def _uplink_dev(dev,bytecode,loop):
         info("VM downloaded, retry uplinking!")
         return
 
+    # this check must be down after vm download, because otherwise shareable vms
+    # burned before the current tool version, cannot be obtained
+
+    # we have vm version, check compatibility with current tool version
+    # TODO: bytecode *could* be compiled with a different version than current?
+    if not env.check_vm_compat(target,version):
+        fatal("Please switch to the correct version of Zerynth or virtualize the device with a compatible VM...")
+
     vm = fs.get_json(vms)
 
-    symbols,_memstart,_romstart,_flashspace = handshake(ch)
-    _memdelta = _memstart-int(vm["map"]["memstart"],16)
-    info("    memdelta :"+str(_memdelta))
-    if _memdelta != vm["map"]["memdelta"]:
-        debug("memdelta mismatch: fota updates could not work")
+    symbols,_memend,_romstart,_flashspace = handshake(ch)
+    # _memdelta = _memstart-int(vm["map"]["memstart"],16)
+    # info("    memdelta :"+str(_memdelta))
+    # if _memdelta != vm["map"]["memdelta"]:
+    #     debug("memdelta mismatch: fota updates could not work")
 
     relocator = Relocator(bf,vm,dev)
-    thebin = relocator.relocate(symbols,_memstart,_romstart)
+    thebin = relocator.relocate(symbols,_memend,_romstart)
     totsize = len(thebin)
 
     #self.log("Sending %i bytes..."%totsize)
