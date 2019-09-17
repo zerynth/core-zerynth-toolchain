@@ -75,7 +75,43 @@ class Relocator():
     def align_to(self,x,n):
         return x if x%n==0 else x+(n-(x%n))
 
-    def relocate_romdata_ram(self,_memstart,vcobj,symreloc,tmpdir,ofile,lfile,debug_info):
+    # relocate code normally, without moving rodata to ram (this is the standard for ARM mcus)
+    def _relocate_noromdata(self,_memstart,vcobj,symreloc,tmpdir,ofile,lfile,debug_info):
+        # no rodata_in_ram
+        #adjust padding
+        cbin = bytearray()
+        cbin.extend(vcobj.get_section(".text"))
+        data_start = vcobj.romdata_start()
+        data_end = vcobj.romdata_end()
+        hsize = vcobj.data_bss_size()
+        if vcobj.rodata_start():
+            #pad
+            cbin.extend(b'\x00'*(vcobj.rodata_start()-vcobj.text_end()))
+            debug("padding text",(vcobj.rodata_start()-vcobj.text_end()))
+        cbin.extend(vcobj.get_section(".rodata"))
+        if vcobj.romdata_start():
+            #has romadata
+            if vcobj.rodata_start():
+                #has rodata
+                cbin.extend(b'\x00'*(vcobj.romdata_start()-vcobj.rodata_end()))
+                debug("padding rodata",(vcobj.romdata_start()-vcobj.rodata_end()))
+            else:
+                #no rodata
+                cbin.extend(b'\x00'*(vcobj.romdata_start()-vcobj.text_end()))
+                debug("padding rodata2")
+
+        debug(hex(len(cbin)))
+        cbin.extend(vcobj.get_section(".data"))
+        debug("data_start",hex(data_start))
+        if debug_info is not None:
+            debug_info.append(lfile)
+
+        return hsize, data_start, data_end, _memstart, cbin, vcobj
+
+
+    # relocate code by moving rodata to ram. This is necessary in some architecture that have 
+    # strict differenciation between code and data segments (i.e. esp32)
+    def _relocate_romdata(self,_memstart,vcobj,symreloc,tmpdir,ofile,lfile,debug_info):
         debug("Relocation .rodata")
         #align everything to 16
         new_memstart = self.align_to(_memstart,16)
@@ -191,136 +227,40 @@ class Relocator():
         debug("ram data end",hex(data_end))
         debug("binary data size",len(cbin))
 
-        return hsize, data_start, data_end, cbin
+        return hsize, data_start, data_end, _memstart, cbin, vcobj
 
-
-
-
-    def relocate(self,_symbols,_memend,_romstart,debug_info=None):
-        #logger.info("Relocating Bytecode for %s",self.upl.board["shortname"])
-        # cc = gcc(tools[self.device.cc],opts=self.device.gccopts)
-        # unpack zcode
-        cobjs = self.zcode["cobjs"]
-        header = bytearray(base64.standard_b64decode(self.zcode["header"]))
-        pyobjs = bytearray(base64.standard_b64decode(self.zcode["pyobjs"]))
+    def _fill_bcode_header(self,header,_textstart,_romstart,_memstart,data_start,data_end,hsize,pyobjs,vcobj):
         zinfo = self.zcode["info"]
         cnatives = self.zcode["cnatives"]
+        # padding pyobjs
+        pdsz = _textstart-_romstart-len(header)-len(pyobjs)
+        for i in range(0,pdsz):
+            pyobjs+=struct.pack("=B",0)
+        # updating header
+        header[12:16] = struct.pack("=I",_memstart)
+        header[16:20] = struct.pack("=I",data_start)
+        header[20:24] = struct.pack("=I",data_end)
+        header[24:28] = struct.pack("=I",hsize)
 
-        rodata_in_ram=self.device.get("rodata_in_ram",False)
-        if cobjs:
-            cobj = base64.standard_b64decode(cobjs)
-        else:
-            cobj = bytes()
-
-        _textstart = _romstart+len(header)+len(pyobjs)
-        debug("textstart",hex(_textstart))
-        #info("Relocation Info: memstart %x romstart %x",_memstart,_romstart)
-        _textstart=self.align_to(_textstart,16)#+(16-(_textstart%16))
-        debug("textstart",hex(_textstart))
-
-        if cobj:
-            tmpdir = fs.get_tempdir()
-            ofile = fs.path(tmpdir,"zerynth.rlo")
-            lfile = fs.path(tmpdir,"zerynth.lo")
-            fs.write_file(cobj,ofile)
-            #if len(_symbols)!=len(self.vmsym): fatal("Symbols mismatch! Expected",len(self.vmsym),"got",len(_symbols))
-            symreloc = {}#dict(self.vmsym)#{self.vmsym[x]:_symbols[x] for x in range(0,len(_symbols))}
-            #symreloc.update(self.vmsym)
-            symreloc.update({"_start":0,".data":_memend,".text":_textstart})
-            vcobj = self.get_relocated_code(symreloc,ofile,lfile,rodata_in_ram)
-            cbin = vcobj.binary
-            data_start = vcobj.romdata_start()
-            data_end = vcobj.romdata_end()
-            hsize = vcobj.data_bss_size()
-            #now calculate real memstart
-            _memstart = _memend-hsize;
-            if _memstart%16:
-                _memstart=_memstart&(~0xf)
-            symreloc.update({"_start":0,".data":_memstart,".text":_textstart})
-            vcobj = self.get_relocated_code(symreloc,ofile,lfile,rodata_in_ram)
-            cbin = vcobj.binary
-            data_start = vcobj.romdata_start()
-            data_end = vcobj.romdata_end()
-            hsize = vcobj.data_bss_size()
-            if rodata_in_ram:
-                # pass 1: calculate hsize
-                debug("RODATA IN RAM STEP 1",hex(_memstart))
-                hsize,_,_,_ = self.relocate_romdata_ram(_memstart,vcobj,symreloc,tmpdir,ofile,lfile,debug_info)
-                # pass 2: relink with correct memstart
-                _memstart = _memend-hsize
-                if _memstart%16:
-                    _memstart=_memstart&(~0xf)
-                symreloc = {"_start":0,".data":_memstart,".text":_textstart}
-                debug("RODATA IN RAM STEP 2",hex(_memstart))
-                # vcobj = self.get_relocated_code(symreloc,ofile,lfile,rodata_in_ram)
-                hsize, data_start,data_end,cbin = self.relocate_romdata_ram(_memstart,vcobj,symreloc,tmpdir,ofile,lfile,debug_info)
-
+        # updating native table
+        hbg = zinfo["pyobjtable_end"]
+        #logger.debug("cnatives: %i symbols: %i",len(self.upl.cnatives),len(vcobj.symbols))
+        rlct = self.device.relocator
+        for nn in cnatives:
+            try:
+                addr = vcobj.symbols[nn]
+            except Exception as e:
+                fatal("Missing symbols!",nn)
+            #print(nn,hex(addr))
+            #logger.info("%s => %s",tohex(addr), nn)
+            # WARNING!!! +1 because it's thumb instructions! (maybe we should add thumb in arch)
+            if rlct=="cortex-m":
+                header[hbg:hbg+4]=struct.pack("=I",addr+1)
             else:
-                # no rodata_in_ram
-                #adjust padding
-                cbin = bytearray()
-                cbin.extend(vcobj.get_section(".text"))
-                if vcobj.rodata_start():
-                    #pad
-                    cbin.extend(b'\x00'*(vcobj.rodata_start()-vcobj.text_end()))
-                    debug("padding text",(vcobj.rodata_start()-vcobj.text_end()))
-                cbin.extend(vcobj.get_section(".rodata"))
-                if vcobj.romdata_start():
-                    #has romadata
-                    if vcobj.rodata_start():
-                        #has rodata
-                        cbin.extend(b'\x00'*(vcobj.romdata_start()-vcobj.rodata_end()))
-                        debug("padding rodata",(vcobj.romdata_start()-vcobj.rodata_end()))
-                    else:
-                        #no rodata
-                        cbin.extend(b'\x00'*(vcobj.romdata_start()-vcobj.text_end()))
-                        debug("padding rodata2")
+                header[hbg:hbg+4]=struct.pack("=I",addr)
+            hbg+=4
 
-                debug(hex(len(cbin)))
-                cbin.extend(vcobj.get_section(".data"))
-                debug("data_start",hex(data_start))
-                if debug_info is not None:
-                    debug_info.append(lfile)
-
-
-
-
-
-            if debug_info is not None:
-                debug_info.append(_textstart)
-
-            # padding pyobjs
-            pdsz = _textstart-_romstart-len(header)-len(pyobjs)
-            for i in range(0,pdsz):
-                pyobjs+=struct.pack("=B",0)
-            # updating header
-            header[12:16] = struct.pack("=I",_memstart)
-            header[16:20] = struct.pack("=I",data_start)
-            header[20:24] = struct.pack("=I",data_end)
-            header[24:28] = struct.pack("=I",hsize)
-            debug("cobj stats: memstart",hex(_memstart),"data start",hex(data_start),"data end",hex(data_end),"size",hsize)
-
-            # updating native table
-            hbg = zinfo["pyobjtable_end"]
-            #logger.debug("cnatives: %i symbols: %i",len(self.upl.cnatives),len(vcobj.symbols))
-            rlct = self.device.relocator
-            for nn in cnatives:
-                try:
-                    addr = vcobj.symbols[nn]
-                except Exception as e:
-                    fatal("Missing symbols!",nn)
-                #print(nn,hex(addr))
-                #logger.info("%s => %s",tohex(addr), nn)
-                # WARNING!!! +1 because it's thumb instructions! (maybe we should add thumb in arch)
-                if rlct=="cortex-m":
-                    header[hbg:hbg+4]=struct.pack("=I",addr+1)
-                else:
-                    header[hbg:hbg+4]=struct.pack("=I",addr)
-                hbg+=4
-            thebin = header+pyobjs+cbin
-        else:
-            thebin = header+pyobjs
-
+    def _fill_thebin(self,thebin):
         # insert bytecode length
         thebin[52:56]=struct.pack("=I",len(thebin))
         # insert vm version
@@ -332,22 +272,132 @@ class Relocator():
         # insert timestamp
         thebin[44:48]=struct.pack("=I",int(time.time()))
 
-
-
-
-        # print("Header starts at:",hex(_romstart))
-        # print("Header size:",len(self.upl.header))
-        # print("Header ends at:",hex(_romstart+len(self.upl.header)))
-        # print("Bytecode starts at:",hex(_romstart+len(self.upl.header)))
-        # print("Bytecode size:",len(self.upl.pyobjs))
-        # print("Bytecode ends at:",hex(_romstart+len(self.upl.pyobjs)+len(self.upl.header)))
-        # print("Native code starts at:",hex(_textstart),"==",hex(_romstart+len(self.upl.pyobjs)+len(self.upl.header)))
-        # print("Native code size:",len(vcobj.binary))
-        # print("Native code ends at:",hex(_textstart+len(vcobj.binary)))
-        # print("Romdata starts at:",hex(vcobj.romdata[0]))
-        # print("Romdata size:",vcobj.romdata[2])
-        # print("Romdata ends at:",hex(vcobj.romdata[1]))
-        # print("BSS starts at:",hex(vcobj.bss[0]))
-        # print("BSS size:",vcobj.bss[2])
-        # print("BSS ends at:",hex(vcobj.bss[1]))
         return thebin
+
+
+    def _get_objs_from_zcode(self,_romstart):
+        cobjs = self.zcode["cobjs"]
+        header = bytearray(base64.standard_b64decode(self.zcode["header"]))
+        pyobjs = bytearray(base64.standard_b64decode(self.zcode["pyobjs"]))
+
+        if cobjs:
+            cobj = base64.standard_b64decode(cobjs)
+        else:
+            cobj = bytes()
+
+        _textstart = _romstart+len(header)+len(pyobjs)
+        debug("textstart",hex(_textstart))
+        #info("Relocation Info: memstart %x romstart %x",_memstart,_romstart)
+        _textstart=self.align_to(_textstart,16)#+(16-(_textstart%16))
+        debug("textstart",hex(_textstart))
+
+        return cobj,header,pyobjs,_textstart
+
+    # old relocation, with memdelta, before r19.09.16
+    def relocate_with_memstart(self,_memstart,_romstart,debug_info=None):
+        #logger.info("Relocating Bytecode for %s",self.upl.board["shortname"])
+        # cc = gcc(tools[self.device.cc],opts=self.device.gccopts)
+        # unpack zcode
+
+        cobj,header,pyobjs,_textstart = self._get_objs_from_zcode(_romstart)
+        rodata_in_ram=self.device.get("rodata_in_ram",False)
+
+        if cobj:
+            tmpdir = fs.get_tempdir()
+            ofile = fs.path(tmpdir,"zerynth.rlo")
+            lfile = fs.path(tmpdir,"zerynth.lo")
+            fs.write_file(cobj,ofile)
+            symreloc = {}
+            symreloc.update({"_start":0,".data":_memstart,".text":_textstart})
+            vcobj = self.get_relocated_code(symreloc,ofile,lfile,rodata_in_ram)
+            if rodata_in_ram:
+                debug("Relocation .rodata")
+                hsize, data_start,data_end,_memstart,cbin,vcobjl = self._relocate_romdata(_memstart,vcobj,symreloc,tmpdir,ofile,lfile,debug_info)
+            else:
+                hsize, data_start,data_end,_memstart,cbin,vcobjl = self._relocate_noromdata(_memstart,vcobj,symreloc,tmpdir,ofile,lfile,debug_info)
+
+            if debug_info is not None:
+                debug_info.append(_textstart)
+
+            self._fill_bcode_header(header,_textstart,_romstart,_memstart,data_start,data_end,hsize,pyobjs,vcobjl)
+
+            thebin = header+pyobjs+cbin
+        else:
+            thebin = header+pyobjs
+
+        return self._fill_thebin(thebin)
+
+
+    def relocate_with_memend(self,_memend,_romstart,debug_info=None):
+        #logger.info("Relocating Bytecode for %s",self.upl.board["shortname"])
+        # cc = gcc(tools[self.device.cc],opts=self.device.gccopts)
+        # unpack zcode
+        cobj,header,pyobjs,_textstart = self._get_objs_from_zcode(_romstart)
+
+        rodata_in_ram=self.device.get("rodata_in_ram",False)
+
+        if cobj:
+            tmpdir = fs.get_tempdir()
+            ofile = fs.path(tmpdir,"zerynth.rlo")
+            lfile = fs.path(tmpdir,"zerynth.lo")
+            fs.write_file(cobj,ofile)
+            symreloc = {}
+            symreloc.update({"_start":0,".data":_memend,".text":_textstart})
+            vcobj = self.get_relocated_code(symreloc,ofile,lfile,rodata_in_ram)
+            # cbin = vcobj.binary
+            # data_start = vcobj.romdata_start()
+            # data_end = vcobj.romdata_end()
+            hsize = vcobj.data_bss_size()
+            #now calculate real memstart
+            _memstart = _memend-hsize;
+            if _memstart%16:
+                _memstart=_memstart&(~0xf)
+            symreloc.update({"_start":0,".data":_memstart,".text":_textstart})
+            vcobj = self.get_relocated_code(symreloc,ofile,lfile,rodata_in_ram)
+            debug("MEMSTART 1",hex(_memstart))
+            if rodata_in_ram:
+                # pass 1: calculate hsize
+                debug("RODATA IN RAM STEP 1",hex(_memstart))
+                hsize,_,_,_,_,_ = self._relocate_romdata(_memstart,vcobj,symreloc,tmpdir,ofile,lfile,debug_info)
+                # pass 2: relink with correct memstart
+                _memstart = _memend-hsize
+                if _memstart%16:
+                    _memstart=_memstart&(~0xf)
+                debug("MEMSTART 2",hex(_memstart))
+                symreloc = {"_start":0,".data":_memstart,".text":_textstart}
+                debug("RODATA IN RAM STEP 2",hex(_memstart))
+                # vcobj = self.get_relocated_code(symreloc,ofile,lfile,rodata_in_ram)
+                hsize, data_start,data_end,_memstart,cbin,vcobjl = self._relocate_romdata(_memstart,vcobj,symreloc,tmpdir,ofile,lfile,debug_info)
+            else:
+                hsize, data_start,data_end,_memstart,cbin,vcobjl = self._relocate_noromdata(_memstart,vcobj,symreloc,tmpdir,ofile,lfile,debug_info)
+
+            if debug_info is not None:
+                debug_info.append(_textstart)
+
+            self._fill_bcode_header(header,_textstart,_romstart,_memstart,data_start,data_end,hsize,pyobjs,vcobjl)
+
+            thebin = header+pyobjs+cbin
+        else:
+            thebin = header+pyobjs
+
+        return self._fill_thebin(thebin)
+
+
+    def relocate(self,_memstart_or_memend,_romstart,debug_info=None):
+        vm = self.thevm
+        vmversion = vm["version"]
+        if vmversion<"r19.09.16":
+            #old vm with memdelta
+            if _memstart_or_memend == -1:
+                # linking without knowning memdelta (called by ztc.link)
+                debug("Relocating with vm.memstart strategy")
+                _memstart_or_memend = int(vm["map"]["memstart"],16)+vm["map"]["memdelta"]
+            else:
+                debug("Relocating with dev.memstart strategy")
+
+            return self.relocate_with_memstart(_memstart_or_memend,_romstart,debug_info)
+        else:
+            # new vm without memdelta
+            info("Relocating with memend strategy")
+            return self.relocate_with_memend(_memstart_or_memend,_romstart,debug_info)
+

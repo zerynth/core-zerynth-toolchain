@@ -328,14 +328,10 @@ def _uplink_dev(dev,bytecode,loop):
 
     vm = fs.get_json(vms)
 
-    symbols,_memend,_romstart,_flashspace = handshake(ch)
-    # _memdelta = _memstart-int(vm["map"]["memstart"],16)
-    # info("    memdelta :"+str(_memdelta))
-    # if _memdelta != vm["map"]["memdelta"]:
-    #     debug("memdelta mismatch: fota updates could not work")
+    symbols,_memend_or_start,_romstart,_flashspace = handshake(ch)
 
     relocator = Relocator(bf,vm,dev)
-    thebin = relocator.relocate(symbols,_memend,_romstart)
+    thebin = relocator.relocate(_memend_or_start,_romstart)
     totsize = len(thebin)
 
     #self.log("Sending %i bytes..."%totsize)
@@ -504,11 +500,8 @@ For example, assuming a project has been compiled to the bytecode file :samp:`pr
             fatal("This VM does not support OTA!")
         else:
             vm = vm["ota"]
-    symbols = vm["map"]["sym"]
-    _memstart = int(vm["map"]["memstart"],16)+vm["map"]["memdelta"]
     _romstart = int(vm["map"]["bc"][bc_ota],16)+int(vm["map"]["bcdelta"],16)
 
-    debug("MEMSTART: ",hex(_memstart))
     debug("ROMSTART: ",hex(_romstart))
     relocator = Relocator(bf,vm,Var(
         {
@@ -517,9 +510,8 @@ For example, assuming a project has been compiled to the bytecode file :samp:`pr
             "gccopts":vm["gccopts"],
             "rodata_in_ram":vm.get("rodata_in_ram",False)
         },recursive=False))
-    addresses = []#[int(symbols[x],16) for x in relocator.vmsym]
     dbginfo = []
-    thebin = relocator.relocate(addresses,_memstart,_romstart,dbginfo)
+    thebin = relocator.relocate(-1,_romstart,dbginfo)
     bcbin = thebin
 
     if debug_bytecode:
