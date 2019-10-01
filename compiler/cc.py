@@ -223,6 +223,9 @@ class gcc():
 
         # find search path: https://stackoverflow.com/a/21610523
         ret, output = self.run_command(self.gcc,self.archopts+["-print-search-dirs"])
+        if ret != 0:
+            error("Linking Error:",output);
+
         lines = output.split('\n')
         self.libpaths=[]
         for line in lines:
