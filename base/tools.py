@@ -259,12 +259,17 @@ class Tools():
                 #not compiled yet, skip
                 continue
             try:
+                pkg = self.get_pack_info(bdir)
+                if pkg is None:
+                    continue
                 bj = fs.get_json(fs.path(cdir,"device.json"))
                 bj["path"] = cdir
+                bj["deps"] = self.get_package_deps(pkg["fullname"])
+                bj["has_all_deps"] = self.has_all_deps(pkg["fullname"])
+                bj["fullname"] = pkg["fullname"]
                 yield bj
             except Exception as e:
                 warning(e)
-
 
     def get_specs(self,specs):
         options = {}
