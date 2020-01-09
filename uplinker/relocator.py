@@ -109,7 +109,7 @@ class Relocator():
         return hsize, data_start, data_end, _memstart, cbin, vcobj
 
 
-    # relocate code by moving rodata to ram. This is necessary in some architecture that have 
+    # relocate code by moving rodata to ram. This is necessary in some architecture that have
     # strict differenciation between code and data segments (i.e. esp32)
     def _relocate_romdata(self,_memstart,vcobj,symreloc,tmpdir,ofile,lfile,debug_info):
         debug("Relocation .rodata")
@@ -159,6 +159,7 @@ class Relocator():
             ".romdata":new_romdata_start,
             ".rodata":new_rodata_start,
             ".bss":new_bss_start,
+            ".eh_frame":new_bss_end,
             ".ctors":new_romdata_end
         }
         symreloc.update(sects)
@@ -172,18 +173,29 @@ class Relocator():
                 sects.update({".data":self.align_to(new_memstart+vcobj.rodata[2],16)})
                 if vcobj.bss[2]:
                     sects.update({".bss":self.align_to(sects[".data"]+vcobj.data[2],16)})
+                    sects.update({".eh_frame":sects[".bss"] + new_bss_size})
+                else:
+                    sects.update({".eh_frame":sects[".data"] + new_data_size})
             else:
                 if vcobj.bss[2]:
                     sects.update({".bss":self.align_to(new_memstart+vcobj.rodata[2],16)})
+                    sects.update({".eh_frame":sects[".bss"] + new_bss_size})
+                else:
+                    sects.update({".eh_frame":sects[".rodata"] + new_rodata_size})
         elif vcobj.data[2]:
             # no rodata, has data
             sects.update({".data":new_memstart})
             if vcobj.bss[2]:
                 sects.update({".bss":self.align_to(new_memstart+vcobj.data[2],16)})
+                sects.update({".eh_frame":sects[".bss"] + new_bss_size})
+            else:
+                sects.update({".eh_frame":sects[".data"] + new_data_size})
         elif vcobj.bss[2]:
             # only bss
             sects.update({".bss":new_memstart})
+            sects.update({".eh_frame":sects[".bss"] + new_bss_size})
 
+ 
         symreloc.update(sects)
         debug("Relocated sections")
         for k,v in sects.items():
