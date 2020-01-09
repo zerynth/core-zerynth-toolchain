@@ -169,9 +169,13 @@ It takes the following options (one at a time):
     if __messages:
         msg_file = fs.path(env.cfg,"messages.json")
         if fs.exists(msg_file):
-            msg_list = fs.get_json(msg_file)
-            for msg in msg_list:
-                msg["read"]=True
+            try:
+                msg_list = fs.get_json(msg_file)
+                for msg in msg_list:
+                    msg["read"]=True
+            except:
+                msg_list = []
+
         else:
             msg_list = []
         last_msg = msg_list[0]["visibleFrom"] if msg_list else ""

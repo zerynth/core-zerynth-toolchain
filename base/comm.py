@@ -3,8 +3,20 @@ import serial
 import threading
 import sys
 import os
+import codecs
 
 __all__ = ["ConnectionInfo","Channel"]
+
+def error_handler(error):
+    result = []
+    for i in range(error.start, error.end):
+        if error.object[i] > 33 and error.object[i] < 126:
+            result.append(chr(error.object[i]))
+        else:
+            result.append('?')
+    return ''.join(result), error.end
+
+codecs.register_error("custom_error",error_handler)
 
 class ConnectionInfo():
 
@@ -88,8 +100,9 @@ class Channel():
             while True:
                 toread = self.ch.inWaiting() or 1
                 data = self.ch.read(toread)
-                log(data.decode("ascii","replace"),sep="",end="")
+                log(data.decode("ascii","custom_error"),sep="",end="")
         except Exception as e:
+            # print(e)
             critical("Lost connection!")
 
     def _writer(self):
