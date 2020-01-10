@@ -398,18 +398,24 @@ class Relocator():
     def relocate(self,_memstart_or_memend,_romstart,debug_info=None):
         vm = self.thevm
         vmversion = vm["version"]
-        if vmversion<"r19.09.16":
+        if vmversion<"r19.12.12":
             #old vm with memdelta
             if _memstart_or_memend == -1:
                 # linking without knowning memdelta (called by ztc.link)
-                debug("Relocating with vm.memstart strategy")
+                info("Relocating with vm.memstart strategy")
                 _memstart_or_memend = int(vm["map"]["memstart"],16)+vm["map"]["memdelta"]
             else:
-                debug("Relocating with dev.memstart strategy")
+                info("Relocating with dev.memstart strategy")
 
             return self.relocate_with_memstart(_memstart_or_memend,_romstart,debug_info)
         else:
+            if _memstart_or_memend == -1:
+                # linking without knowning memdelta (called by ztc.link)
+                info("Relocating with map.memend strategy")
+                _memstart_or_memend = int(vm["map"]["memend"],16)
+            else:
+                info("Relocating with dev.memend strategy")
+
             # new vm without memdelta
-            info("Relocating with memend strategy")
             return self.relocate_with_memend(_memstart_or_memend,_romstart,debug_info)
 
