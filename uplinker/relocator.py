@@ -398,7 +398,7 @@ class Relocator():
     def relocate(self,_memstart_or_memend,_romstart,debug_info=None):
         vm = self.thevm
         vmversion = vm["version"]
-        if vmversion<"r19.12.12":
+        if vmversion<"r20.01.30":
             #old vm with memdelta
             if _memstart_or_memend == -1:
                 # linking without knowning memdelta (called by ztc.link)
