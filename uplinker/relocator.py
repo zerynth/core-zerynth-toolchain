@@ -402,19 +402,19 @@ class Relocator():
             #old vm with memdelta
             if _memstart_or_memend == -1:
                 # linking without knowning memdelta (called by ztc.link)
-                info("Relocating with vm.memstart strategy")
+                debug("Relocating with vm.memstart strategy")
                 _memstart_or_memend = int(vm["map"]["memstart"],16)+vm["map"]["memdelta"]
             else:
-                info("Relocating with dev.memstart strategy")
+                debug("Relocating with dev.memstart strategy")
 
             return self.relocate_with_memstart(_memstart_or_memend,_romstart,debug_info)
         else:
             if _memstart_or_memend == -1:
                 # linking without knowning memdelta (called by ztc.link)
-                info("Relocating with map.memend strategy")
+                debug("Relocating with map.memend strategy")
                 _memstart_or_memend = int(vm["map"]["memend"],16)
             else:
-                info("Relocating with dev.memend strategy")
+                debug("Relocating with dev.memend strategy")
 
             # new vm without memdelta
             return self.relocate_with_memend(_memstart_or_memend,_romstart,debug_info)
