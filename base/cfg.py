@@ -330,11 +330,13 @@ def init_cfg():
     #env.load_ipack_db(env.idb,"packages.db")
     version = env.var.version
     env.var.bytecode_version=2
+
+    testmode = 2
     if testmode==1:
         # local
         env.git_url   = os.environ.get("ZERYNTH_GIT_URL","http://localhost/git")
         env.backend   = os.environ.get("ZERYNTH_BACKEND_URL","http://localhost/v1")
-        env.connector = os.environ.get("ZERYNTH_ADM_URL","http://localhost/v1")
+        env.connector = os.environ.get("ZERYNTH_ADM_URL","http://api.localhost/v1")
         env.patchurl  = os.environ.get("ZERYNTH_PATCH_URL","http://localhost/installer")
         env.packurl   = os.environ.get("ZERYNTH_PACK_URL","http://localhost")
         github_app = "NO_APP"
@@ -342,7 +344,7 @@ def init_cfg():
         # CI
         env.git_url   = os.environ.get("ZERYNTH_GIT_URL","https://test.zerynth.com/git")
         env.backend   = os.environ.get("ZERYNTH_BACKEND_URL","https://test.zerynth.com/v1")
-        env.connector = os.environ.get("ZERYNTH_ADM_URL","https://testapi.zerynth.com:444/v1" )
+        env.connector = os.environ.get("ZERYNTH_ADM_URL","http://api.adm.zerinth.com/v1" )
         env.patchurl  = os.environ.get("ZERYNTH_PATCH_URL","https://test.zerynth.com/installer")
         env.packurl   = os.environ.get("ZERYNTH_PACK_URL","https://test.zerynth.com")
         github_app = "882c71c6f98cd0354d97"
@@ -350,7 +352,7 @@ def init_cfg():
         # remote
         env.git_url ="https://backend.zerynth.com/git"
         env.backend="https://backend.zerynth.com/v1"
-        env.connector="https://api.zerynth.com/v1"
+        env.connector=os.environ.get("ZERYNTH_ADM_URL","http://api.adm.zerinth.com/v1" )
         env.patchurl= os.environ.get("ZERYNTH_PATCH_URL","https://backend.zerynth.com/installer")
         env.packurl= os.environ.get("ZERYNTH_PACK_URL","https://backend.zerynth.com")
         github_app = "99fdc1e39d8ce3051ce6"
@@ -398,7 +400,8 @@ def init_cfg():
     env.api = Var({
         "project":env.backend+"/projects",
         "renew":env.backend+"/user/renew",
-        "sso":env.backend+"/sso",
+        # "sso":env.backend+"/sso",
+        "sso":env.backend+"/sso?redirect=http://api.adm.zerinth.com/v1/login/ztc/",
         "github_api":"https://api.github.com",
         "github":"https://github.com/login/oauth/authorize?client_id="+github_app+"&scope=user,repo",
         "pwd_reset":env.backend+"/user/reset",
@@ -415,6 +418,12 @@ def init_cfg():
         "user": env.backend+"/user"
     })
 
+    # adm api
+    env.adm = Var({
+        "workspaces":env.connector+"/workspace/",
+        "devices":env.connector+"/device/",
+        "fleets":env.connector+"/fleet/",
+    })
     env.admfile = fs.path(env.cfg,"adm.json")
     if fs.exists(env.admfile):
         try:
