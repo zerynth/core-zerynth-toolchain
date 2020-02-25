@@ -30,3 +30,7 @@ class Fleet:
     @property
     def Id(self):
         return self.id
+
+    @property
+    def WorkspaceId(self):
+        return self.workspace_id

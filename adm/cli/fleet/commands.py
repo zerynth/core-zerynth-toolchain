@@ -1,6 +1,7 @@
 import click
 from base.base import info
 from ..helper import pass_adm
+from base.base import log_table, log_json, echo, error
 
 @click.group()
 def fleet():
@@ -20,8 +21,11 @@ def create(adm, name, workspaceid):
 @pass_adm
 def all(adm):
     """Get all the fleets"""
+    table = []
     for f in adm.fleet_all():
-        info(f.id)
+        table.append([f.Id, f.Name, f.WorkspaceId if f.WorkspaceId else "<none>"])
+    log_table(table, headers=["ID", "Name", "WorkspaceID"])
+
 
 @fleet.command()
 @click.argument('id')

@@ -9,7 +9,7 @@ from .workspace.commands import workspace
 
 
 @cli.group()
-@click.option('--adm-url', envvar='ZERYNTH_ADM_URL', default='http://api.ad.zerinth.com/v1')
+@click.option('--adm-url', envvar='ZERYNTH_ADM_URL', default='http://api.adm.zerinth.com/v1')
 @click.pass_context
 def adm(ctx, adm_url):
     """Manage the adm"""

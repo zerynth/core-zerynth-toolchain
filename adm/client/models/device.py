@@ -14,11 +14,15 @@ class Device:
         return Device(dev["id"], dev["name"], dev["fleet_id"] if dev["fleet_id"] is not "" else None)
 
     def __str__(self):
-        return "Device: id: {}, name:{}, fleetid :{}".format(self.id, self.name, self.fleet_id)
+        return "Device: id: {}, name:{}, fleetId :{}".format(self.id, self.name, self.fleet_id)
 
     @property
     def Id(self):
         return self.id
+
+    @property
+    def Name(self):
+        return self.name
 
     @property
     def FleetID(self):

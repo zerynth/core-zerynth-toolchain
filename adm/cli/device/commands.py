@@ -1,5 +1,6 @@
 import click
 from base.base import info
+from base.base import log_table, log_json, echo, error
 
 from ..helper import pass_adm
 
@@ -40,8 +41,10 @@ def workspace(adm, id):
 @pass_adm
 def all(adm):
     """Get all the devices"""
+    table = []
     for d in adm.device_all():
-        info(d.Id)
+        table.append([d.Id, d.Name, d.FleetID if d.FleetID else "<none>"])
+    log_table(table, headers=["ID", "Name", "FleeId"])
 
 
 @device.command()

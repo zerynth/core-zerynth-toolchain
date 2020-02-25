@@ -43,7 +43,6 @@ class MyLogger(object, metaclass=SingletonType):
         # self._logger.addHandler(fileHandler)
         self._logger.addHandler(streamHandler)
 
-        print("Generate new instance")
 
     def get_logger(self):
         return self._logger
