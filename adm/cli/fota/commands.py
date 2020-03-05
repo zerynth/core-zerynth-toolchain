@@ -1,5 +1,7 @@
 import click
-from base.base import info, log_table
+from base.base import info, log_table, fatal
+from base.fs import fs
+from base.tools import tools
 
 from ..helper import pass_adm
 
@@ -20,21 +22,31 @@ def fota():
 # $ZTC link $VMUID bytecode.vbo --bc 1 --file bc.bin --bin
 
 @fota.command()
-@click.argument('workspace_id')
+@click.argument('workspace-id')
 @click.argument('file', type=click.Path(exists=True))
 @click.argument('version')
-@click.argument("bc-slot")
-@click.argument("vm-slot")
 @click.argument("vm-uid")
 @pass_adm
-def prepare(adm, workspace_id, file, version, bc_slot, vm_slot, vm_uid):
+def prepare(adm, workspace_id, file, version, vm_uid):
     """Prepare the FOTA uploading the firmware"""
-    metadata = {"bc_slot": bc_slot, "vm_slot": vm_slot, "vm_uid": vm_uid}
+    # file bin di prova = /home/davide/test-esp32/main.vbo
+    filevm = tools.get_vm_by_uid(vm_uid)
+    if not filevm or not fs.exists(filevm):
+        fatal("Can't find vm", vm_uid)
+    j = fs.get_json(filevm)
+    if 'hash_features' not in j:
+        fatal("Can't find hash feature of vm", vm_uid)
+    vm_hash_featues = j['hash_features']
+    if 'version' not in j:
+        fatal("Can't find the version of vm", vm_uid)
+    vm_version = j['version']
+    metadata = {"vm_version": vm_version, "vm_feature": vm_hash_featues}
     res = adm.firmware_upload(workspace_id, file, version, metadata)
-    info("Uploaded firmware " + res.Id + "with version " + res.Version)
+    info("Uploaded firmware " + res.Id)
+
 
 @fota.command()
-@click.argument('workspace_id')
+@click.argument('workspace-id')
 @pass_adm
 def all(adm, workspace_id):
     """Get all the firmware of a workspace"""
@@ -47,22 +59,23 @@ def all(adm, workspace_id):
 
 
 @fota.command()
-@click.argument('firmware_id')
+@click.argument('firmware-version')
 @click.argument('devices', nargs=-1)
-#@click.command("on-time")
+# @click.command("on-time")
 @pass_adm
-def schedule(adm, firmware_id, devices):
+def schedule(adm, firmware_version, devices):
     """Start a fota"""
-
     devs = [d for d in devices]
+    res = adm.fota_schedule(firmware_version, devs)
+    info("Sent fota to devices ", devs)
 
-    res = adm.fota_schedule(firmware_id, devs)
-    print(res)
 
-# @fota.command()
-# @click.argument('device')
-# @click.argument('firmware_id')
-# @pass_adm
-# def check(adm, device, firmware_id):
-#     """Start a fota"""
-#     pass
+@fota.command()
+@click.argument('devices', nargs=-1)
+@pass_adm
+def check(adm, devices):
+    """Check the status of a fota on multiple devices"""
+    table = []
+    for dmsg in adm.fota_check(devices):
+        table.append([dmsg["device"], dmsg['status']])
+    log_table(table, headers=["Device", "Status"])

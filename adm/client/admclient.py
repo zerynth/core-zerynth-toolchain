@@ -9,6 +9,7 @@ from .models import Device
 from .models import DeviceKey
 from .models import Firmware
 from .models import Fleet
+from .models import Status
 from .models import Workspace
 
 logger = MyLogger().get_logger()
@@ -214,11 +215,9 @@ class ADMClient(object):
 
     def _create_changeset(self, key, value, targets):
         path = "{}changeset".format(self.status_url)
-        logger.info("Creating a changeset: {}".format(path))
-        print(path)
-
+        logger.debug("Creating a changeset: {}".format(path))
         payload = {"key": key, "value": value, "targets": targets}
-        logger.info(payload)
+        logger.debug(payload)
         r = zpost(path, data=payload)
         if r.status_code == 200:
             data = r.json()
@@ -234,19 +233,38 @@ class ADMClient(object):
     #     #     print(r.status_code)
     #     #     print(r.text)
     #     #
-    #     # def _get_current_status(self, device_id):
-    #     #     path = "{}/currentstatus/{}".format(self.status_url, device_id)
-    #     #     logger.info("Get the current status of {} device: {}".format(device_id, path))
-    #     #     r = requests.get(path)
-    #     #     print(r.status_code)
-    #     #     print(r.text)
-    #     #
-    #     # def _get_expected_status(self, device_id):
-    #     #     path = "{}/expectedstatus/{}".format(self.status_url, device_id)
-    #     #     logger.info("Get the expected status of {} device: {}".format(device_id, path))
-    #     #     r = requests.get(path)
-    #     #     print(r.status_code)
-    #     #     print(r.text)
+    def _get_current_device_status(self, device_id):
+        # /status/currentstatus/{devid}
+        path = "{}currentstatus/{}".format(self.status_url, device_id)
+        logger.info("Get the current status of {} device: {}".format(device_id, path))
+        r = zget(path)
+        if r.status_code == 200:
+            data = r.json()
+            datastatus = data['status'] if "status" in data and data["status"] and not None else {}
+            status = []
+            for key, value in datastatus.items():
+                s = Status(key, value['v'], value['t'])
+                status.append(s)
+            return status
+        else:
+            logger.error("Error in creating the changeset {}, {}".format(r.status_code, r.text))
+            raise NotFoundError(r.text)
+
+    def _get_expected_status(self, device_id):
+        path = "{}expected/{}".format(self.status_url, device_id)
+        logger.info("Get the expected status of {} device: {}".format(device_id, path))
+        r = zget(path)
+        if r.status_code == 200:
+            data = r.json()
+            datastatus = data['status'] if "status" in data and data["status"] and not None else {}
+            status = []
+            for key, value in datastatus.items():
+                s = Status(key, value['v'], value['t'])
+                status.append(s)
+            return status
+        else:
+            logger.error("Error in creating the changeset {}, {}".format(r.status_code, r.text))
+            raise NotFoundError(r.text)
 
     ##############################
     #   Change set
@@ -300,7 +318,20 @@ class ADMClient(object):
             print("Can't get firmwwares. {}".format(e))
 
     def fota_schedule(self, fw_version, devices, on_time=""):
-        # devices is a lst of devices
-
         value = {"fw_version": fw_version, "on_schedule": on_time}
         return self._create_changeset("@fota", value, devices)
+
+    def fota_check(self, devices):
+        map_fota = []
+        for dev in devices:
+            current_status = [status for status in self._get_current_device_status(dev) if status.is_fota()]
+            expected_status = [status for status in self._get_expected_status(dev) if status.is_fota()]
+            status_msg = "<none>"
+            if len(expected_status) > 0 and len(current_status) == 0:
+                status_msg = "Scheduled"
+            elif len(current_status) > 0:
+                status = current_status[0]
+                status_msg = status.value
+            d = {"device": dev,"status": status_msg}
+            map_fota.append(d)
+        return map_fota
