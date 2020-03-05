@@ -41,6 +41,7 @@ def prepare(adm, workspace_id, file, version, vm_uid):
         fatal("Can't find the version of vm", vm_uid)
     vm_version = j['version']
     metadata = {"vm_version": vm_version, "vm_feature": vm_hash_featues}
+    # TODO: add a list of binaries in base64 instead of one binary.
     res = adm.firmware_upload(workspace_id, file, version, metadata)
     info("Uploaded firmware " + res.Id)
 

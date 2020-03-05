@@ -199,16 +199,6 @@ class ADMClient(object):
             logger.error("Error in getting the device {}")
             raise NotFoundError(r.text)
 
-    # def send_fota(self):
-    #     # {
-    #     #     "key": "fota",
-    #     #     "value": {
-    #     #         "url": "http://api.adm.zerinth.com/v1/workspace/wks-4pc4a2v05zpd/firmware/firm4pc4g0ex5nnm/download",
-    #     #         "version": "0.1"
-    #     #     },
-    #     #     "targets": ["dev-4pcidr47kutt"]
-    #     # }
-
     ##############################
     #   Change set
     ##############################
@@ -226,13 +216,6 @@ class ADMClient(object):
             logger.error("Error in creating the changeset {}, {}".format(r.status_code, r.text))
             raise NotFoundError(r.text)
 
-    # def _get_changeset(self, changeset_id):
-    #     #     path = "{}/changeset/{}".format(self.status_url, changeset_id)
-    #     #     logger.info("Get the {} changeset: {}".format(changeset_id, path))
-    #     #     r = requests.get(path)
-    #     #     print(r.status_code)
-    #     #     print(r.text)
-    #     #
     def _get_current_device_status(self, device_id):
         # /status/currentstatus/{devid}
         path = "{}currentstatus/{}".format(self.status_url, device_id)
@@ -266,9 +249,9 @@ class ADMClient(object):
             logger.error("Error in creating the changeset {}, {}".format(r.status_code, r.text))
             raise NotFoundError(r.text)
 
-    ##############################
-    #   Change set
-    ##############################
+    ##################################
+    # Firmware
+    ################################
 
     def get_firmware_metadata(self, worksapce_id, firmware_id):
         path = "{}/{}/firmware/{}".format(self.status_url, worksapce_id, firmware_id)
@@ -282,11 +265,8 @@ class ADMClient(object):
             logger.error("Error in getting the device {}")
             raise NotFoundError(r.text)
 
-    ##################################
-    # Firmware
-    ##########################
-
     def firmware_upload(self, workspace_id, file_path, version, metadata):
+        # TODO: upload multiple firmaware
         path = "{}{}/firmware/{}".format(self.workspace_url, workspace_id, version)
         with open(file_path, "rb") as image_file:
             enc64 = base64.b64encode(image_file.read())
@@ -332,6 +312,6 @@ class ADMClient(object):
             elif len(current_status) > 0:
                 status = current_status[0]
                 status_msg = status.value
-            d = {"device": dev,"status": status_msg}
+            d = {"device": dev, "status": status_msg}
             map_fota.append(d)
         return map_fota
