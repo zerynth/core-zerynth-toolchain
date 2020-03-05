@@ -1,12 +1,15 @@
+import base64
+
 from base.zrequests import TimeoutException
 from base.zrequests import zget, zpost, zput
 
 from .errors import NotFoundError
+from .logging import MyLogger
 from .models import Device
 from .models import DeviceKey
+from .models import Firmware
 from .models import Fleet
 from .models import Workspace
-from .logging import MyLogger
 
 logger = MyLogger().get_logger()
 
@@ -21,14 +24,18 @@ class ADMClient(object):
     """
 
     def __init__(self, rpc_url="http://127.0.0.1:7777", workspace_url="http://127.0.0.1:8001",
-                 device_url="http://127.0.0.1:8001", fleet_url="http://api.localhost/v1/device/"):
+                 device_url="http://127.0.0.1:8001", fleet_url="http://api.localhost/v1/device/",
+                 status_url="http://api.localhost/v1/status"):
         self.rpc_url = rpc_url
         self.workspace_url = workspace_url
         self.device_url = device_url
         self.fleet_url = fleet_url
+        self.status_url = status_url
+        print(self.device_url)
 
     def workspace_all(self):
         try:
+            print(self.workspace_url)
             res = zget(self.workspace_url)
             if res.status_code == 200:
                 data = res.json()
@@ -47,18 +54,19 @@ class ADMClient(object):
         res = zpost(self.workspace_url, data=data)
         if res.status_code == 200:
             data = res.json()
+            print(data)
             return Workspace.from_json(data['workspace'])
         else:
             logger.error("Error in getting the workspace {}".format(res.text))
             raise NotFoundError(res.text)
 
     def workspace_get(self, workspace_id):
-        path = "{}{}/".format(self.workspace_url, workspace_id)
+        path = "{}{}".format(self.workspace_url, workspace_id)
         logger.info("Get the {} workspace: {}".format(workspace_id, path))
         r = zget(path)
         if r.status_code == 200:
             data = r.json()
-            return Workspace.from_json(data)
+            return Workspace.from_json(data["workspace"])
         else:
             logger.error("Error in getting the workspace {}".format(r.text))
             raise NotFoundError(r.text)
@@ -142,7 +150,7 @@ class ADMClient(object):
 
     def device_get_workspace(self, devid):
         path = "{}{}/workspace".format(self.device_url, devid)
-        logger.info("Get the workspace of a device")
+        logger.info("Geting the workspace of a device")
         r = zget(path)
         if r.status_code == 200:
             data = r.json()
@@ -189,3 +197,110 @@ class ADMClient(object):
             logger.info(r.text)
             logger.error("Error in getting the device {}")
             raise NotFoundError(r.text)
+
+    # def send_fota(self):
+    #     # {
+    #     #     "key": "fota",
+    #     #     "value": {
+    #     #         "url": "http://api.adm.zerinth.com/v1/workspace/wks-4pc4a2v05zpd/firmware/firm4pc4g0ex5nnm/download",
+    #     #         "version": "0.1"
+    #     #     },
+    #     #     "targets": ["dev-4pcidr47kutt"]
+    #     # }
+
+    ##############################
+    #   Change set
+    ##############################
+
+    def _create_changeset(self, key, value, targets):
+        path = "{}changeset".format(self.status_url)
+        logger.info("Creating a changeset: {}".format(path))
+        print(path)
+
+        payload = {"key": key, "value": value, "targets": targets}
+        logger.info(payload)
+        r = zpost(path, data=payload)
+        if r.status_code == 200:
+            data = r.json()
+            return data["id"]
+        else:
+            logger.error("Error in creating the changeset {}, {}".format(r.status_code, r.text))
+            raise NotFoundError(r.text)
+
+    # def _get_changeset(self, changeset_id):
+    #     #     path = "{}/changeset/{}".format(self.status_url, changeset_id)
+    #     #     logger.info("Get the {} changeset: {}".format(changeset_id, path))
+    #     #     r = requests.get(path)
+    #     #     print(r.status_code)
+    #     #     print(r.text)
+    #     #
+    #     # def _get_current_status(self, device_id):
+    #     #     path = "{}/currentstatus/{}".format(self.status_url, device_id)
+    #     #     logger.info("Get the current status of {} device: {}".format(device_id, path))
+    #     #     r = requests.get(path)
+    #     #     print(r.status_code)
+    #     #     print(r.text)
+    #     #
+    #     # def _get_expected_status(self, device_id):
+    #     #     path = "{}/expectedstatus/{}".format(self.status_url, device_id)
+    #     #     logger.info("Get the expected status of {} device: {}".format(device_id, path))
+    #     #     r = requests.get(path)
+    #     #     print(r.status_code)
+    #     #     print(r.text)
+
+    ##############################
+    #   Change set
+    ##############################
+
+    def get_firmware_metadata(self, worksapce_id, firmware_id):
+        path = "{}/{}/firmware/{}".format(self.status_url, worksapce_id, firmware_id)
+        logger.info("Getting a firmware metadata: {}".format(path))
+        r = zget(path)
+        if r.status_code == 200:
+            data = r.json()
+            return Fleet.from_json(data["fleet"])
+        else:
+            logger.info(r.text)
+            logger.error("Error in getting the device {}")
+            raise NotFoundError(r.text)
+
+    ##################################
+    # Firmware
+    ##########################
+
+    def firmware_upload(self, workspace_id, file_path, version, metadata):
+        path = "{}{}/firmware/{}".format(self.workspace_url, workspace_id, version)
+        with open(file_path, "rb") as image_file:
+            enc64 = base64.b64encode(image_file.read())
+        payload = {"bin": enc64.decode('ascii'), "metadata": metadata, "description": ""}
+        r = zpost(path, payload)
+        if r.status_code == 200:
+            data = r.json()
+            return Firmware.from_json(data["firmware"])
+        else:
+            logger.info(r.text)
+            logger.error("Error in uploading the firmware {}")
+            raise NotFoundError(r.text)
+
+    def firmware_all(self, workspace_id):
+        path = "{}{}/firmware".format(self.workspace_url, workspace_id)
+        logger.info(path)
+        try:
+            res = zget(path)
+            if res.status_code == 200:
+                data = res.json()
+                firm = [Firmware.from_json(w) for w in data["firmwares"]]
+                return firm
+            else:
+                print("Error in getting all fleets {}".format(res.text))
+                raise NotFoundError(res.text)
+        except TimeoutException as e:
+            print("No answer yet")
+        except Exception as e:
+            print("Can't get firmwwares. {}".format(e))
+
+    def fota_schedule(self, fw_version, devices, on_time=""):
+        # devices is a lst of devices
+
+        value = {"fw_version": fw_version, "on_schedule": on_time}
+        return self._create_changeset("@fota", value, devices)

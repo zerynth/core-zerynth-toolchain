@@ -89,6 +89,8 @@ Every successful ZTC installation or update is kept in a separate directory (:sa
 import sys
 import os
 
+#
+
 from base import *
 import adm.cli
 
@@ -96,9 +98,8 @@ import adm.cli
 sys.path = [os.path.dirname(os.path.realpath(__file__))]+sys.path
 
 
-
 if __name__=="__main__":
-    init_all()
+    init_all(cli_type="zdm")
     # load tools
     tools.init()
     cli()

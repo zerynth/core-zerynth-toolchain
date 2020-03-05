@@ -14,45 +14,44 @@ The following commands are available:
 * :ref:`profile <ztc-cmd-user-profile>` set and get profile information.
 
     """
-from base import *
-import click
+import base64
 import time
 import webbrowser
-import json
-import base64
 
+import click
+from base import *
 
 
 def check_installation():
     try:
-        instfile = fs.path(env.cfg,"installation.json")
+        instfile = fs.path(env.cfg, "installation.json")
         inst = fs.get_json(instfile)
-        if not inst.get("uid") and inst.get("offline",None) is not None:
+        if not inst.get("uid") and inst.get("offline", None) is not None:
             # save installation info
             try:
-                res = zpost(env.api.installation,{"installer":"offline" if inst["offline"] else "online"})
-                if res.status_code==200:
+                res = zpost(env.api.installation, {"installer": "offline" if inst["offline"] else "online"})
+                if res.status_code == 200:
                     rj = res.json()
-                    if rj["status"]=="success":
-                        inst["uid"]=rj["data"]["inst_uid"]
-                        fs.set_json(inst,instfile)
+                    if rj["status"] == "success":
+                        inst["uid"] = rj["data"]["inst_uid"]
+                        fs.set_json(inst, instfile)
                     else:
-                        warning(rj["code"],"after checking installation")
+                        warning(rj["code"], "after checking installation")
                 else:
-                    warning(res.status_code,"while checking installation")
+                    warning(res.status_code, "while checking installation")
             except:
                 warning("Exception while sending installation data")
     except Exception as e:
-        warning("Exception while checking installation",str(e))
+        warning("Exception while checking installation", str(e))
 
 
-@cli.command("login",help="Obtain an authentication token")
-@click.option("--token",default=None,help="set the token in non interactive mode")
-@click.option("--user",default=None,help="username for manual login")
-@click.option("--passwd",default=None,help="password for manual login")
-@click.option("--origin",default=None,help="origin for 3dparty auth")
-@click.option("--origin_username",default=None,help="origin username for 3dparty auth")
-def __login(token,user,passwd,origin,origin_username):
+@cli.command("login", help="Obtain an authentication token")
+@click.option("--token", default=None, help="set the token in non interactive mode")
+@click.option("--user", default=None, help="username for manual login")
+@click.option("--passwd", default=None, help="password for manual login")
+@click.option("--origin", default=None, help="origin for 3dparty auth")
+@click.option("--origin_username", default=None, help="origin username for 3dparty auth")
+def __login(token, user, passwd, origin, origin_username):
     """
 .. _ztc-cmd-user-login:
 
@@ -86,6 +85,10 @@ The :samp:`authentication_token` can be obtained by manually opening the login/r
 .. warning:: For manual registrations, email address confirmation is needed. An email will be sent at the provided address with instructions.
 
     """
+    user_login(token, user, passwd, origin, origin_username)
+
+
+def user_login(token, user, passwd, origin, origin_username):
     if not token and not user and not passwd:
         log("Hello!")
         log("In a few seconds a browser will open to the login page")
@@ -98,23 +101,24 @@ The :samp:`authentication_token` can be obtained by manually opening the login/r
         check_installation()
     elif user and passwd:
         try:
-            head = {"Authorization":"Basic "+base64.standard_b64encode(bytes(user+":"+passwd,"utf-8")).decode("utf-8")}
+            head = {"Authorization": "Basic " + base64.standard_b64encode(bytes(user + ":" + passwd, "utf-8")).decode(
+                "utf-8")}
             params = {}
             if origin and origin_username:
-                params["origin"]=origin
-                params["origin_username"]=origin_username
-            res = zget(env.api.user,head,params,auth=False)
-            if res.status_code==200:
+                params["origin"] = origin
+                params["origin_username"] = origin_username
+            res = zget(env.api.user, head, params, auth=False)
+            if res.status_code == 200:
                 rj = res.json()
-                if rj["status"]=="success":
+                if rj["status"] == "success":
                     env.set_token(rj["data"]["token"])
                     info("Ok")
                 else:
                     fatal(rj["message"])
             else:
-                fatal(res.status_code,"while logging user")
+                fatal(res.status_code, "while logging user")
         except Exception as e:
-            fatal("Error!",e)
+            fatal("Error!", e)
     else:
         fatal("Token needed!")
 
@@ -138,19 +142,20 @@ where :samp:`email` is the email address used in the manual registration flow. A
 
     """
     try:
-        res = zget(env.api.pwd_reset,auth=False,params={"email":email})
-        if res.status_code!=200:
-            fatal(res.status_code,"from endpoint")
+        res = zget(env.api.pwd_reset, auth=False, params={"email": email})
+        if res.status_code != 200:
+            fatal(res.status_code, "from endpoint")
         else:
             rj = res.json()
-            if rj["status"]=="success":
-                log("Reset instructions have been sent to",email)
+            if rj["status"] == "success":
+                log("Reset instructions have been sent to", email)
             else:
-                fatal("Can't reset password:",rj["message"])
+                fatal("Can't reset password:", rj["message"])
     except Exception as e:
-        fatal("Can't reset password:",e)
+        fatal("Can't reset password:", e)
 
-@cli.command("logout",help="Close current session. A new login is needed")
+
+@cli.command("logout", help="Close current session. A new login is needed")
 def __logout():
     """
 .. _ztc-cmd-user-logout:
@@ -166,19 +171,21 @@ Delete current session with the following command ::
 .. note:: it will be necessary to login again.
 
     """
+    user_logout()
+
+def user_logout():
     env.rm_token()
 
-
 @cli.command(help="Manage account info.\n\n")
-@click.option("--set","__set",flag_value=True, default=False, help="Flag to set/modify profile informations.")
-@click.option("--name","name",default="",help="Your Name")
-@click.option("--surname","surname",default="",help="Your Surname")
-@click.option("--job","job",default="",help="Your Job")
-@click.option("--country","country",default="",help="Your Country")
-@click.option("--company","company",default="",help="Your Company")
-@click.option("--age","age",default="",help="Your Age")
-@click.option("--website","website",default="",help="Your Website")
-def profile(job,company,age,name,surname,country,website,__set):
+@click.option("--set", "__set", flag_value=True, default=False, help="Flag to set/modify profile informations.")
+@click.option("--name", "name", default="", help="Your Name")
+@click.option("--surname", "surname", default="", help="Your Surname")
+@click.option("--job", "job", default="", help="Your Job")
+@click.option("--country", "country", default="", help="Your Country")
+@click.option("--company", "company", default="", help="Your Company")
+@click.option("--age", "age", default="", help="Your Age")
+@click.option("--website", "website", default="", help="Your Website")
+def profile(job, company, age, name, surname, country, website, __set):
     """
 .. _ztc-cmd-user-profile:
 
@@ -232,27 +239,27 @@ where :samp:`options` is a list of one or more of the following options:
     """
     if __set:
         try:
-            res = zput(url=env.api.profile,data = {
-                "job":job,
-                "company":company,
-                "age":age,
-                "name":name,
-                "surname":surname,
-                "country":country,
-                "website":website
+            res = zput(url=env.api.profile, data={
+                "job": job,
+                "company": company,
+                "age": age,
+                "name": name,
+                "surname": surname,
+                "country": country,
+                "website": website
             })
-            if res.status_code!=200:
-                error("Can't set profile",res.status_code)
+            if res.status_code != 200:
+                error("Can't set profile", res.status_code)
             else:
                 info("Profile set")
         except Exception as e:
-            critical("Can't set profile",e)
+            critical("Can't set profile", e)
     else:
         try:
-            table=[]
+            table = []
             res = zget(url=env.api.profile)
             rj = res.json()
-            if rj["status"]=="success":
+            if rj["status"] == "success":
                 if env.human:
                     table.append([
                         rj["data"]["display_name"],
@@ -267,85 +274,86 @@ where :samp:`options` is a list of one or more of the following options:
                     ])
                     log()
                     info("General Info\n")
-                    log_table(table,headers=["Username","Email","Name","Surname","Age","Country","Company","Job","Website"])
-                    
+                    log_table(table,
+                              headers=["Username", "Email", "Name", "Surname", "Age", "Country", "Company", "Job",
+                                       "Website"])
+
                     table = []
                     table.append([
                         rj["data"]["roles"],
                         rj["data"]["repositories"]
                     ])
-                    
+
                     log()
                     info("Account info\n")
-                    log_table(table,headers=["Roles","Repositories"])
+                    log_table(table, headers=["Roles", "Repositories"])
 
                     table = []
                     vmassets = rj["data"]["assets"]["list"]
                     for asset in vmassets:
-                        table.append([asset["rtos"],asset["value"],asset["total"],"Premium" if asset["pro"] else "Starter",asset["target"],asset["description"]])
+                        table.append(
+                            [asset["rtos"], asset["value"], asset["total"], "Premium" if asset["pro"] else "Starter",
+                             asset["target"], asset["description"]])
                     log()
                     info("Assets\n")
-                    log_table(table,headers=["Rtos","Available","Total","Type","Target","Description"])
+                    log_table(table, headers=["Rtos", "Available", "Total", "Type", "Target", "Description"])
 
                     table = []
-                    history = rj["data"].get("history",[])
+                    history = rj["data"].get("history", [])
                     for purchase in history:
-                        table.append([purchase["item"],purchase["date"],"%0.2f $" % purchase["price"],purchase["order"]])
+                        table.append(
+                            [purchase["item"], purchase["date"], "%0.2f $" % purchase["price"], purchase["order"]])
                     log()
                     info("Purchase History\n")
-                    log_table(table,headers=["Item","Date","Price","Order"])
+                    log_table(table, headers=["Item", "Date", "Price", "Order"])
 
                 else:
                     log_json(rj["data"])
-            elif rj["code"]==403:
+            elif rj["code"] == 403:
                 log("\"Unauthorized\"")
             else:
-                critical("Can't get profile",rj["message"])
+                critical("Can't get profile", rj["message"])
         except Exception as e:
-            critical("Can't get profile",e)
+            critical("Can't get profile", e)
 
 
-@cli.command("register",help="Obtain an authentication token")
+@cli.command("register", help="Obtain an authentication token")
 @click.argument("email")
 @click.argument("passwd")
 @click.argument("name")
-def __register(email,passwd,name):
+def __register(email, passwd, name):
     try:
-        res = zpost(env.api.user,{"username":email,"password":passwd, "display_name":name},auth=False)
-        if res.status_code==200:
+        res = zpost(env.api.user, {"username": email, "password": passwd, "display_name": name}, auth=False)
+        if res.status_code == 200:
             rj = res.json()
-            if rj["status"]=="success":
+            if rj["status"] == "success":
                 info("Ok")
                 info(rj["data"])
                 env.set_token(rj["data"]["token"])
             else:
                 fatal(rj["message"])
         else:
-            fatal(res.status_code,"while registering user")
+            fatal(res.status_code, "while registering user")
     except Exception as e:
-        fatal("Exception while registering user",e)
-
+        fatal("Exception while registering user", e)
 
 
 ################# REDEEM Licenses
-@cli.command("redeem",help="Redeem assets with codes")
+@cli.command("redeem", help="Redeem assets with codes")
 @click.argument("code")
 def redeem(code):
     try:
-        res = zpost(env.api.user+"/redeem/",{"code":code})
+        res = zpost(env.api.user + "/redeem/", {"code": code})
         rj = res.json()
-        if rj["status"]=="success":
+        if rj["status"] == "success":
             asset = rj["data"]
             if env.human:
-                info("Code successfully redeemed! You now have",asset["value"],"premium" if asset["pro"] else "starter","virtual machine(s) for the following targets:",asset["target"])
+                info("Code successfully redeemed! You now have", asset["value"],
+                     "premium" if asset["pro"] else "starter", "virtual machine(s) for the following targets:",
+                     asset["target"])
             else:
                 log_json(asset)
         else:
-            fatal("Can't redeem code!",rj["message"])
+            fatal("Can't redeem code!", rj["message"])
     except Exception as e:
-        critical("Can't redeem code",exc=e)
-
-
-
-
-
+        critical("Can't redeem code", exc=e)

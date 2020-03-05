@@ -26,7 +26,8 @@ def create(adm, fleet_id, name):
 def get(adm, id):
     """Get a single device"""
     device = adm.device_get(id)
-    info(device.Id)
+    log_table([[device.Id, device.Name]], headers=["ID", "Name"])
+
 
 
 @device.command()
@@ -34,8 +35,8 @@ def get(adm, id):
 @pass_adm
 def workspace(adm, id):
     """Get the workspace of a device"""
-    adm.device_get_workspace(id)
-
+    workspace = adm.device_get_workspace(id)
+    log_table([[workspace.Id, workspace.Name]], headers=["ID", "Name"])
 
 @device.command()
 @pass_adm
@@ -55,3 +56,4 @@ def all(adm):
 def update(adm, id, fleet_id, name):
     """Update a device"""
     adm.device_update(id, name, fleet_id)
+    info("Device ", device.Id, " updated correctly")
