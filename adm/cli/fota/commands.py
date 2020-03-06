@@ -23,11 +23,12 @@ def fota():
 
 @fota.command()
 @click.argument('workspace-id')
-@click.argument('file', type=click.Path(exists=True))
+# @click.argument('file', type=click.Path(exists=True))
+@click.argument('files', nargs=-1, type=click.Path(True))
 @click.argument('version')
 @click.argument("vm-uid")
 @pass_adm
-def prepare(adm, workspace_id, file, version, vm_uid):
+def prepare(adm, workspace_id, files, version, vm_uid):
     """Prepare the FOTA uploading the firmware"""
     # file bin di prova = /home/davide/test-esp32/main.vbo
     filevm = tools.get_vm_by_uid(vm_uid)
@@ -42,7 +43,7 @@ def prepare(adm, workspace_id, file, version, vm_uid):
     vm_version = j['version']
     metadata = {"vm_version": vm_version, "vm_feature": vm_hash_featues}
     # TODO: add a list of binaries in base64 instead of one binary.
-    res = adm.firmware_upload(workspace_id, file, version, metadata)
+    res = adm.firmware_upload(workspace_id, files, version, metadata)
     info("Uploaded firmware " + res.Id)
 
 
@@ -53,7 +54,6 @@ def all(adm, workspace_id):
     """Get all the firmware of a workspace"""
     table = []
     firmwares = adm.firmware_all(workspace_id)
-    print(firmwares)
     for d in firmwares:
         table.append([d.Id, d.Version, d.WorkspaceID if d.WorkspaceID else "<none>"])
     log_table(table, headers=["ID", "Version", "WorkspaceID"])

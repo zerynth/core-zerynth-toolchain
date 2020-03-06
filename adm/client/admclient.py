@@ -265,12 +265,15 @@ class ADMClient(object):
             logger.error("Error in getting the device {}")
             raise NotFoundError(r.text)
 
-    def firmware_upload(self, workspace_id, file_path, version, metadata):
-        # TODO: upload multiple firmaware
+    def firmware_upload(self, workspace_id, files_path, version, metadata):
         path = "{}{}/firmware/{}".format(self.workspace_url, workspace_id, version)
-        with open(file_path, "rb") as image_file:
-            enc64 = base64.b64encode(image_file.read())
-        payload = {"bin": enc64.decode('ascii'), "metadata": metadata, "description": ""}
+        binsbase64 = []
+        for filename in files_path:
+            print("reading sfile", filename)
+            with open(filename, "rb") as image_file:
+                enc64 = base64.b64encode(image_file.read())
+                binsbase64.append(enc64.decode("utf8"))
+        payload = {"bin": binsbase64, "metadata": metadata, "description": ""}
         r = zpost(path, payload)
         if r.status_code == 200:
             data = r.json()
