@@ -76,5 +76,3 @@ def key(zcli, name, id):
                              algorithm='HS256')
 
     info(encoded_jwt)
-
-eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyIjoiZGV2LTRxMTN5cXQ3YjM3diIsImtleSI6NywiZXhwIjoyNTE2MjM5MDIyLCJzdWIiOiJkZXYtNHExM3lxdDdiMzd2In0.6VJP23vLGmiojJxSwctneVBEnbApz0QKkeUKlHOUn3A
