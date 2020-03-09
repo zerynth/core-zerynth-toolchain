@@ -24,6 +24,7 @@ class DeviceKey:
         #     "created_at": "0001-01-01T00:00:00Z",
         #     "account_id": "OsbDq5jtSwmmPi5I5bNyYw"
         # }
+        print("keys", device_key)
         return DeviceKey(device_key["id"], device_key["device_id"], device_key["name"], device_key["raw"],
                          device_key["revoked"])
 

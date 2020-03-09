@@ -7,6 +7,7 @@ import traceback
 
 import click
 
+
 from . import commentjson as commentjson
 from . import tabulate
 from . import websocket as ws
@@ -205,6 +206,19 @@ def version_int32(iv):
     return "r" + str(x) + "." + str(y) + "." + str(z)
 
 
+class ZCliContext(object):
+    def __init__(self):
+        from adm.client import ADMClient
+        from base.cfg import env
+        self.adm_client = ADMClient(workspace_url=env.adm.workspaces, device_url=env.adm.devices, fleet_url=env.adm.fleets, status_url=env.adm.status)
+
+    @property
+    def adm(self):
+        return self.adm_client
+
+
+pass_zcli = click.make_pass_decorator(ZCliContext, ensure=True)
+
 ## Main entrypoint gathering
 @click.group(help="Zerynth Toolchain.")
 @click.option("-v", "verbose", flag_value=True, default=False, help="Verbose.")
@@ -214,7 +228,9 @@ def version_int32(iv):
 @click.option("--user_agent", default="ztc", help="To insert custom user agent.")
 @click.option("--pretty", "pretty", flag_value=True, default=False, help="To display pretty json output.")
 @click.option("-J", "__j", flag_value=True, default=False, help="To display the output in json format.")
-def cli(verbose, nocolors, notraceback, user_agent, __j, pretty):
+@click.pass_context
+def cli(ctx, verbose, nocolors, notraceback, user_agent, __j, pretty):
+    ctx.obj = ZCliContext()
     _options["colors"] = nocolors
     _options["traceback"] = notraceback
     _options["verbose"] = verbose

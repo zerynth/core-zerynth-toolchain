@@ -1,8 +1,6 @@
 import click
 
-from ..helper import pass_adm
-from base.cfg import env
-from base.base import log_table, log_json, echo, error, info
+from base.base import info, pass_zcli
 
 
 @click.group()
@@ -10,19 +8,20 @@ def status():
     """Manage the changesets and device status"""
     pass
 
+
 @status.command()
 @click.argument('key')
 @click.argument('value')
 @click.argument('targets')
-@pass_adm
-def create(adm, key, value, targets):
+@pass_zcli
+def create(zcli, key, value, targets):
     """Create a ChangeSet"""
     id = adm._create_changeset(key, value, targets)
     info("Created changeset", id)
 
 # @status.command()
 # @click.argument('changeset_id')
-# @pass_adm
+# @pass_zcli
 # def get_changeset(status_url, changeset_id):
 #     """Get a ChangeSet"""
 #     client = adm.ADMClient(status_url=status_url)

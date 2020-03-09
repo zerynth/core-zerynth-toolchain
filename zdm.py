@@ -89,9 +89,9 @@ Every successful ZTC installation or update is kept in a separate directory (:sa
 import sys
 import os
 
-#
-
-from base import *
+from base.base import init_all
+from base.tools import tools
+from base.cfg import cli
 import adm.cli
 
 # set sys.path to the directory containing ztc.py (this file) so that modules can be loaded correctly

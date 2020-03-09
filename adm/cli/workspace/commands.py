@@ -1,8 +1,7 @@
 import click
-
-from ..helper import pass_adm
-from base.base import log_table, log_json, echo, error
+from base.base import log_table, log_json, echo, error, pass_zcli
 from base.cfg import env
+
 
 @click.group()
 def workspace():
@@ -11,9 +10,11 @@ def workspace():
 
 
 @workspace.command()
-@pass_adm
-def all(adm):
-    wks = adm.workspace_all()
+@pass_zcli
+def all(zcli):
+    """List the  workspace"""
+    wks = zcli.adm.workspace_all()
+    print(wks)
     if env.human:
         table = []
         for ws in wks:
@@ -26,20 +27,19 @@ def all(adm):
 
 @workspace.command()
 @click.argument('id')
-@pass_adm
-def get(adm, id):
+@pass_zcli
+def get(zcli, id):
     """Get a workspace"""
     try:
-        workspace = adm.workspace_get(id)
-        echo(workspace.Id)
+        workspace = zcli.adm.workspace_get(id)
+        log_table([[workspace.Id, workspace.Name, len(workspace.Fleets)]], headers=["ID", "Name", "#fleets"])
     except Exception as e:
-       error(e)
-
+        error(e)
 
 
 @workspace.command()
 @click.argument('name')
-@pass_adm
-def create(adm, name):
+@pass_zcli
+def create(zcli, name):
     """Create a workspace"""
-    adm.workspace_create(name)
+    zcli.sadm.workspace_create(name)

@@ -32,7 +32,7 @@ class ADMClient(object):
         self.device_url = device_url
         self.fleet_url = fleet_url
         self.status_url = status_url
-        print(self.device_url)
+
 
     def workspace_all(self):
         try:
