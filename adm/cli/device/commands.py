@@ -1,8 +1,8 @@
 import click
-
+import base64
 from base.base import log_table, pass_zcli, info
 from base.jwt.api_jwt import encode
-
+import   time
 @click.group()
 def device():
     """Manage the Devices"""
@@ -66,13 +66,7 @@ def key(zcli, name, id):
     """Provision the devie with a new key"""
     keydevice = zcli.adm.device_create_key(name, id)
 
-    # "sub": "dev-4pxhtfjd92x7",       // the id of the device
-    # "user": "dev-4pxhtfjd92x7",     // the id of the device
-    # "key": 1,                                 // the ID of the key generated in the step 1.
-    # "exp": 2516239022            // expiration time of the jwt in seconds (epoch)
-
-    info({'sub': id, "user": id, "key": keydevice.Id, "exp": 2516239022})
-    encoded_jwt = encode({'sub': id, "user": id, "key": keydevice.Id, "exp": 2516239022}, keydevice.raw,
+    key = base64.b64decode(keydevice.raw)
+    encoded_jwt = encode({'sub': id, "user": id, "key": keydevice.Id, "exp": int(time.time())+3600*24*30}, key,
                              algorithm='HS256')
-
-    info(encoded_jwt)
+    info("Jwt Device: " , encoded_jwt.decode("utf-8"))
