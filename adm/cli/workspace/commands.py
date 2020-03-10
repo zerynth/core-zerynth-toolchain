@@ -14,7 +14,6 @@ def workspace():
 def all(zcli):
     """List the  workspace"""
     wks = zcli.adm.workspace_all()
-    print(wks)
     if env.human:
         table = []
         for ws in wks:

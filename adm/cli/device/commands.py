@@ -66,9 +66,3 @@ def key(zcli, name, id):
     keydevice = zcli.adm.device_create_key(name, id)
     jwt, exp = keydevice.as_jwt()
     log_table([[id, keydevice.Id,  jwt, exp]], headers=["Device Id", "Key Id","Password", "Expiration"])
-
-@device.command()
-@click.argument("id")
-@pass_zcli
-def key_all(zcli, devid)
-    """Get all the keys of a device"""

@@ -33,10 +33,8 @@ class ADMClient(object):
         self.fleet_url = fleet_url
         self.status_url = status_url
 
-
     def workspace_all(self):
         try:
-            print(self.workspace_url)
             res = zget(self.workspace_url)
             if res.status_code == 200:
                 data = res.json()
