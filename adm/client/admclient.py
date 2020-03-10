@@ -140,6 +140,16 @@ class ADMClient(object):
             logger.error("Error in getting the workspace of a device {}".format(res.text))
             raise NotFoundError(res.text)
 
+    def device_all_key(self, devid):
+        path = "{}{}/key".format(self.device_url, devid)
+        res = zget(path)
+        if res.status_code == 200:
+            data = res.json()
+            return [DeviceKey.from_json(key) for key in data["keys"]]
+        else:
+            logger.error("Error in getting the workspace of a device {}".format(res.text))
+            raise NotFoundError(res.text)
+
     def device_get_workspace(self, devid):
         path = "{}{}/workspace".format(self.device_url, devid)
         logger.info("Geting the workspace of a device")

@@ -1,5 +1,5 @@
 import click
-from base.base import log_table, log_json, echo, error, pass_zcli
+from base.base import log_table, log_json, error, pass_zcli
 from base.cfg import env
 
 
