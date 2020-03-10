@@ -41,4 +41,4 @@ def get(zcli, id):
 @pass_zcli
 def create(zcli, name):
     """Create a workspace"""
-    zcli.sadm.workspace_create(name)
+    zcli.adm.workspace_create(name)
