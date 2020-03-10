@@ -15,6 +15,9 @@ class DeviceKey:
         self.raw_key = raw_key
         self.revoked = revoked
 
+        # default expiraton time is 1 month
+        self.exp = self.set_exp_time(31)
+
     @staticmethod
     def from_json(device_key):
         # "key": {
@@ -33,12 +36,22 @@ class DeviceKey:
     def __str__(self):
         return "Key: id: {}, name:{}, revoked :{}".format(self.id, self.name, self.revoked)
 
-    def as_jwt(self, exp_in_day=31):
-        exp = datetime.utcnow() + timedelta(days=exp_in_day)
+    def set_exp_time(self, delta_days=31):
+        return datetime.utcnow() + timedelta(days=delta_days)
+
+    def as_jwt(self, exp_delta_in_days=None):
+        if exp_delta_in_days is not None:
+            self.exp = self.set_exp_time(exp_delta_in_days)
+
         key = base64.b64decode(self.raw)
-        encoded_jwt = encode({'sub': self.device_id, "user": self.device_id, "key": self.id, "exp": exp}, key,
+        encoded_jwt = encode({'sub': self.device_id, "user": self.device_id, "key": self.id, "exp": self.exp}, key,
                              algorithm='HS256')
-        return encoded_jwt.decode("utf-8"), exp.strftime('%B %d %Y - %H:%M:%S')
+        return encoded_jwt.decode("utf-8")
+
+    @property
+    def Expiration(self):
+        return self.exp.strftime('%B %d %Y - %H:%M:%S')
+
 
     @property
     def Id(self):
@@ -47,3 +60,7 @@ class DeviceKey:
     @property
     def raw(self):
         return self.raw_key
+
+    @property
+    def Name(self):
+        return self.name

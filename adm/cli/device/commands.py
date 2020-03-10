@@ -57,12 +57,39 @@ def update(zcli, id, fleet_id, name):
     info("Device ", device.Id, " updated correctly")
 
 
-@device.command()
-@click.argument("id")
-@click.argument('Name')
+@click.group()
+def key():
+    """Manage the key of a Device"""
+    pass
+
+
+@key.command()
+@click.argument("device-id")
+@click.argument('key-name')
+@click.option('--as-jwt', default=True, help='Generate a new Jwt fo the key')
+@click.option('--expiration-days', default=31, help='Expiration in days')
 @pass_zcli
-def key(zcli, name, id):
+def create(zcli, key_name, device_id, as_jwt, expiration_days):
     """Generate a new authetication key"""
-    keydevice = zcli.adm.device_create_key(name, id)
-    jwt, exp = keydevice.as_jwt()
-    log_table([[id, keydevice.Id,  jwt, exp]], headers=["Device Id", "Key Id","Password", "Expiration"])
+    keydevice = zcli.adm.device_create_key(key_name, device_id)
+    if as_jwt:
+        keydevice.set_exp_time(expiration_days)
+        jwt = keydevice.as_jwt()
+        log_table([[device_id, keydevice.Id, keydevice.Name, jwt, keydevice.Expiration]], headers=["Device Id", "Key Id", "Key Name","Password", "Expiration"])
+    else:
+        log_table([[device_id, keydevice.Id, keydevice.Name]], headers=["Device Id", "Key Id", "Key Name"])
+
+
+@key.command()
+@click.argument("id")
+@pass_zcli
+def all(zcli, id):
+    """List the authetication key of a device"""
+    keys = zcli.adm.device_all_key(id)
+    table = []
+    for key in keys:
+        table.append([key.Id, key.Name])# key.as_jwt(), key.Expiration])
+    log_table(table, headers=["ID", "Name"])
+
+
+device.add_command(key)
