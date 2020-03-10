@@ -132,13 +132,6 @@ class ADMClient(object):
             print("Can't get devices: err s{}".format(e))
 
     def device_create_key(self, name, devid):
-        # curl -d '{"name":"prova"}' POST http://api.zerinth.com/v1/device/dev-4m2vxgc5k935/key
-        # key = POST http://api.zerinth.com/v1/device/dev-4m2vxgc5k935/key {"name":"prova"}
-        # key.id
-        # key.raw
-        # exp =  '09/19/18 13:55:26'
-        # jwt = device.encode_jwt(auth_keyid=key.id, secret=key.raw, exp=DEVICE_AUTHKEY_EXPIRATION)))
-        # jwt is the password for the device
         path = "{}{}/key".format(self.device_url, devid)
         payload = {"Name": name}
         res = zpost(path, data=payload)
