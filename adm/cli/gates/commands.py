@@ -1,5 +1,5 @@
 import click
-from base.base import info, log_table, fatal, pass_zcli
+from base.base import pass_zcli
 
 
 @click.group()
@@ -12,18 +12,17 @@ def gate():
 @click.argument('name')
 @click.argument('url')
 @click.argument("token")
-@click.argument("period")
+@click.argument("period", type=int)
 @click.argument('workspace-id')
 @click.argument("tag")
 @pass_zcli
-def prepare(zcli, name, files, version, vm_uid):
-    pass
+def start(zcli, name, url, token, period, workspace_id, tag):
+    res = zcli.adm.gate_webhook_data_create(name,url, token, period, workspace_id, tag)
+    print(res)
 
 @gate.command()
-@click.argument('firmware-version')
-@click.argument('devices', nargs=-1)
+@click.argument('gate-id')
 @pass_zcli
-def schedule(zcli, firmware_version, devices):
-    """Start a fota"""
+def get(zcli, gate_id):
+    """Get a single gate"""
     pass
-

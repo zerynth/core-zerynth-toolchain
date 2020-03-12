@@ -5,13 +5,14 @@ from base.zrequests import zget, zpost, zput
 
 from .errors import NotFoundError
 from .logging import MyLogger
+from .models import DataTag
 from .models import Device
 from .models import DeviceKey
 from .models import Firmware
 from .models import Fleet
 from .models import Status
 from .models import Workspace
-from .models import DataTag
+
 logger = MyLogger().get_logger()
 
 
@@ -125,7 +126,6 @@ class ADMClient(object):
             logger.error("Error creating the device")
             raise NotFoundError(r.text)
 
-
     def device_get(self, id):
         path = "{}{}/".format(self.device_url, id)
         logger.debug("Getting the device {}".format(path))
@@ -153,7 +153,6 @@ class ADMClient(object):
             print("No answer yet")
         except Exception as e:
             print("Can't get devices: err s{}".format(e))
-
 
     def device_all(self):
         try:
@@ -364,50 +363,22 @@ class ADMClient(object):
         return map_fota
 
     ##############################
-    #   Device
+    #   WebHook
     ##############################
     def gate_webhook_data_create(self, name, url, token, period, workspace_id, tag):
-        path = "{}gate/webhook/".format(self.gate_url)
-        logger.debug("Creating a webhook: {}".format(path))
-        payload = {"name": name, "url": url, "content-type":"application/json", "period": period,
-                   "origin":"data",
+        path = "{}/webhook/".format(self.gate_url)
+        logger.info("Creating a webhook: {}".format(path))
+        payload = {"name": name, "url": url, "content-type": "application/json", "period": period,
+                   "origin": "data",
                    "payload": {"tag": tag, "workspace_id": workspace_id},
-                   "tokens": token}
+                   "tokens": {
+                       "X-Auth-Token":token
+                   }}
         logger.info(payload)
         r = zpost(path, data=payload)
         if r.status_code == 200:
             data = r.json()
-            return data["id"]
+            return data
         else:
-            logger.error("Error in creating the changeset {}, {}".format(r.status_code, r.text))
+            logger.error("Error in creating the webhook {}, {}".format(r.status_code, r.text))
             raise NotFoundError(r.text)
-#         {
-#             "name": "UbiDotsWebHook",
-#             "url":               "https://things.ubidots.com/api/v1.6/devices/{ubidots-device-id}",
-#             "content-type": "application/json",
-#             "period": "10", [Only if origin = data]
-#         "origin": "data" | "events”,
-#                            "payload": {
-#             "tag": "here-the-tag-devices-publish-to", [only if origin = data]
-#         "workspace_id": "the-workspace-id" [only if origin = data]
-#         },
-#         "tokens": {
-#             "X-Auth-Token": "Ubidots-X-Auth-Token" [Tokens used for ubidots]
-#         }
-#         }
-# {
-#     "name": "UbiDotsWebHook",
-#     "url":               "https://things.ubidots.com/api/v1.6/devices/{ubidots-device-id}",
-#     "content-type": "application/json",
-#     "period": "10", [Only if origin = data]
-# "origin": "data" | "events”,
-#                    "payload": {
-#     "tag": "here-the-tag-devices-publish-to", [only if origin = data]
-# "workspace_id": "the-workspace-id" [only if origin = data]
-# },
-# "tokens": {
-#     "X-Auth-Token": "Ubidots-X-Auth-Token" [Tokens used for ubidots]
-# }
-# }
-
-

@@ -210,7 +210,11 @@ class ZCliContext(object):
     def __init__(self):
         from adm.client import ADMClient
         from base.cfg import env
-        self.adm_client = ADMClient(workspace_url=env.adm.workspaces, device_url=env.adm.devices, fleet_url=env.adm.fleets, status_url=env.adm.status, data_url=env.adm.data)
+        self.adm_client = ADMClient(workspace_url=env.adm.workspaces, device_url=env.adm.devices,
+                                    fleet_url=env.adm.fleets,
+                                    status_url=env.adm.status,
+                                    data_url=env.adm.data,
+                                    gates_url=env.adm.gates)
 
     @property
     def adm(self):

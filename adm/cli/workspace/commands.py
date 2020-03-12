@@ -78,4 +78,3 @@ def data(zcli, workspace_id, tag):
     else:
         info("No data for ", tag, " in workspace ", workspace_id)
 
-

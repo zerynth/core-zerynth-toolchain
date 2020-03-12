@@ -439,6 +439,7 @@ def init_cfg(cli_type="ztc"):
         "fleets": env.connector + "/fleet/",
         "status": env.connector + "/status/",
         "data": env.connector + "/tsmanager/",
+        "gates": env.connector + "/gate/"
     })
     env.admfile = fs.path(env.cfg, "adm.json")
     if fs.exists(env.admfile):
