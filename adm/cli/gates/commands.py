@@ -4,7 +4,7 @@ from base.base import info, log_table, fatal, pass_zcli
 
 @click.group()
 def gate():
-    """Manage the fota"""
+    """Manage the gates"""
     pass
 
 

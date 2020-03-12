@@ -106,27 +106,6 @@ class ADMClient(object):
             logger.error("Error in getting the device {}")
             raise NotFoundError(r.text)
 
-    # https://api.adm.zerinth.com/v1/tsmanager/workspace/wks-4qx4v0wf5czv/tag/ufficio
-    # "result": [
-    #     {
-    #         "tag": "ufficio",
-    #         "timestamp_device": "2020-03-12T16:00:04",
-    #         "device_id": "dev-4qxyl1t5bjep",
-    #         "payload": {
-    #             "temp": 20,
-    #             "pressure": 57
-    #         }
-    #     },
-    #     {
-    #         "tag": "ufficio",
-    #         "timestamp_device": "2020-03-12T16:00:04",
-    #         "device_id": "dev-4qxyl1t5bjep",
-    #         "payload": {
-    #             "temp": 20,
-    #             "pressure": 50
-    #         }
-    #     }
-    # ]
     ##############################
     #   Device
     ##############################
@@ -273,7 +252,6 @@ class ADMClient(object):
         path = "{}changeset".format(self.status_url)
         logger.debug("Creating a changeset: {}".format(path))
         payload = {"key": key, "value": value, "targets": targets}
-        logger.debug(payload)
         r = zpost(path, data=payload)
         if r.status_code == 200:
             data = r.json()
@@ -385,7 +363,51 @@ class ADMClient(object):
             map_fota.append(d)
         return map_fota
 
+    ##############################
+    #   Device
+    ##############################
+    def gate_webhook_data_create(self, name, url, token, period, workspace_id, tag):
+        path = "{}gate/webhook/".format(self.gate_url)
+        logger.debug("Creating a webhook: {}".format(path))
+        payload = {"name": name, "url": url, "content-type":"application/json", "period": period,
+                   "origin":"data",
+                   "payload": {"tag": tag, "workspace_id": workspace_id},
+                   "tokens": token}
+        logger.info(payload)
+        r = zpost(path, data=payload)
+        if r.status_code == 200:
+            data = r.json()
+            return data["id"]
+        else:
+            logger.error("Error in creating the changeset {}, {}".format(r.status_code, r.text))
+            raise NotFoundError(r.text)
+#         {
+#             "name": "UbiDotsWebHook",
+#             "url":               "https://things.ubidots.com/api/v1.6/devices/{ubidots-device-id}",
+#             "content-type": "application/json",
+#             "period": "10", [Only if origin = data]
+#         "origin": "data" | "events”,
+#                            "payload": {
+#             "tag": "here-the-tag-devices-publish-to", [only if origin = data]
+#         "workspace_id": "the-workspace-id" [only if origin = data]
+#         },
+#         "tokens": {
+#             "X-Auth-Token": "Ubidots-X-Auth-Token" [Tokens used for ubidots]
+#         }
+#         }
+# {
+#     "name": "UbiDotsWebHook",
+#     "url":               "https://things.ubidots.com/api/v1.6/devices/{ubidots-device-id}",
+#     "content-type": "application/json",
+#     "period": "10", [Only if origin = data]
+# "origin": "data" | "events”,
+#                    "payload": {
+#     "tag": "here-the-tag-devices-publish-to", [only if origin = data]
+# "workspace_id": "the-workspace-id" [only if origin = data]
+# },
+# "tokens": {
+#     "X-Auth-Token": "Ubidots-X-Auth-Token" [Tokens used for ubidots]
+# }
+# }
 
-    def gate_webhook_data_create(self, name, url, tag, workspace_id, token):
-        pass
 
