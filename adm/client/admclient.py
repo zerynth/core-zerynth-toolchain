@@ -11,7 +11,7 @@ from .models import Firmware
 from .models import Fleet
 from .models import Status
 from .models import Workspace
-
+from .models import DataTag
 logger = MyLogger().get_logger()
 
 
@@ -24,14 +24,21 @@ class ADMClient(object):
 
     """
 
-    def __init__(self, rpc_url="http://127.0.0.1:7777", workspace_url="http://127.0.0.1:8001",
-                 device_url="http://127.0.0.1:8001", fleet_url="http://api.localhost/v1/device/",
-                 status_url="http://api.localhost/v1/status"):
+    def __init__(self, rpc_url="http://127.0.0.1:7777",
+                 workspace_url="http://127.0.0.1:8001",
+                 device_url="http://127.0.0.1:8001",
+                 fleet_url="http://api.localhost/v1/device/",
+                 status_url="http://api.localhost/v1/status",
+                 gates_url="http://api.localhost/v1/gate",
+                 data_url="http://api.localhost/v1/tsmanager/",
+                 ):
         self.rpc_url = rpc_url
         self.workspace_url = workspace_url
         self.device_url = device_url
         self.fleet_url = fleet_url
         self.status_url = status_url
+        self.gate_url = gates_url
+        self.data_url = data_url
 
     def workspace_all(self):
         try:
@@ -48,8 +55,8 @@ class ADMClient(object):
         except Exception as e:
             print("Can't get workspaces: err s{}".format(e))
 
-    def workspace_create(self, name):
-        data = {"name": name}
+    def workspace_create(self, name, description=""):
+        data = {"name": name, "description": description}
         res = zpost(self.workspace_url, data=data)
         if res.status_code == 200:
             data = res.json()
@@ -61,7 +68,7 @@ class ADMClient(object):
 
     def workspace_get(self, workspace_id):
         path = "{}{}".format(self.workspace_url, workspace_id)
-        logger.info("Get the {} workspace: {}".format(workspace_id, path))
+        logger.debug("Get the {} workspace: {}".format(workspace_id, path))
         r = zget(path)
         if r.status_code == 200:
             data = r.json()
@@ -69,6 +76,60 @@ class ADMClient(object):
         else:
             logger.error("Error in getting the workspace {}".format(r.text))
             raise NotFoundError(r.text)
+
+    def workspace_tags_all(self, workspace_id):
+        path = "{}workspace/{}/tags".format(self.data_url, workspace_id)
+        logger.debug("Get the tags of the workspace {}, {}".format(workspace_id, path))
+        r = zget(path)
+        if r.status_code == 200:
+            data = r.json()
+            if "tags" in data:
+                return [tag for tag in data["tags"]]
+            else:
+                []
+            # return Workspace.from_json(data["workspace"])
+        else:
+            logger.error("Error in getting tags of a workspace {}".format(r.text))
+            raise NotFoundError(r.text)
+
+    def workspace_data_get(self, workspace_id, tag, device_id=None):
+        # todo filter by devices the tags
+        path = "{}workspace/{}/tag/{}".format(self.data_url, workspace_id, tag)
+        logger.debug("Getting tags of a workspace {}".format(path))
+        r = zget(path)
+        if r.status_code == 200:
+            data = r.json()
+            res = data["result"]
+            return [DataTag.from_json(data) for data in res]
+        else:
+            logger.debug(r.text)
+            logger.error("Error in getting the device {}")
+            raise NotFoundError(r.text)
+
+    # https://api.adm.zerinth.com/v1/tsmanager/workspace/wks-4qx4v0wf5czv/tag/ufficio
+    # "result": [
+    #     {
+    #         "tag": "ufficio",
+    #         "timestamp_device": "2020-03-12T16:00:04",
+    #         "device_id": "dev-4qxyl1t5bjep",
+    #         "payload": {
+    #             "temp": 20,
+    #             "pressure": 57
+    #         }
+    #     },
+    #     {
+    #         "tag": "ufficio",
+    #         "timestamp_device": "2020-03-12T16:00:04",
+    #         "device_id": "dev-4qxyl1t5bjep",
+    #         "payload": {
+    #             "temp": 20,
+    #             "pressure": 50
+    #         }
+    #     }
+    # ]
+    ##############################
+    #   Device
+    ##############################
 
     def device_create(self, name, fleetId=None):
         payload = {
@@ -81,25 +142,26 @@ class ADMClient(object):
             data = r.json()
             return Device.from_json(data['device'])
         else:
-            logger.info(r.text)
+            logger.debug(r.text)
             logger.error("Error creating the device")
             raise NotFoundError(r.text)
 
+
     def device_get(self, id):
         path = "{}{}/".format(self.device_url, id)
-        logger.info("Getting the device {}".format(path))
+        logger.debug("Getting the device {}".format(path))
         r = zget(path)
         if r.status_code == 200:
             data = r.json()
             return Device.from_json(data["device"])
         else:
-            logger.info(r.text)
+            logger.debug(r.text)
             logger.error("Error in getting the device {}")
             raise NotFoundError(r.text)
 
     def device_update(self, device_id, name, fleet_id):
         path = "{}{}/".format(self.device_url, device_id)
-        logger.info("Updating device {}: path {}".format(device_id, path))
+        logger.debug("Updating device {}: path {}".format(device_id, path))
         payload = {"Name": name, "fleet_id": fleet_id}
         try:
             res = zput(path, data=payload)
@@ -113,7 +175,7 @@ class ADMClient(object):
         except Exception as e:
             print("Can't get devices: err s{}".format(e))
 
-    #
+
     def device_all(self):
         try:
             res = zget(self.device_url)
@@ -152,7 +214,7 @@ class ADMClient(object):
 
     def device_get_workspace(self, devid):
         path = "{}{}/workspace".format(self.device_url, devid)
-        logger.info("Geting the workspace of a device")
+        logger.debug("Geting the workspace of a device")
         r = zget(path)
         if r.status_code == 200:
             data = r.json()
@@ -161,10 +223,13 @@ class ADMClient(object):
             logger.error("Error in getting the workspace of a device {}".format(r.text))
             raise NotFoundError(r.text)
 
+    ##############################
+    #   Fleet
+    ##############################
     def fleet_create(self, name, workspace_id):
         payload = {"Name": name, "workspace_id": workspace_id}
         logger.debug("Path create fleet: {}".format(self.fleet_url))
-        logger.info("Creating fleet: {}".format(name))
+        logger.debug("Creating fleet: {}".format(name))
         r = zpost(self.fleet_url, data=payload)
         if r.status_code == 200:
             data = r.json()
@@ -190,13 +255,13 @@ class ADMClient(object):
 
     def fleet_get(self, id):
         path = "{}{}".format(self.fleet_url, id)
-        logger.info("Getting the fleet {}".format(path))
+        logger.debug("Getting the fleet {}".format(path))
         r = zget(path)
         if r.status_code == 200:
             data = r.json()
             return Fleet.from_json(data["fleet"])
         else:
-            logger.info(r.text)
+            logger.debug(r.text)
             logger.error("Error in getting the device {}")
             raise NotFoundError(r.text)
 
@@ -220,7 +285,7 @@ class ADMClient(object):
     def _get_current_device_status(self, device_id):
         # /status/currentstatus/{devid}
         path = "{}currentstatus/{}".format(self.status_url, device_id)
-        logger.info("Get the current status of {} device: {}".format(device_id, path))
+        logger.debug("Get the current status of {} device: {}".format(device_id, path))
         r = zget(path)
         if r.status_code == 200:
             data = r.json()
@@ -234,9 +299,9 @@ class ADMClient(object):
             logger.error("Error in creating the changeset {}, {}".format(r.status_code, r.text))
             raise NotFoundError(r.text)
 
-    def _get_expected_status(self, device_id):
+    def _get_expected_device_status(self, device_id):
         path = "{}expected/{}".format(self.status_url, device_id)
-        logger.info("Get the expected status of {} device: {}".format(device_id, path))
+        logger.debug("Get the expected status of {} device: {}".format(device_id, path))
         r = zget(path)
         if r.status_code == 200:
             data = r.json()
@@ -256,13 +321,13 @@ class ADMClient(object):
 
     def get_firmware_metadata(self, worksapce_id, firmware_id):
         path = "{}/{}/firmware/{}".format(self.status_url, worksapce_id, firmware_id)
-        logger.info("Getting a firmware metadata: {}".format(path))
+        logger.debug("Getting a firmware metadata: {}".format(path))
         r = zget(path)
         if r.status_code == 200:
             data = r.json()
             return Fleet.from_json(data["fleet"])
         else:
-            logger.info(r.text)
+            logger.debug(r.text)
             logger.error("Error in getting the device {}")
             raise NotFoundError(r.text)
 
@@ -280,13 +345,13 @@ class ADMClient(object):
             data = r.json()
             return Firmware.from_json(data["firmware"])
         else:
-            logger.info(r.text)
+            logger.debug(r.text)
             logger.error("Error in uploading the firmware {}")
             raise NotFoundError(r.text)
 
     def firmware_all(self, workspace_id):
         path = "{}{}/firmware".format(self.workspace_url, workspace_id)
-        logger.info(path)
+        logger.debug(path)
         try:
             res = zget(path)
             if res.status_code == 200:
@@ -309,7 +374,7 @@ class ADMClient(object):
         map_fota = []
         for dev in devices:
             current_status = [status for status in self._get_current_device_status(dev) if status.is_fota()]
-            expected_status = [status for status in self._get_expected_status(dev) if status.is_fota()]
+            expected_status = [status for status in self._get_expected_device_status(dev) if status.is_fota()]
             status_msg = "<none>"
             if len(expected_status) > 0 and len(current_status) == 0:
                 status_msg = "Scheduled"
@@ -319,3 +384,8 @@ class ADMClient(object):
             d = {"device": dev, "status": status_msg}
             map_fota.append(d)
         return map_fota
+
+
+    def gate_webhook_data_create(self, name, url, tag, workspace_id, token):
+        pass
+

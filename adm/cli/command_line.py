@@ -1,12 +1,11 @@
-import click
 from base.base import cli
-from user import user_login, user_logout
 
 from .device.commands import device
 from .fleet.commands import fleet
+from .job.commands import job
 from .fota.commands import fota
-from .status.commands import status
 from .workspace.commands import workspace
+from .gates.commands import gate
 
 # @cli.command()
 # @click.option("--token", default=None, help="set the token in non interactive mode")
@@ -23,8 +22,9 @@ from .workspace.commands import workspace
 #     user_logout
 
 
-cli.add_command(workspace)
+cli.add_command(job)
 cli.add_command(fota)
+cli.add_command(gate)
+cli.add_command(workspace)
 cli.add_command(device)
 cli.add_command(fleet)
-cli.add_command(status)

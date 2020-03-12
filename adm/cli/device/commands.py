@@ -15,7 +15,7 @@ def device():
 def create(zcli, fleet_id, name):
     """Create a device"""
     dev = zcli.adm.device_create(name, fleet_id)
-    print(dev)
+    log_table([[dev.Id, dev.Name, dev.FleetID]], headers=["ID", "Name", "FleetID"])
 
 
 @device.command()
@@ -81,11 +81,11 @@ def create(zcli, key_name, device_id, as_jwt, expiration_days):
 
 
 @key.command()
-@click.argument("id")
+@click.argument("device-id")
 @pass_zcli
-def all(zcli, id):
+def all(zcli, device_id):
     """List the authetication key of a device"""
-    keys = zcli.adm.device_all_key(id)
+    keys = zcli.adm.device_all_key(device_id)
     table = []
     for key in keys:
         table.append([key.Id, key.Name])# key.as_jwt(), key.Expiration])
@@ -93,3 +93,4 @@ def all(zcli, id):
 
 
 device.add_command(key)
+

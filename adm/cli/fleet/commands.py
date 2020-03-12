@@ -15,7 +15,8 @@ def fleet():
 def create(zcli, name, workspaceid):
     """Create a fleet"""
     fleet = zcli.adm.fleet_create(name, workspaceid)
-    info("Created fleet:", fleet.name)
+    log_table([[fleet.Id, fleet.Name, fleet.WorkspaceId]], headers=["ID", "Name", "WorkspaceID"])
+
 
 
 @fleet.command()

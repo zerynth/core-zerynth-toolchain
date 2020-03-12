@@ -4,3 +4,4 @@ from .fleet import Fleet
 from .devicekey import DeviceKey
 from .firmware import Firmware
 from .status import Status
+from .datatag import DataTag
