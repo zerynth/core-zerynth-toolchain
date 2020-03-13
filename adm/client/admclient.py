@@ -173,8 +173,10 @@ class ADMClient(object):
             res = zget(self.device_url)
             if res.status_code == 200:
                 data = res.json()
-                devices = [Device.from_json(w) for w in data["devices"]]
-                return devices
+                if "devices" in data and data["devices"] is not None:
+                    return [Device.from_json(w) for w in data["devices"]]
+                else:
+                    return []
             else:
                 print("Error in getting all devices {}".format(res.text))
                 raise NotFoundError(res.text)
@@ -378,7 +380,7 @@ class ADMClient(object):
         return map_fota
 
     ##############################
-    #   WebHook
+    #   Gate: WebHook
     ##############################
     def gate_workspace_all(self, workspace_id, status, origin):
         path = self.urljoin(self.gate_url, "workspace", workspace_id)
@@ -456,6 +458,18 @@ class ADMClient(object):
                 return None
         except Exception as e:
             print(e)
+
+    ##############################
+    #   Job
+    ##############################
+
+    def job_schedule(self, name, args, devices, on_time=""):
+
+        value = {"args”": { }, "on_schedule": on_time}
+
+        if not name.startswith('@'):
+            name = "@" + name
+        return self._create_changeset(name, value, devices)
 
     def urljoin(self, base_path, *args):
         """

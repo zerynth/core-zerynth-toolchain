@@ -5,7 +5,7 @@ from base.base import info, pass_zcli
 
 @click.group()
 def job():
-    """Manage the jobs sent to the device"""
+    """Manage the jobs sent to the devices"""
     pass
 
 
@@ -14,7 +14,7 @@ def job():
 @click.argument('args')  # json = { }
 @click.argument('devices', nargs=-1, type=click.STRING)
 @pass_zcli
-def start(zcli, key, value, targets):
+def start(zcli, name, args, devices):
     """Send a Job """
     # add a "@" to the name of the job
     pass
