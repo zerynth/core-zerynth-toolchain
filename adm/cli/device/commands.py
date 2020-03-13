@@ -24,7 +24,9 @@ def create(zcli, fleet_id, name):
 def get(zcli, id):
     """Get a single device"""
     device = zcli.adm.device_get(id)
-    log_table([[device.Id, device.Name]], headers=["ID", "Name"])
+    workspace = zcli.adm.device_get_workspace(device.Id)
+    log_table([[device.Id, device.Name, device.FleetID, workspace.Id]],
+              headers=["ID", "Name", "FleetID", "WorkspaceID"])
 
 
 @device.command()
@@ -42,8 +44,9 @@ def all(zcli):
     """Get all the devices"""
     table = []
     for d in zcli.adm.device_all():
-        table.append([d.Id, d.Name, d.FleetID if d.FleetID else "<none>"])
-    log_table(table, headers=["ID", "Name", "FleeId"])
+        workspace = zcli.adm.device_get_workspace(d.Id)
+        table.append([d.Id, d.Name, d.FleetID if d.FleetID else "<none>", workspace.Id])
+    log_table(table, headers=["ID", "Name", "FleeId", "WorkspaceID"])
 
 
 @device.command()
@@ -75,7 +78,8 @@ def create(zcli, key_name, device_id, as_jwt, expiration_days):
     if as_jwt:
         keydevice.set_exp_time(expiration_days)
         jwt = keydevice.as_jwt()
-        log_table([[device_id, keydevice.Id, keydevice.Name, jwt, keydevice.Expiration]], headers=["Device Id", "Key Id", "Key Name","Password", "Expiration"])
+        log_table([[device_id, keydevice.Id, keydevice.Name, jwt, keydevice.Expiration]],
+                  headers=["Device Id", "Key Id", "Key Name", "Password", "Expiration"])
     else:
         log_table([[device_id, keydevice.Id, keydevice.Name]], headers=["Device Id", "Key Id", "Key Name"])
 
@@ -88,9 +92,8 @@ def all(zcli, device_id):
     keys = zcli.adm.device_all_key(device_id)
     table = []
     for key in keys:
-        table.append([key.Id, key.Name])# key.as_jwt(), key.Expiration])
+        table.append([key.Id, key.Name])  # key.as_jwt(), key.Expiration])
     log_table(table, headers=["ID", "Name"])
 
 
 device.add_command(key)
-
