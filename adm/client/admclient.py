@@ -1,7 +1,7 @@
 import base64
 
 from base.zrequests import TimeoutException
-from base.zrequests import zget, zpost, zput
+from base.zrequests import zget, zpost, zput, zdelete
 
 from .errors import NotFoundError
 from .logging import MyLogger
@@ -386,7 +386,7 @@ class ADMClient(object):
         r = zget(path, params=params)
         if r.status_code == 200:
             data = r.json()
-            if "gates" in data:
+            if "gates" in data and data["gates"] is not None:
                 return [Gate.from_json(gate) for gate in data["gates"]]
             return []
         else:
@@ -412,6 +412,50 @@ class ADMClient(object):
             logger.error("Error in creating the webhook {}, {}".format(r.status_code, r.text))
             raise NotFoundError(r.text)
 
+    def gate_get(self, gate_id):
+        path = self.urljoin(self.gate_url, gate_id)
+        logger.debug("Getting the Gate: {}".format(path))
+        r = zget(path)
+        if r.status_code == 200:
+            data = r.json()
+            if "gate" in data and data["gate"] is not None:
+                return Gate.from_json(data["gate"])
+            return None
+        else:
+            logger.error("Error in creating the webhook {}, {}".format(r.status_code, r.text))
+            raise NotFoundError(r.text)
+
+    def gate_update(self, gate_id, name=None, status=None, period=None, url=None):
+        path = self.urljoin(self.gate_url, gate_id)
+        payload = {}
+        if name:
+            payload["name"] = name
+        if status:
+            payload["status"] = status
+        if period:
+            payload["period"] = period
+        if url:
+            payload["url"] = url
+        try:
+            res = zput(path, data=payload)
+            if res.status_code == 200:
+                return "Gate Updated succesfully"
+            else:
+                return None
+        except Exception as e:
+            print(e)
+
+    def gate_delete(self, gate_id):
+        path = self.urljoin(self.gate_url, gate_id)
+        logger.debug("Deleting gate : {}".format(path))
+        try:
+            res = zdelete(path)
+            if res.status_code == 200:
+                return "Gate deleted succesfully"
+            else:
+                return None
+        except Exception as e:
+            print(e)
 
     def urljoin(self, base_path, *args):
         """
