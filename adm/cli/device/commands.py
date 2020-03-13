@@ -28,16 +28,6 @@ def get(zcli, id):
     log_table([[device.Id, device.Name, device.FleetID, workspace.Id]],
               headers=["ID", "Name", "FleetID", "WorkspaceID"])
 
-
-@device.command()
-@click.argument('id')
-@pass_zcli
-def workspace(zcli, id):
-    """Get the workspace of a device"""
-    workspace = zcli.adm.device_get_workspace(id)
-    log_table([[workspace.Id, workspace.Name]], headers=["ID", "Name"])
-
-
 @device.command()
 @pass_zcli
 def all(zcli):

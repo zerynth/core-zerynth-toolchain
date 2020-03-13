@@ -6,7 +6,7 @@ from .job.commands import job
 from .fota.commands import fota
 from .workspace.commands import workspace
 from .gates.commands import gate
-
+from user.usercmd import user_login
 
 # @cli.command()
 # @click.option("--token", default=None, help="set the token in non interactive mode")
