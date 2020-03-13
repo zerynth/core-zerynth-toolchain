@@ -17,8 +17,9 @@ def all(zcli):
     if env.human:
         table = []
         for ws in wks:
-            table.append([ws.Id, ws.Name])
-        log_table(table, headers=["ID", "Name"])
+            devices = zcli.adm.workspace_get_devices(ws.Id)
+            table.append([ws.Id, ws.Name, [fleet.Id for fleet in ws.Fleets], [device.Id for device in devices]])
+        log_table(table, headers=["ID", "Name", "Fleets", "Devices"])
     else:
         for ws in wks:
             log_json(ws.toJSON())
@@ -31,7 +32,8 @@ def get(zcli, id):
     """Get a workspace"""
     try:
         workspace = zcli.adm.workspace_get(id)
-        log_table([[workspace.Id, workspace.Name, len(workspace.Fleets)]], headers=["ID", "Name", "#fleets"])
+        devices = zcli.adm.workspace_get_devices(workspace.Id)
+        log_table([[workspace.Id, workspace.Name, [fleet.Id for fleet in workspace.Fleets], [device.Id for device in devices]]], headers=["ID", "Name", "Fleets", "Devices"])
     except Exception as e:
         error(e)
 

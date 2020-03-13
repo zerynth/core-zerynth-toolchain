@@ -93,6 +93,20 @@ class ADMClient(object):
             logger.error("Error in getting tags of a workspace {}".format(r.text))
             raise NotFoundError(r.text)
 
+    def workspace_get_devices(self, workspace_id):
+        path = self.urljoin(self.workspace_url, workspace_id, "devices")
+        logger.debug("Get the tags of the workspace {}, {}".format(workspace_id, path))
+        r = zget(path)
+        if r.status_code == 200:
+            data = r.json()
+            if "devices" in data and data["devices"] is not None:
+                return [Device.from_json(device) for device in data["devices"]]
+            else:
+                return []
+        else:
+            logger.error("Error in getting devices of a workspace {}".format(r.text))
+            raise NotFoundError(r.text)
+
     def workspace_data_get(self, workspace_id, tag, device_id=None):
         # todo filter by devices the tags
         path = "{}workspace/{}/tag/{}".format(self.data_url, workspace_id, tag)
@@ -192,7 +206,8 @@ class ADMClient(object):
 
     def device_get_workspace(self, devid):
         path = "{}{}/workspace".format(self.device_url, devid)
-        logger.debug("Geting the workspace of a device")
+        logger.debug("Getting the workspace of a device")
+        logger.debug("Getting the workspace of a device")
         r = zget(path)
         if r.status_code == 200:
             data = r.json()
