@@ -39,7 +39,7 @@ def check_int(s):
 @click.argument('device', nargs=1, type=click.STRING)
 @pass_zcli
 def status(zcli, name, device):
-    """Check the current status of a job of devices"""
+    """Check the jo result of a device"""
     status = zcli.adm._get_current_device_status(device)
     result = list(filter(lambda x: x.Name == convert_into_job(name), status))
     table = []
