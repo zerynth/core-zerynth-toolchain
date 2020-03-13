@@ -5,3 +5,4 @@ from .devicekey import DeviceKey
 from .firmware import Firmware
 from .status import Status
 from .datatag import DataTag
+from .gate import Gate

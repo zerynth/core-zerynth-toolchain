@@ -12,7 +12,7 @@ from .models import Firmware
 from .models import Fleet
 from .models import Status
 from .models import Workspace
-
+from .models import Gate
 logger = MyLogger().get_logger()
 
 
@@ -365,6 +365,20 @@ class ADMClient(object):
     ##############################
     #   WebHook
     ##############################
+    def gate_workspace_all(self, workspace_id, status, origin):
+        path = self.urljoin(self.gate_url, "workspace", workspace_id)
+        params = {"status": status, "origin": origin}
+        r = zget(path, params=params)
+        if r.status_code == 200:
+            data = r.json()
+            if "gates" in data:
+                return [Gate.from_json(gate) for gate in data["gates"]]
+            return []
+        else:
+            logger.debug(r.text)
+            logger.error("Error in getting all the tags for workspace {}", workspace_id)
+            raise NotFoundError(r.text)
+
     def gate_webhook_data_create(self, name, url, token, period, workspace_id, tag):
         path = "{}/webhook/".format(self.gate_url)
         logger.info("Creating a webhook: {}".format(path))
@@ -382,3 +396,20 @@ class ADMClient(object):
         else:
             logger.error("Error in creating the webhook {}, {}".format(r.status_code, r.text))
             raise NotFoundError(r.text)
+
+
+    def urljoin(self, base_path, *args):
+        """
+        Joins given arguments into an url. Trailing but not leading slashes are
+        stripped for each argument.
+
+        Example
+           urljoin("hello",  "world"))   ->  hello/world
+           urljoin("/hello",  "world")   -> /hello/world
+           urljoin("hello/",  "world")   -> hello/world
+           urljoin("hello/",  "world/")   -> hello/world
+           urljoin("hello/",  "/world/")  ->  hello//world
+        """
+
+        # return "/".join(map(lambda x: str(x).rstrip('/'), args))
+        return base_path + "/".join(map(lambda x: str(x).rstrip('/'), args))
