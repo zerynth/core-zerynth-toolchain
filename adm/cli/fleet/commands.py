@@ -25,8 +25,9 @@ def all(zcli):
     """Get all the fleets"""
     table = []
     for f in zcli.adm.fleet_all():
-        table.append([f.Id, f.Name, f.WorkspaceId if f.WorkspaceId else "<none>"])
-    log_table(table, headers=["ID", "Name", "WorkspaceID"])
+        print(f.Devices)
+        table.append([f.Id, f.Name, f.WorkspaceId if f.WorkspaceId else "<none>", [d.Id for d in f.Devices]])
+    log_table(table, headers=["ID", "Name", "WorkspaceID", "Devices"])
 
 
 @fleet.command()
@@ -35,4 +36,5 @@ def all(zcli):
 def get(zcli, id):
     """Get a single fleet"""
     fleet = zcli.adm.fleet_get(id)
+
     info("Get fleet", fleet.name)

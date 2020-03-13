@@ -18,8 +18,8 @@ def all(zcli):
         table = []
         for ws in wks:
             devices = zcli.adm.workspace_get_devices(ws.Id)
-            table.append([ws.Id, ws.Name, [fleet.Id for fleet in ws.Fleets], [device.Id for device in devices]])
-        log_table(table, headers=["ID", "Name", "Fleets", "Devices"])
+            table.append([ws.Id, ws.Name, ws.Description, [fleet.Id for fleet in ws.Fleets], [device.Id for device in devices]])
+        log_table(table, headers=["ID", "Name", "Description", "Fleets", "Devices"])
     else:
         for ws in wks:
             log_json(ws.toJSON())
@@ -33,14 +33,14 @@ def get(zcli, id):
     try:
         workspace = zcli.adm.workspace_get(id)
         devices = zcli.adm.workspace_get_devices(workspace.Id)
-        log_table([[workspace.Id, workspace.Name, [fleet.Id for fleet in workspace.Fleets], [device.Id for device in devices]]], headers=["ID", "Name", "Fleets", "Devices"])
+        log_table([[workspace.Id, workspace.Name, workspace.Description, [fleet.Id for fleet in workspace.Fleets], [device.Id for device in devices]]], headers=["ID", "Name", "Description", "Fleets", "Devices"])
     except Exception as e:
         error(e)
 
 
 @workspace.command()
 @click.argument('name')
-@click.option('--description', default=1, help="Small description af the workspace.")
+@click.option('--description', default=1, type=click.STRING, help="Small description af the workspace.")
 @pass_zcli
 def create(zcli, name, description):
     """Create a workspace"""
