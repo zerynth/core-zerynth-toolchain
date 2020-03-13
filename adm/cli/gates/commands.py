@@ -4,7 +4,7 @@ from base.base import log_table, pass_zcli, info
 
 @click.group()
 def webhook():
-    """Manage the gates"""
+    """Manage the webHooks"""
     pass
 
 
@@ -29,7 +29,7 @@ def start(zcli, name, url, token, period, workspace_id, tag):
 @click.argument('workspace-id')
 @pass_zcli
 def all(zcli, workspace_id, origin, status):
-    """Get all gates of a workspace"""
+    """Get all webhook of a workspace"""
     gates = zcli.adm.gate_workspace_all(workspace_id, status, origin)
     table = []
     for gate in gates:
@@ -40,7 +40,7 @@ def all(zcli, workspace_id, origin, status):
 @click.argument('gate-id')
 @pass_zcli
 def get(zcli, gate_id):
-    """Get a single gate"""
+    """Get a single webhook"""
     gate = zcli.adm.gate_get(gate_id)
     log_table([[gate.Id, gate.Name, gate.Period, gate.Status, gate.last_schedule]], headers=["ID", "Name", "Period", "Status", "LastSchedule"])
 
@@ -48,7 +48,7 @@ def get(zcli, gate_id):
 @click.argument('gate-id')
 @pass_zcli
 def disable(zcli, gate_id):
-    """ Disable a gate"""
+    """ Disable a webhook"""
     res = zcli.adm.gate_update(gate_id, status="disabled")
     if res is not None:
         info("Gate ", gate_id, " succesfully disabled.")
@@ -57,7 +57,7 @@ def disable(zcli, gate_id):
 @click.argument('gate-id')
 @pass_zcli
 def enable(zcli, gate_id):
-    """ Disable a gate"""
+    """ Enable a webhook"""
     res = zcli.adm.gate_update(gate_id, status="active")
     if res is not None:
         info("Gate ", gate_id, " succesfully enabled.")
@@ -67,7 +67,7 @@ def enable(zcli, gate_id):
 @click.argument('gate-id')
 @pass_zcli
 def delete(zcli, gate_id):
-    """ Disable a gate"""
+    """ Delete a webhook"""
     res = zcli.adm.gate_delete(gate_id)
     if res is not None:
         info("Gate ", gate_id, " succesfully deleted.")
