@@ -1,6 +1,7 @@
 import click
 
-from base.base import info, pass_zcli
+from base.base import info, pass_zcli, log_table
+from adm.client.helper import convert_into_job, from_job_name
 
 
 @click.group()
@@ -11,23 +12,38 @@ def job():
 
 @job.command()
 @click.argument('name')
-@click.argument('args')  # json = { }
+@click.option('--arg', type=(str, str), multiple=True)
 @click.argument('devices', nargs=-1, type=click.STRING)
 @pass_zcli
-def start(zcli, name, args, devices):
+def schedule(zcli, name, arg, devices):
     """Send a Job """
     # add a "@" to the name of the job
-    pass
-    # id = zcli.adm._create_changeset(key, value, targets)
-    # info("Created Job", id)
+    # args is a nttyple of typle (('er', 's'), ('caio', '23'))
+    args_dict = {}
+    for a in arg:
+        arg_name = a[0]
+        arg_value = a[1]
+        if check_int(a[1]):
+            arg_value = int(a[1])
+        args_dict[arg_name] = arg_value
+    res = zcli.adm.job_schedule(name, args_dict, devices, on_time="")
+
+def check_int(s):
+    if s[0] in ('-', '+'):
+        return s[1:].isdigit()
+    return s.isdigit()
 
 
 @job.command()
 @click.argument('name')
-@click.argument('device')
+@click.argument('device', nargs=1, type=click.STRING)
 @pass_zcli
 def status(zcli, name, device):
-    """Send a Job """
-    pass
-    # id = zcli.adm._create_changeset(key, value, targets)
-    # info("Created Job", id)
+    """Check the current status of a job of devices"""
+    status = zcli.adm._get_current_device_status(device)
+    result = list(filter(lambda x: x.Name == convert_into_job(name), status))
+    table = []
+    if len(result) > 0:
+        res = result[0]
+        table.append([from_job_name(res.Name), res.Value, res.Timestamp])
+    log_table(table, headers=["Name", "Result", "Time"])

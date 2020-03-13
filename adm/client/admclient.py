@@ -13,6 +13,7 @@ from .models import Fleet
 from .models import Status
 from .models import Workspace
 from .models import Gate
+from .helper import convert_into_job
 logger = MyLogger().get_logger()
 
 
@@ -464,9 +465,8 @@ class ADMClient(object):
     ##############################
 
     def job_schedule(self, name, args, devices, on_time=""):
-        value = {"args”": args, "on_schedule": on_time}
-        if not name.startswith('@'):
-            name = "@" + name
+        value = {"args": args, "on_schedule": on_time}
+        name = convert_into_job(name)
         return self._create_changeset(name, value, devices)
 
     def urljoin(self, base_path, *args):
