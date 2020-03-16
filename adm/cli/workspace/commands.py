@@ -40,7 +40,7 @@ def get(zcli, id):
 
 @workspace.command()
 @click.argument('name')
-@click.option('--description', default=1, type=click.STRING, help="Small description af the workspace.")
+@click.option('--description', default="", type=click.STRING, help="Small description af the workspace.")
 @pass_zcli
 def create(zcli, name, description):
     """Create a workspace"""

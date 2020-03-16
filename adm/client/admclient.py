@@ -59,13 +59,14 @@ class ADMClient(object):
 
     def workspace_create(self, name, description=""):
         data = {"name": name, "description": description}
+        print(self.workspace_url)
         res = zpost(self.workspace_url, data=data)
         if res.status_code == 200:
             data = res.json()
             print(data)
             return Workspace.from_json(data['workspace'])
         else:
-            logger.error("Error in getting the workspace {}".format(res.text))
+            logger.error("Error in creating the workspace {}".format(res.text))
             raise NotFoundError(res.text)
 
     def workspace_get(self, workspace_id):
