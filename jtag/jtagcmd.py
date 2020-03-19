@@ -119,7 +119,10 @@ def start_probe(target,probe):
     debug(jtag_interface,jtag_target)
 
     jtag_target_options = dev.jtag_target_options or ""
-    e,_,_ = proc.runcmd(dev.jtag_tool or "openocd","-f",jtag_interface,"-c",jtag_target_options,"-f",jtag_target,outfn=log)
+    if dev.custom_openocd:
+        e,_,_ = proc.runcmd(dev.jtag_tool or "openocd","-s", fs.path(env.devices, dev.target),"-f", fs.path(env.devices, dev.target,"custom_openocd.cfg"), outfn=log)
+    else:
+        e,_,_ = proc.runcmd(dev.jtag_tool or "openocd","-f",jtag_interface,"-c",jtag_target_options,"-f",jtag_target,outfn=log)
 
 
 
