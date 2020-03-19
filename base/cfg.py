@@ -343,7 +343,7 @@ def init_cfg(cli_type="ztc"):
     version = env.var.version
     env.var.bytecode_version = 2
 
-    testmode = 2 # test mode
+
 
     if testmode == 1:
         # local
@@ -357,8 +357,7 @@ def init_cfg(cli_type="ztc"):
         # CI
         env.git_url = os.environ.get("ZERYNTH_GIT_URL", "https://test.zerynth.com/git")
         env.backend = os.environ.get("ZERYNTH_BACKEND_URL", "https://test.zerynth.com/v1")
-        #env.connector = os.environ.get("ZERYNTH_ADM_URL", "https://api.adm.zerinth.com/v1")
-        env.connector = os.environ.get("ZERYNTH_ADM_URL", "https://api.zdm.stage.zerynth.com/v1")
+        env.connector = os.environ.get("ZERYNTH_ADM_URL", "https://api.adm.zerinth.com/v1")
         env.patchurl = os.environ.get("ZERYNTH_PATCH_URL", "https://test.zerynth.com/installer")
         env.packurl = os.environ.get("ZERYNTH_PACK_URL", "https://test.zerynth.com")
         github_app = "882c71c6f98cd0354d97"
@@ -411,6 +410,7 @@ def init_cfg(cli_type="ztc"):
 
     sso_params = ""
     # the cli_type is set if the cfg are loaded by the ztc or zdm
+    #
     if cli_type == "zdm":
         sso_params = "?redirect=" + env.connector + "/login/ztc/"
 

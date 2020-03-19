@@ -43,6 +43,7 @@ class ADMClient(object):
         self.data_url = data_url
 
     def workspace_all(self):
+        print(self.workspace_url)
         try:
             res = zget(self.workspace_url)
             if res.status_code == 200:
