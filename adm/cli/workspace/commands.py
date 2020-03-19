@@ -64,7 +64,6 @@ def tags(zcli, workspace_id):
         info("No tags associated with the workspace ", workspace_id)
 
 
-
 @workspace.command()
 @click.argument('workspace-id')
 @click.argument('tag')
