@@ -344,7 +344,6 @@ def init_cfg(cli_type="ztc"):
     env.var.bytecode_version = 2
 
 
-
     if testmode == 1:
         # local
         env.git_url = os.environ.get("ZERYNTH_GIT_URL", "http://localhost/git")
