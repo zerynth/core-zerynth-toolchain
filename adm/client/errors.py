@@ -1,5 +1,6 @@
 import requests
 
+
 class ZdmException(Exception):
     """
      A base class from which all other exceptions inherit.
@@ -15,32 +16,33 @@ def create_api_error_from_http_exception(e):
     """
     response = e.response
     try:
-        message = response.json()['message']
+        # TODO: use err_code, err_title and err_mesage of the ZDM API
+        explanation = response.json()['message']
     except ValueError:
-        message = (response.content or '').strip()
+        explanation = (response.content or '').strip()
     cls = APIError
+    if response.status_code == 403:
+        cls = ForbiddenException
     if response.status_code == 404:
         # if explanation and ('No such image' in str(explanation) or
         #                     'not found: does not exist or no pull access'
         #                     in str(explanation) or
         #                     'repository does not exist' in str(explanation)):
-        #     cls = NotFoundError
+        #     cls = ImageNotFound
         # else:
         cls = NotFoundError
-    raise cls(e, response=response, message=message)
+    raise cls(e, response=response, explanation=explanation)
 
 
 class APIError(requests.exceptions.HTTPError, ZdmException):
     """
     An HTTP error from the API.
     """
-    def __init__(self, code, title, message, response=None, explanation=None):
+    def __init__(self, message, response=None, explanation=None):
         # requests 1.2 supports response as a keyword argument, but
         # requests 1.1 doesn't
         super(APIError, self).__init__(message)
         self.response = response
-        self.code = code
-        self.title = title
         self.explanation = explanation
 
     def __str__(self):
@@ -77,27 +79,12 @@ class APIError(requests.exceptions.HTTPError, ZdmException):
             return False
         return 500 <= self.status_code < 600
 
-class InputError(ZdmException):
-    """Exception raised for errors in the input.
 
-    Attributes:
-        expression -- input expression in which the error occurred
-        message -- explanation of the error
-    """
-
-    def __init__(self, expression, message):
-        self.expression = expression
-        self.message = message
+class ForbiddenException(APIError):
+    pass
 
 
-class NotFoundError(ZdmException):
+class NotFoundError(APIError):
     """Raised when a resource is not found
-
-    Attributes:
-        previous -- state at beginning of transition
-        next -- attempted new state
-        message -- explanation of why the specific transition is not allowed
     """
-
-    def __init__(self, message):
-        self.message = message
+    pass

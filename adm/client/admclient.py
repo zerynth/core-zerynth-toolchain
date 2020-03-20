@@ -42,48 +42,7 @@ class ADMClient(object):
         self.gate_url = gates_url
         self.data_url = data_url
 
-    def workspace_tags_all(self, workspace_id):
-        path = "{}workspace/{}/tags".format(self.data_url, workspace_id)
-        logger.debug("Get the tags of the workspace {}, {}".format(workspace_id, path))
-        r = zget(path)
-        if r.status_code == 200:
-            data = r.json()
-            if "tags" in data:
-                return [tag for tag in data["tags"]]
-            else:
-                []
-            # return Workspace.from_json(data["workspace"])
-        else:
-            logger.error("Error in getting tags of a workspace {}".format(r.text))
-            raise NotFoundError(r.text)
 
-    def workspace_get_devices(self, workspace_id):
-        path = self.urljoin(self.workspace_url, workspace_id, "devices")
-        logger.debug("Get the tags of the workspace {}, {}".format(workspace_id, path))
-        r = zget(path)
-        if r.status_code == 200:
-            data = r.json()
-            if "devices" in data and data["devices"] is not None:
-                return [Device.from_json(device) for device in data["devices"]]
-            else:
-                return []
-        else:
-            logger.error("Error in getting devices of a workspace {}".format(r.text))
-            raise NotFoundError(r.text)
-
-    def workspace_data_get(self, workspace_id, tag, device_id=None):
-        # todo filter by devices the tags
-        path = "{}workspace/{}/tag/{}".format(self.data_url, workspace_id, tag)
-        logger.debug("Getting tags of a workspace {}".format(path))
-        r = zget(path)
-        if r.status_code == 200:
-            data = r.json()
-            res = data["result"]
-            return [DataTag.from_json(data) for data in res]
-        else:
-            logger.debug(r.text)
-            logger.error("Error in getting the device {}")
-            raise NotFoundError(r.text)
 
     ##############################
     #   Device

@@ -28,20 +28,3 @@ class WorkspaceApiMixin(object):
         u = self._url("/workspace/")
         res = self._result(self._post(u, data=data))
         return res["workspace"]
-
-    def tags(self, workspace_id):
-        """
-        Return tallthe tags of a workspace
-
-        Args:
-            workspace_id (str): The  workspace id
-
-        Raises:
-            :py:class:`docker.errors.APIError`
-                If the server returns an error.
-        """
-
-        url = self._url("/tsmanager/workspace/{0}/tag", workspace_id)
-        res = self._get(url)
-        self._raise_for_status(res)
-        return res
