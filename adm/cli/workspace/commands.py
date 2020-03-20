@@ -13,13 +13,13 @@ def workspace():
 @pass_zcli
 def all(zcli):
     """List the  workspace"""
-    wks = zcli.adm.workspace_all()
+    wks = zcli.adm.workspaces.list()
     if env.human:
         table = []
         for ws in wks:
-            devices = zcli.adm.workspace_get_devices(ws.Id)
-            table.append([ws.Id, ws.Name, ws.Description, [fleet.Id for fleet in ws.Fleets], [device.Id for device in devices]])
-        log_table(table, headers=["ID", "Name", "Description", "Fleets", "Devices"])
+            table.append(
+                [ws.id, ws.name, ws.description, [fleet for fleet in ws.fleets], [device for device in ws.devices]])
+        log_table(table, headers=["ID", "Name", "Description" "Fleets", "Devices"])
     else:
         for ws in wks:
             log_json(ws.toJSON())
@@ -31,9 +31,11 @@ def all(zcli):
 def get(zcli, id):
     """Get a workspace"""
     try:
-        workspace = zcli.adm.workspace_get(id)
-        devices = zcli.adm.workspace_get_devices(workspace.Id)
-        log_table([[workspace.Id, workspace.Name, workspace.Description, [fleet.Id for fleet in workspace.Fleets], [device.Id for device in devices]]], headers=["ID", "Name", "Description", "Fleets", "Devices"])
+        workspace = zcli.adm.workspaces.get(id)
+        # devices = zcli.adm.workspace_get_devices(workspace.Id)
+        # log_table([[workspace.Id, workspace.Name, workspace.Description, [fleet.Id for fleet in workspace.Fleets], [device.Id for device in devices]]], headers=["ID", "Name", "Description", "Fleets", "Devices"])
+        log_table([[workspace.id, workspace.name, workspace.description]], headers=["ID", "Name", "Description"])
+
     except Exception as e:
         error(e)
 
@@ -44,9 +46,8 @@ def get(zcli, id):
 @pass_zcli
 def create(zcli, name, description):
     """Create a workspace"""
-    wks = zcli.adm.workspace_create(name, description)
-    log_table([[wks.Id, wks.Name, wks.Description]], headers=["ID", "Name", "Description"])
-
+    wks = zcli.adm.workspaces.create(name, description)
+    log_table([[wks.id, wks.name, wks.description]], headers=["ID", "Name", "Description"])
 
 
 @workspace.command()
@@ -78,4 +79,3 @@ def data(zcli, workspace_id, tag):
         log_table(table, headers=["Tag", "Payload", "Device", "Timestamp"])
     else:
         info("No data for ", tag, " in workspace ", workspace_id)
-

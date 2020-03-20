@@ -1,5 +1,13 @@
 from .device import Device
+from .base import Model, Collection
 
+class FleetModel(Model):
+    """Fleet class represent a Fleet"""
+
+    pass
+
+class FleetCollection(Collection):
+    model = FleetModel
 
 class Fleet:
     """Fleet class represent a fleet"""

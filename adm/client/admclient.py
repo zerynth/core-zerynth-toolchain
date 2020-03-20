@@ -42,45 +42,6 @@ class ADMClient(object):
         self.gate_url = gates_url
         self.data_url = data_url
 
-    def workspace_all(self):
-        print(self.workspace_url)
-        try:
-            res = zget(self.workspace_url)
-            if res.status_code == 200:
-                data = res.json()
-                workspaces = [Workspace.from_json(w) for w in data["workspaces"]]
-                return workspaces
-            else:
-                print("Error in getting the workspace {}".format(res.text))
-                raise NotFoundError(res.text)
-        except TimeoutException as e:
-            print("No answer yet")
-        except Exception as e:
-            print("Can't get workspaces: err s{}".format(e))
-
-    def workspace_create(self, name, description=""):
-        data = {"name": name, "description": description}
-        print(self.workspace_url)
-        res = zpost(self.workspace_url, data=data)
-        if res.status_code == 200:
-            data = res.json()
-            print(data)
-            return Workspace.from_json(data['workspace'])
-        else:
-            logger.error("Error in creating the workspace {}".format(res.text))
-            raise NotFoundError(res.text)
-
-    def workspace_get(self, workspace_id):
-        path = "{}{}".format(self.workspace_url, workspace_id)
-        logger.debug("Get the {} workspace: {}".format(workspace_id, path))
-        r = zget(path)
-        if r.status_code == 200:
-            data = r.json()
-            return Workspace.from_json(data["workspace"])
-        else:
-            logger.error("Error in getting the workspace {}".format(r.text))
-            raise NotFoundError(r.text)
-
     def workspace_tags_all(self, workspace_id):
         path = "{}workspace/{}/tags".format(self.data_url, workspace_id)
         logger.debug("Get the tags of the workspace {}, {}".format(workspace_id, path))

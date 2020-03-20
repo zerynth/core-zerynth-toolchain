@@ -209,16 +209,21 @@ def version_int32(iv):
 class ZCliContext(object):
     def __init__(self):
         from adm.client import ADMClient
+        from adm.client.client import ZdmClient
         from base.cfg import env
         self.adm_client = ADMClient(workspace_url=env.adm.workspaces, device_url=env.adm.devices,
                                     fleet_url=env.adm.fleets,
                                     status_url=env.adm.status,
                                     data_url=env.adm.data,
                                     gates_url=env.adm.gates)
+        self.adm_test = ZdmClient(base_url=env.connector)
+
+
 
     @property
     def adm(self):
-        return self.adm_client
+        return self.adm_test
+        #return self.adm_client
 
 
 pass_zcli = click.make_pass_decorator(ZCliContext, ensure=True)
