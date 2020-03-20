@@ -1,4 +1,5 @@
 from .models.workspacetest import WorkspaceCollection
+from .models.datatag import DataTagCollection
 from .api.client import APIClient
 
 class ZdmClient(object):
@@ -12,3 +13,7 @@ class ZdmClient(object):
         An object for managing workspaces on the server.
         """
         return WorkspaceCollection(client=self)
+
+    @property
+    def data(self):
+        return DataTagCollection(client=self)

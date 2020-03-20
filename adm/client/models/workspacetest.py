@@ -28,7 +28,7 @@ class WorkspaceModel(Model):
            workspace_id (str): workspace ID.
 
        Returns:
-           A :py:class:`Tags` object.
+            (list of dicts): The response of the search.
 
        Raises:
            :py:class:`adm.errors.NotFound`
@@ -36,7 +36,7 @@ class WorkspaceModel(Model):
            :py:class:`adm.errors.APIError`
                If the server returns an error.
        """
-        return self.client.api.tags(self.id, repository, tag=tag, **kwargs)
+        return self.client.api.tags(self.id)
 
 class WorkspaceCollection(Collection):
     model = WorkspaceModel

@@ -42,6 +42,6 @@ class WorkspaceApiMixin(object):
         """
 
         url = self._url("/tsmanager/workspace/{0}/tag", workspace_id)
-        res = self.__get(url)
+        res = self._get(url)
         self._raise_for_status(res)
         return res

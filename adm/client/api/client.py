@@ -5,10 +5,11 @@ import six
 from base.zrequests import zget, zpost
 
 from .workspace import WorkspaceApiMixin
+from .datatag import DataApiMixin
 from ..constants import DEFAULT_TIMEOUT_SECONDS, DEFAULT_USER_AGENT, DEFAULT_ZDM_API_VERSION
 from ..errors import create_api_error_from_http_exception
 
-class APIClient(requests.Session, WorkspaceApiMixin):
+class APIClient(requests.Session, WorkspaceApiMixin, DataApiMixin):
     """
     A low-level client for the ZDM API
     """

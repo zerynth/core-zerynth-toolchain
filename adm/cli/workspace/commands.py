@@ -55,7 +55,9 @@ def create(zcli, name, description):
 @pass_zcli
 def tags(zcli, workspace_id):
     """Get all the tags of a workspace"""
-    tags = zcli.adm.workspace_tags_all(workspace_id)
+    tags = zcli.adm.data.list(workspace_id)
+
+    print(tags)
     if len(tags) > 0:
         table = []
         for tag in tags:

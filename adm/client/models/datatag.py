@@ -1,8 +1,34 @@
-import base64
-from datetime import datetime
-from datetime import timedelta
+from .base import Model, Collection
 
-from base.jwt.api_jwt import encode
+
+class DataTagModel(Model):
+
+    @property
+    def Tag(self):
+        return self.attrs.get("tag")
+
+    @property
+    def Timestamp(self):
+        return self.attrs.get("timestamp_device")
+
+    @property
+    def DeviceId(self):
+        return self.attrs.get("device_id")
+
+    @property
+    def Payload(self):
+        return self.attrs.get("payload")
+
+
+class DataTagCollection(Collection):
+    model = DataTagModel
+
+    def list(self, workspace_id, page=None, page_size=None, sort=None):
+        """
+        List Data Tags for a workspace
+        """
+        resp = self.client.api.tags(workspace_id)
+        return [self.prepare_model(r) for r in resp]
 
 
 class DataTag:
@@ -23,7 +49,8 @@ class DataTag:
         #         "temp": 20,
         #         "pressure": 57
         #  }
-        return DataTag(device_key["tag"], device_key["timestamp_device"], device_key["device_id"], device_key["payload"])
+        return DataTag(device_key["tag"], device_key["timestamp_device"], device_key["device_id"],
+                       device_key["payload"])
 
     def __str__(self):
         return "DataTag: tag: {}, devid:{}, payload :{}".format(self.tag, self.device_id, self.payload)
