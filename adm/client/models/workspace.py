@@ -17,7 +17,7 @@ class Workspace:
         # wks = json["workspace"]
         # {'id': 'wks-4p8azofi7ton', 'description': '', 'created_at': '2020-02-24T09:09:03.837579Z', 'name': 'prova 4', 'fleet': None, 'account_id': 'OsbDq5jtSwmmPi5I5bNyYw'
         fleets = []
-        if wks['fleet'] is not None:
+        if wks['fleets'] is not None:
             fleets = [Fleet(fleet["id"], fleet["name"], fleet["workspace_id"] if fleet["workspace_id"] is not "" else None, []) for fleet in wks['fleets']]
         return Workspace(wks["id"], wks["name"], fleets, wks["account_id"] if wks["account_id"] is not "" else None, wks["description"])
 
