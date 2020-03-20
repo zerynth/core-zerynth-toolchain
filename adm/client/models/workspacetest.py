@@ -36,7 +36,8 @@ class WorkspaceModel(Model):
            :py:class:`adm.errors.APIError`
                If the server returns an error.
        """
-        return self.client.api.tag(self.id, repository, tag=tag, **kwargs)
+        return self.client.api.tags(self.id, repository, tag=tag, **kwargs)
+
 class WorkspaceCollection(Collection):
     model = WorkspaceModel
 
