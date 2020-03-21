@@ -1,5 +1,6 @@
 from .base import Model, Collection
 
+
 class DeviceModel(Model):
 
     @property
@@ -8,9 +9,11 @@ class DeviceModel(Model):
 
     @property
     def workspace_id(self):
-        print(self.attrs)
         res = self.client.api.workspace_of_device(self.id)
-        return  res.get(self.id_attribute)
+        return res.get(self.id_attribute)
+
+    def create_key(self, name):
+        key = self.client.api.devices.create_device_key(self.id, name)
 
 
 class DeviceCollection(Collection):

@@ -1,8 +1,10 @@
-from .models.workspacetest import WorkspaceCollection
+from .api.client import APIClient
 from .models.datatag import DataTagCollection
 from .models.device import DeviceCollection
+from .models.devicekey import DeviceKeyCollection
 from .models.fleet import FleetCollection
-from .api.client import APIClient
+from .models.workspacetest import WorkspaceCollection
+
 
 class ZdmClient(object):
 
@@ -32,4 +34,14 @@ class ZdmClient(object):
 
     @property
     def data(self):
+        """
+        An object for managing the data sent by the devices on the server.
+        """
         return DataTagCollection(client=self)
+
+    @property
+    def keys(self):
+        """
+        An object for managing the keys of the devices on the server.
+        """
+        return DeviceKeyCollection(client=self)

@@ -37,33 +37,6 @@ class ADMClient(object):
         self.gate_url = gates_url
 
 
-
-    ##############################
-    #   Device
-    ##############################
-
-    def device_create_key(self, name, devid):
-        path = "{}{}/key".format(self.device_url, devid)
-        payload = {"Name": name}
-        res = zpost(path, data=payload)
-        if res.status_code == 200:
-            data = res.json()
-            return DeviceKey.from_json(data["key"])
-        else:
-            logger.error("Error in getting the workspace of a device {}".format(res.text))
-            raise NotFoundError(res.text)
-
-    def device_all_key(self, devid):
-        path = "{}{}/key".format(self.device_url, devid)
-        res = zget(path)
-        if res.status_code == 200:
-            data = res.json()
-            return [DeviceKey.from_json(key) for key in data["keys"]]
-        else:
-            logger.error("Error in getting the workspace of a device {}".format(res.text))
-            raise NotFoundError(res.text)
-
-
     ##############################
     #   Change set
     ##############################

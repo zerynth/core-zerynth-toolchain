@@ -15,7 +15,6 @@ class DeviceApiMixin(object):
         res = self._result(self._get(u))
         return res["devices"]
 
-    # @utils.check_resource('image')
     def get_device(self, device_id):
         """
         Get detailed information about a device by ID.
@@ -48,8 +47,8 @@ class DeviceApiMixin(object):
                If the server returns an error.
         """
         payload = {
-             "name": name,
-             "fleet_id": None if fleet_id is None else fleet_id
+            "name": name,
+            "fleet_id": None if fleet_id is None else fleet_id
         }
         u = self._url("/device/")
         res = self._result(self._post(u, data=payload))
@@ -80,19 +79,73 @@ class DeviceApiMixin(object):
         return res
 
     def workspace_of_device(self, device_id):
-       """
-       Get the Workspace ID of the Device
+        """
+        Get the Workspace ID of the Device
 
-       Args:
-          device_id (str): The device id to get
+        Args:
+           device_id (str): The device id.
 
-       Returns:
-          (dict): a dictionary of  workspace
+        Returns:
+           (dict): a dictionary of a workspace
 
-       Raises:
+        Raises:
+           :py:class:`adm.errors.APIError`
+               If the server returns an error.
+        """
+        u = self._url("/device/{0}/workspace", device_id)
+        res = self._result(self._get(u))
+        return res["workspace"]
+
+    def create_device_key(self, device_id, name):
+        """
+        Create a authentication key for the device.
+
+        Args:
+          device_id (str): The device id.
+          name (str): The name of the key.
+
+        Returns:
+          (dict): a dictionary of the created key.
+
+        Raises:
           :py:class:`adm.errors.APIError`
               If the server returns an error.
-       """
-       u = self._url("/device/{0}/workspace", device_id)
-       res = self._result(self._get(u))
-       return res["workspace"]
+        """
+        payload = {"name": name}
+        u = self._url("/device/{0}/key", device_id)
+        res = self._result(self._post(u, data=payload))
+        return res["key"]
+
+    def list_device_keys(self, device_id):
+        """
+        Get all the keys of a device.
+
+        Returns:
+            (list of dicts): a list of keys dictionaries
+
+        Raises:
+            :py:class:`adm.errors.APIError`
+                If the server returns an error.
+        """
+        u = self._url("/device/{0}/key", device_id)
+        res = self._result(self._get(u))
+        return res["keys"]
+
+    def get_device_key(self, device_id, key_id):
+        """
+        Get a device key.
+
+        Args:
+            device_id (str): The Device id.
+            key_id (str): The key id.
+
+        Returns:
+            (dict): a key dictionary
+
+        Raises:
+            :py:class:`adm.errors.APIError`
+                If the server returns an error.
+        """
+        u = self._url("/device/{0}/key/{1}", device_id, key_id)
+        res = self._result(self._get(u))
+        return res["key"]

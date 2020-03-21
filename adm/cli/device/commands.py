@@ -40,7 +40,8 @@ def get(zcli, id):
     """Get a single device"""
     device = zcli.adm.devices.get(id)
     log_table([[device.id, device.name, device.fleet_id, device.workspace_id]],
-               headers=["ID", "Name", "FleetID", "WorkspaceID"])
+              headers=["ID", "Name", "FleetID", "WorkspaceID"])
+
 
 @device.command()
 @click.option('--fleet-id', default=None, help='Id of the new fleet')
@@ -63,31 +64,36 @@ def key():
 @key.command()
 @click.argument("device-id")
 @click.argument('key-name')
-@click.option('--as-jwt', default=True, help='Generate a new Jwt fo the key')
-@click.option('--expiration-days', default=31, help='Expiration in days')
 @pass_zcli
-def create(zcli, key_name, device_id, as_jwt, expiration_days):
-    """Generate a new authetication key"""
-    keydevice = zcli.adm.device_create_key(key_name, device_id)
-    if as_jwt:
-        keydevice.set_exp_time(expiration_days)
-        jwt = keydevice.as_jwt()
-        log_table([[device_id, keydevice.id, keydevice.name, jwt, keydevice.Expiration]],
-                  headers=["Device Id", "Key Id", "Key Name", "Password", "Expiration"])
-    else:
-        log_table([[device_id, keydevice.id, keydevice.name]], headers=["Device Id", "Key Id", "Key Name"])
+@handle_error
+def create(zcli, key_name, device_id):
+    """Create a device key."""
+    key = zcli.adm.keys.create(device_id, key_name)
+    log_table([[key.id, key.name, key.is_revoked, key.created_at]], headers=["ID", "Name", "Revoked", "CreatedAt"])
 
+@key.command()
+@click.argument("device-id")
+@click.argument('key-id')
+@click.option('--expiration-days', default=31, help='Number of days after the key expires.')
+@pass_zcli
+@handle_error
+def generate(zcli, device_id, key_id, expiration_days):
+    """Generate a password  (Jwt) from a key."""
+    key = zcli.adm.keys.get(device_id, key_id)
+    jwt = key.as_jwt(exp_delta_in_days=expiration_days)
+    log_table([[key.name, jwt, key.expire_at]], headers=["Key Name", "Password", "ExpireAt"])
 
 @key.command()
 @click.argument("device-id")
 @pass_zcli
+@handle_error
 def all(zcli, device_id):
-    """List the authetication key of a device"""
-    keys = zcli.adm.device_all_key(device_id)
+    """List the keys."""
+    keys = zcli.adm.keys.list(device_id)
     table = []
     for key in keys:
-        table.append([key.id, key.name])  # key.as_jwt(), key.Expiration])
-    log_table(table, headers=["ID", "Name"])
+        table.append([key.id, key.name, key.is_revoked, key.created_at])  # key.as_jwt(), key.expire_at])
+    log_table(table, headers=["ID", "Name", "Revoked", "CreatedAt"])
 
 
 device.add_command(key)
