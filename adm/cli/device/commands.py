@@ -1,6 +1,8 @@
 import click
 from base.base import log_table, pass_zcli, info
 
+from ..helper import handle_error
+
 
 @click.group()
 def device():
@@ -9,50 +11,58 @@ def device():
 
 
 @device.command()
-@click.option('--fleet-id', default=None, help='Fleet ID where the device is assigned')
-@click.argument('name')
 @pass_zcli
-def create(zcli, fleet_id, name):
-    """Create a device"""
-    dev = zcli.adm.device_create(name, fleet_id)
-    log_table([[dev.Id, dev.Name, dev.FleetID]], headers=["ID", "Name", "FleetID"])
-
-
-@device.command()
-@click.argument('id')
-@pass_zcli
-def get(zcli, id):
-    """Get a single device"""
-    device = zcli.adm.device_get(id)
-    workspace = zcli.adm.device_get_workspace(device.Id)
-    log_table([[device.Id, device.Name, device.FleetID, workspace.Id]],
-              headers=["ID", "Name", "FleetID", "WorkspaceID"])
-
-@device.command()
-@pass_zcli
+@handle_error
 def all(zcli):
     """Get all the devices"""
     table = []
-    for d in zcli.adm.device_all():
-        workspace = zcli.adm.device_get_workspace(d.Id)
-        table.append([d.Id, d.Name, d.FleetID if d.FleetID else "<none>", workspace.Id])
+    for d in zcli.adm.devices.list():
+        # TODO: add the workspace of the devic
+        # workspace = zcli.adm.device_get_workspace(d.id)
+        table.append([d.id, d.name, d.fleet_id if d.fleet_id else "<none>"])  # , workspace.id])
     log_table(table, headers=["ID", "Name", "FleeId", "WorkspaceID"])
 
 
 @device.command()
-@click.option('--fleet-id', default=None, help='Id of the new device')
+@click.option('--fleet-id', default=None, help='Fleet ID where the device is assigned')
+@click.argument('name')
+@pass_zcli
+@handle_error
+def create(zcli, fleet_id, name):
+    """Create a device"""
+    dev = zcli.adm.devices.create(name, fleet_id)
+    log_table([[dev.id, dev.name, dev.fleet_id]], headers=["ID", "Name", "fleet_id"])
+
+
+@device.command()
+@click.argument('id')
+@pass_zcli
+@handle_error
+def get(zcli, id):
+    """Get a single device"""
+    device = zcli.adm.devices.get(id)
+    # TODO: add the workspace of the device
+    #workspace = zcli.adm.device_get_workspace(device.id)
+    # log_table([[device.id, device.name, device.fleet_id, workspace.id]],
+    #           headers=["ID", "Name", "FleetID", "WorkspaceID"])
+    log_table([[device.id, device.name, device.fleet_id]],
+              headers=["ID", "Name", "FleetID"])
+
+@device.command()
+@click.option('--fleet-id', default=None, help='Id of the new fleet')
 @click.option('--name', default=None, help='Name of the device')
 @click.argument('id')
 @pass_zcli
+@handle_error
 def update(zcli, id, fleet_id, name):
     """Update a device"""
-    zcli.adm.device_update(id, name, fleet_id)
-    info("Device ", device.Id, " updated correctly")
+    zcli.adm.devices.update(id, name, fleet_id)
+    info("Device [{}] updated correctly.".format(id))
 
 
 @click.group()
 def key():
-    """Manage the key of a Device"""
+    """Manage the authentication key of a Device"""
     pass
 
 
@@ -68,10 +78,10 @@ def create(zcli, key_name, device_id, as_jwt, expiration_days):
     if as_jwt:
         keydevice.set_exp_time(expiration_days)
         jwt = keydevice.as_jwt()
-        log_table([[device_id, keydevice.Id, keydevice.Name, jwt, keydevice.Expiration]],
+        log_table([[device_id, keydevice.id, keydevice.name, jwt, keydevice.Expiration]],
                   headers=["Device Id", "Key Id", "Key Name", "Password", "Expiration"])
     else:
-        log_table([[device_id, keydevice.Id, keydevice.Name]], headers=["Device Id", "Key Id", "Key Name"])
+        log_table([[device_id, keydevice.id, keydevice.name]], headers=["Device Id", "Key Id", "Key Name"])
 
 
 @key.command()
@@ -82,7 +92,7 @@ def all(zcli, device_id):
     keys = zcli.adm.device_all_key(device_id)
     table = []
     for key in keys:
-        table.append([key.Id, key.Name])  # key.as_jwt(), key.Expiration])
+        table.append([key.id, key.name])  # key.as_jwt(), key.Expiration])
     log_table(table, headers=["ID", "Name"])
 
 

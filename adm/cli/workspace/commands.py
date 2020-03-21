@@ -59,7 +59,7 @@ def tags(zcli, workspace_id):
     if len(tags) > 0:
         log_table([[tags]], headers=["Tags"])
     else:
-        info("No tags associated with the workspace ", workspace_id)
+        info("Empty tags for workspace {}.".foramt(workspace_id))
 
 
 @workspace.command()
@@ -69,11 +69,11 @@ def tags(zcli, workspace_id):
 @handle_error
 def data(zcli, workspace_id, tag):
     """Get all the data of a workspace associated to a tag"""
-    tags = zcli.adm.workspace_data_get(workspace_id, tag)
+    tags = zcli.adm.data.get(workspace_id, tag)
     if len(tags) > 0:
         table = []
         for tag in tags:
             table.append([tag.Tag, tag.Payload, tag.DeviceId, tag.Timestamp])
         log_table(table, headers=["Tag", "Payload", "Device", "Timestamp"])
     else:
-        info("No data for ", tag, " in workspace ", workspace_id)
+        info("No data present for to tag [{}].".format(tag))

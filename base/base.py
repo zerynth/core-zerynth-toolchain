@@ -214,7 +214,6 @@ class ZCliContext(object):
         self.adm_client = ADMClient(workspace_url=env.adm.workspaces, device_url=env.adm.devices,
                                     fleet_url=env.adm.fleets,
                                     status_url=env.adm.status,
-                                    data_url=env.adm.data,
                                     gates_url=env.adm.gates)
         self.adm_test = ZdmClient(base_url=env.connector)
 

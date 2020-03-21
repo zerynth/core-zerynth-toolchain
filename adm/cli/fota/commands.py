@@ -42,7 +42,7 @@ def prepare(zcli, workspace_id, files, version, vm_uid):
     metadata = {"vm_version": vm_version, "vm_feature": vm_hash_featues}
     # TODO: add a list of binaries in base64 instead of one binary.
     res = zcli.adm.firmware_upload(workspace_id, files, version, metadata)
-    info("Uploaded firmware " + res.Id)
+    info("Uploaded firmware " + res.id)
 
 
 @fota.command()
@@ -53,7 +53,7 @@ def all(zcli, workspace_id):
     table = []
     firmwares = zcli.adm.firmware_all(workspace_id)
     for d in firmwares:
-        table.append([d.Id, d.Version, d.WorkspaceID if d.WorkspaceID else "<none>"])
+        table.append([d.id, d.Version, d.WorkspaceID if d.WorkspaceID else "<none>"])
     log_table(table, headers=["ID", "Version", "WorkspaceID"])
 
 

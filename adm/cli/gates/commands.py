@@ -33,7 +33,7 @@ def all(zcli, workspace_id, origin, status):
     gates = zcli.adm.gate_workspace_all(workspace_id, status, origin)
     table = []
     for gate in gates:
-        table.append([gate.Id, gate.Name, gate.Period, gate.Status, gate.last_schedule])
+        table.append([gate.id, gate.name, gate.Period, gate.Status, gate.last_schedule])
     log_table(table, headers=["ID", "Name", "Period", "Status", "LastSchedule"])
 
 @webhook.command()
@@ -42,7 +42,7 @@ def all(zcli, workspace_id, origin, status):
 def get(zcli, gate_id):
     """Get a single webhook"""
     gate = zcli.adm.gate_get(gate_id)
-    log_table([[gate.Id, gate.Name, gate.Period, gate.Status, gate.last_schedule]], headers=["ID", "Name", "Period", "Status", "LastSchedule"])
+    log_table([[gate.id, gate.name, gate.Period, gate.Status, gate.last_schedule]], headers=["ID", "Name", "Period", "Status", "LastSchedule"])
 
 @webhook.command()
 @click.argument('gate-id')

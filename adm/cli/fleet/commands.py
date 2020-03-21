@@ -15,7 +15,7 @@ def fleet():
 def create(zcli, name, workspaceid):
     """Create a fleet"""
     fleet = zcli.adm.fleet_create(name, workspaceid)
-    log_table([[fleet.Id, fleet.Name, fleet.WorkspaceId]], headers=["ID", "Name", "WorkspaceID"])
+    log_table([[fleet.id, fleet.name, fleet.WorkspaceId]], headers=["ID", "Name", "WorkspaceID"])
 
 
 
@@ -26,7 +26,7 @@ def all(zcli):
     table = []
     for f in zcli.adm.fleet_all():
         print(f.Devices)
-        table.append([f.Id, f.Name, f.WorkspaceId if f.WorkspaceId else "<none>", [d.Id for d in f.Devices]])
+        table.append([f.id, f.name, f.WorkspaceId if f.WorkspaceId else "<none>", [d.id for d in f.Devices]])
     log_table(table, headers=["ID", "Name", "WorkspaceID", "Devices"])
 
 

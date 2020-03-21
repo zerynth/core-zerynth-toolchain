@@ -2,14 +2,16 @@ from functools import partial
 
 import requests
 import six
-from base.zrequests import zget, zpost
+from base.zrequests import zget, zpost, zput
 
-from .workspace import WorkspaceApiMixin
 from .datatag import DataApiMixin
+from .devices import DeviceApiMixin
+from .workspace import WorkspaceApiMixin
 from ..constants import DEFAULT_TIMEOUT_SECONDS, DEFAULT_USER_AGENT, DEFAULT_ZDM_API_VERSION
 from ..errors import create_api_error_from_http_exception
 
-class APIClient(requests.Session, WorkspaceApiMixin, DataApiMixin):
+
+class APIClient(requests.Session, WorkspaceApiMixin, DataApiMixin, DeviceApiMixin):
     """
     A low-level client for the ZDM API
     """
@@ -28,6 +30,8 @@ class APIClient(requests.Session, WorkspaceApiMixin, DataApiMixin):
         self.timeout = timeout
         self.headers['User-Agent'] = user_agent
 
+    # TODO: don't use zget, zpost, zput but get jwt and put into header automatically
+
     # @update_headers
     def _get(self, url, **kwargs):
         return zget(url, **kwargs)
@@ -35,6 +39,9 @@ class APIClient(requests.Session, WorkspaceApiMixin, DataApiMixin):
 
     def _post(self, url, **kwargs):
         return zpost(url, **kwargs)
+
+    def _put(self, url, **kwargs):
+        return zput(url, **self._set_request_timeout(kwargs))
 
     def _set_request_timeout(self, kwargs):
         """Prepare the kwargs for an HTTP request by inserting the timeout
@@ -53,11 +60,11 @@ class APIClient(requests.Session, WorkspaceApiMixin, DataApiMixin):
         quote_f = partial(six.moves.urllib.parse.quote, safe="/:")
         args = map(quote_f, args)
 
-        #if kwargs.get('versioned_api', True):
+        # if kwargs.get('versioned_api', True):
         return '{0}/v{1}{2}'.format(
-                self.base_url, self._version, pathfmt.format(*args)
-            )
-        #else:
+            self.base_url, self._version, pathfmt.format(*args)
+        )
+        # else:
         #    return '{0}{1}'.format(self.base_url, pathfmt.format(*args))
 
     def _raise_for_status(self, response):

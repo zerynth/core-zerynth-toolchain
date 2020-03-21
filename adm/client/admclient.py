@@ -32,7 +32,6 @@ class ADMClient(object):
                  fleet_url="http://api.localhost/v1/device/",
                  status_url="http://api.localhost/v1/status",
                  gates_url="http://api.localhost/v1/gate",
-                 data_url="http://api.localhost/v1/tsmanager/",
                  ):
         self.rpc_url = rpc_url
         self.workspace_url = workspace_url
@@ -40,7 +39,6 @@ class ADMClient(object):
         self.fleet_url = fleet_url
         self.status_url = status_url
         self.gate_url = gates_url
-        self.data_url = data_url
 
 
 

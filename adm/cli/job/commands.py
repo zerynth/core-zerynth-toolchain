@@ -41,9 +41,9 @@ def check_int(s):
 def status(zcli, name, device):
     """Check the jo result of a device"""
     status = zcli.adm._get_current_device_status(device)
-    result = list(filter(lambda x: x.Name == convert_into_job(name), status))
+    result = list(filter(lambda x: x.name == convert_into_job(name), status))
     table = []
     if len(result) > 0:
         res = result[0]
-        table.append([from_job_name(res.Name), res.Value, res.Timestamp])
+        table.append([from_job_name(res.name), res.Value, res.Timestamp])
     log_table(table, headers=["Name", "Result", "Time"])

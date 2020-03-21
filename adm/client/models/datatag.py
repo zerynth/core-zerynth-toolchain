@@ -30,11 +30,11 @@ class DataTagCollection(Collection):
         resp = self.client.api.tags(workspace_id)
         return resp
 
-    def get(self,workspace_id, tag):
+    def get(self, workspace_id, tag, device_id=None, start=None, end=None, page=None, per_page=None, sort=None):
         """
         Get all the data associated to a tag
         """
-        resp = self.client.api.get_data(workspace_id, tag)
+        resp = self.client.api.get_data(workspace_id, tag, device_id, page, per_page, sort)
         return [self.prepare_model(datatag) for datatag in resp]
 
 

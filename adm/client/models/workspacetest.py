@@ -22,13 +22,13 @@ class WorkspaceModel(Model):
 
     def tags(self):
         """
-        Get the tags of the data published in the workspace.
+        Get all available tags of the data published in the workspace.
 
        Args:
            workspace_id (str): workspace ID.
 
        Returns:
-            (list of dicts): The response of the search.
+            (list of string): The response of the search.
 
        Raises:
            :py:class:`adm.errors.NotFound`
