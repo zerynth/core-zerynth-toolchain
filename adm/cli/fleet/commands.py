@@ -1,6 +1,6 @@
 import click
 from base.base import log_table, info, pass_zcli
-
+from ..helper import handle_error
 
 @click.group()
 def fleet():
@@ -9,6 +9,7 @@ def fleet():
 
 @fleet.command()
 @pass_zcli
+@handle_error
 def all(zcli):
     """Get all the fleets"""
     table = []
@@ -21,6 +22,7 @@ def all(zcli):
 @click.argument('name')
 @click.argument('workspaceid')
 @pass_zcli
+@handle_error
 def create(zcli, name, workspaceid):
     """Create a fleet"""
     fleet = zcli.adm.fleets.create(name, workspaceid)
@@ -30,6 +32,7 @@ def create(zcli, name, workspaceid):
 @fleet.command()
 @click.argument('id')
 @pass_zcli
+@handle_error
 def get(zcli, id):
     """Get a single fleet"""
     fleet = zcli.adm.fleets.get(id)

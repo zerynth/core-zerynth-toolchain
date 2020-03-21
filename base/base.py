@@ -211,8 +211,8 @@ class ZCliContext(object):
         from adm.client import ADMClient
         from adm.client.client import ZdmClient
         from base.cfg import env
-        self.adm_client = ADMClient(workspace_url=env.adm.workspaces, device_url=env.adm.devices,
-                                    fleet_url=env.adm.fleets,
+        self.adm_client = ADMClient(workspace_url=env.adm.workspaces,
+                                    device_url=env.adm.devices,
                                     status_url=env.adm.status,
                                     gates_url=env.adm.gates)
         self.adm_test = ZdmClient(base_url=env.connector)

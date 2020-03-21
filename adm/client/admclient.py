@@ -5,15 +5,13 @@ from base.zrequests import zget, zpost, zput, zdelete
 
 from .errors import NotFoundError
 from .logging import MyLogger
-from .models import DataTag
-from .models import Device
 from .models import DeviceKey
 from .models import Firmware
 from .models import Fleet
 from .models import Status
-from .models import Workspace
 from .models import Gate
 from .helper import convert_into_job
+
 logger = MyLogger().get_logger()
 
 
@@ -29,14 +27,12 @@ class ADMClient(object):
     def __init__(self, rpc_url="http://127.0.0.1:7777",
                  workspace_url="http://127.0.0.1:8001",
                  device_url="http://127.0.0.1:8001",
-                 fleet_url="http://api.localhost/v1/device/",
                  status_url="http://api.localhost/v1/status",
                  gates_url="http://api.localhost/v1/gate",
                  ):
         self.rpc_url = rpc_url
         self.workspace_url = workspace_url
         self.device_url = device_url
-        self.fleet_url = fleet_url
         self.status_url = status_url
         self.gate_url = gates_url
 
@@ -67,32 +63,6 @@ class ADMClient(object):
             logger.error("Error in getting the workspace of a device {}".format(res.text))
             raise NotFoundError(res.text)
 
-    ##############################
-    #   Fleet
-    ##############################
-    def fleet_create(self, name, workspace_id):
-        payload = {"Name": name, "workspace_id": workspace_id}
-        logger.debug("Path create fleet: {}".format(self.fleet_url))
-        logger.debug("Creating fleet: {}".format(name))
-        r = zpost(self.fleet_url, data=payload)
-        if r.status_code == 200:
-            data = r.json()
-            return Fleet.from_json(data["fleet"])
-        else:
-            logger.error("Error in getting the workspace {}".format(r.text))
-            raise NotFoundError(r.text)
-
-    def fleet_get(self, id):
-        path = "{}{}".format(self.fleet_url, id)
-        logger.debug("Getting the fleet {}".format(path))
-        r = zget(path)
-        if r.status_code == 200:
-            data = r.json()
-            return Fleet.from_json(data["fleet"])
-        else:
-            logger.debug(r.text)
-            logger.error("Error in getting the device {}")
-            raise NotFoundError(r.text)
 
     ##############################
     #   Change set
