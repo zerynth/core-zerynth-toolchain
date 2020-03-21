@@ -7,7 +7,6 @@ import traceback
 
 import click
 
-
 from . import commentjson as commentjson
 from . import tabulate
 from . import websocket as ws
@@ -209,23 +208,21 @@ def version_int32(iv):
 class ZCliContext(object):
     def __init__(self):
         from adm.client import ADMClient
-        from adm.client.client import ZdmClient
+        from adm import ZdmClient
         from base.cfg import env
         self.adm_client = ADMClient(workspace_url=env.adm.workspaces,
-                                    device_url=env.adm.devices,
                                     status_url=env.adm.status,
                                     gates_url=env.adm.gates)
         self.adm_test = ZdmClient(base_url=env.connector)
 
-
-
     @property
     def adm(self):
         return self.adm_test
-        #return self.adm_client
+        # return self.adm_client
 
 
 pass_zcli = click.make_pass_decorator(ZCliContext, ensure=True)
+
 
 ## Main entrypoint gathering
 @click.group(help="Zerynth Toolchain.")

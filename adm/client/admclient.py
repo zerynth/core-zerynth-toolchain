@@ -26,13 +26,11 @@ class ADMClient(object):
 
     def __init__(self, rpc_url="http://127.0.0.1:7777",
                  workspace_url="http://127.0.0.1:8001",
-                 device_url="http://127.0.0.1:8001",
                  status_url="http://api.localhost/v1/status",
                  gates_url="http://api.localhost/v1/gate",
                  ):
         self.rpc_url = rpc_url
         self.workspace_url = workspace_url
-        self.device_url = device_url
         self.status_url = status_url
         self.gate_url = gates_url
 
@@ -40,18 +38,6 @@ class ADMClient(object):
     ##############################
     #   Change set
     ##############################
-
-    def _create_changeset(self, key, value, targets):
-        path = "{}changeset".format(self.status_url)
-        logger.debug("Creating a changeset: {}".format(path))
-        payload = {"key": key, "value": value, "targets": targets}
-        r = zpost(path, data=payload)
-        if r.status_code == 200:
-            data = r.json()
-            return data["id"]
-        else:
-            logger.error("Error in creating the changeset {}, {}".format(r.status_code, r.text))
-            raise NotFoundError(r.text)
 
     def _get_current_device_status(self, device_id):
         # /status/currentstatus/{devid}
@@ -137,6 +123,10 @@ class ADMClient(object):
         except Exception as e:
             print("Can't get firmwwares. {}".format(e))
 
+    ##################################
+    # Fota
+    ################################s
+
     def fota_schedule(self, fw_version, devices, on_time=""):
         value = {"fw_version": fw_version, "on_schedule": on_time}
         return self._create_changeset("@fota", value, devices)
@@ -155,6 +145,9 @@ class ADMClient(object):
             d = {"device": dev, "status": status_msg}
             map_fota.append(d)
         return map_fota
+
+
+
 
     ##############################
     #   Gate: WebHook
@@ -235,15 +228,6 @@ class ADMClient(object):
                 return None
         except Exception as e:
             print(e)
-
-    ##############################
-    #   Job
-    ##############################
-
-    def job_schedule(self, name, args, devices, on_time=""):
-        value = {"args": args, "on_schedule": on_time}
-        name = convert_into_job(name)
-        return self._create_changeset(name, value, devices)
 
     def urljoin(self, base_path, *args):
         """

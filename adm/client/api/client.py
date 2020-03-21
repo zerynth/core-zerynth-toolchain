@@ -8,11 +8,12 @@ from .datatag import DataApiMixin
 from .devices import DeviceApiMixin
 from .fleets import FleetApiMixin
 from .workspace import WorkspaceApiMixin
+from .status import StatusApiMixin
 from ..constants import DEFAULT_TIMEOUT_SECONDS, DEFAULT_USER_AGENT, DEFAULT_ZDM_API_VERSION
 from ..errors import create_api_error_from_http_exception
 
 
-class APIClient(requests.Session, WorkspaceApiMixin, DataApiMixin, DeviceApiMixin, FleetApiMixin):
+class APIClient(requests.Session, WorkspaceApiMixin, DataApiMixin, DeviceApiMixin, FleetApiMixin, StatusApiMixin):
     """
     A low-level client for the ZDM API
     """

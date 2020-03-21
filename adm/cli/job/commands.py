@@ -1,8 +1,7 @@
 import click
 
 from base.base import info, pass_zcli, log_table
-from adm.client.helper import convert_into_job, from_job_name
-
+from ..helper import handle_error
 
 @click.group()
 def job():
@@ -12,13 +11,13 @@ def job():
 
 @job.command()
 @click.argument('name')
-@click.option('--arg', type=(str, str), multiple=True)
 @click.argument('devices', nargs=-1, type=click.STRING)
+@click.option('--arg', type=(str, str), multiple=True)
 @pass_zcli
+@handle_error
 def schedule(zcli, name, arg, devices):
-    """Send a Job """
-    # add a "@" to the name of the job
-    # args is a nttyple of typle (('er', 's'), ('caio', '23'))
+    """Schedule a Job"""
+    # args is a tuple of typle (('temp', 'yes'), ('on', True))
     args_dict = {}
     for a in arg:
         arg_name = a[0]
@@ -26,7 +25,9 @@ def schedule(zcli, name, arg, devices):
         if check_int(a[1]):
             arg_value = int(a[1])
         args_dict[arg_name] = arg_value
-    res = zcli.adm.job_schedule(name, args_dict, devices, on_time="")
+    res = zcli.adm.jobs.schedule(name, args_dict, devices, on_time="")
+    print(res)
+    info("Job [{}] scheduled correctly.".format(name))
 
 def check_int(s):
     if s[0] in ('-', '+'):
@@ -36,14 +37,14 @@ def check_int(s):
 
 @job.command()
 @click.argument('name')
-@click.argument('device', nargs=1, type=click.STRING)
+@click.argument('device-id', nargs=1, type=click.STRING)
 @pass_zcli
-def status(zcli, name, device):
-    """Check the jo result of a device"""
-    status = zcli.adm._get_current_device_status(device)
-    result = list(filter(lambda x: x.name == convert_into_job(name), status))
-    table = []
-    if len(result) > 0:
-        res = result[0]
-        table.append([from_job_name(res.name), res.Value, res.Timestamp])
-    log_table(table, headers=["Name", "Result", "Time"])
+@handle_error
+def status(zcli, name, device_id):
+    """Check the job status sent to a device."""
+
+    status = zcli.adm.jobs.status(name, device_id)
+    if status:
+         log_table([[status.name, status.value, status.version]],headers=["Name", "Value", "Timestamp"])
+    else:
+        info("No job [{}] for device [{}].".format(name, device_id))

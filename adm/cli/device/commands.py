@@ -71,6 +71,7 @@ def create(zcli, key_name, device_id):
     key = zcli.adm.keys.create(device_id, key_name)
     log_table([[key.id, key.name, key.is_revoked, key.created_at]], headers=["ID", "Name", "Revoked", "CreatedAt"])
 
+
 @key.command()
 @click.argument("device-id")
 @click.argument('key-id')
@@ -82,6 +83,7 @@ def generate(zcli, device_id, key_id, expiration_days):
     key = zcli.adm.keys.get(device_id, key_id)
     jwt = key.as_jwt(exp_delta_in_days=expiration_days)
     log_table([[key.name, jwt, key.expire_at]], headers=["Key Name", "Password", "ExpireAt"])
+
 
 @key.command()
 @click.argument("device-id")
