@@ -1,11 +1,17 @@
 from .base import Model, Collection
-
+from .workspacetest import WorkspaceCollection
 
 class DeviceModel(Model):
 
     @property
     def fleet_id(self):
         return self.attrs.get("fleet_id")
+
+    @property
+    def workspace_id(self):
+        print(self.attrs)
+        res = self.client.api.workspace_of_device(self.id)
+        return  res.get(self.id_attribute)
 
 
 class DeviceCollection(Collection):

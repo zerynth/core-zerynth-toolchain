@@ -46,66 +46,6 @@ class ADMClient(object):
     #   Device
     ##############################
 
-    def device_create(self, name, fleetId=None):
-        payload = {
-            "name": name,
-            "fleet_id": None if fleetId is None else fleetId
-        }
-        logger.debug("Creating device {}: {}".format(name, self.device_url))
-        r = zpost(self.device_url, data=payload)
-        if r.status_code == 200:
-            data = r.json()
-            return Device.from_json(data['device'])
-        else:
-            logger.debug(r.text)
-            logger.error("Error creating the device")
-            raise NotFoundError(r.text)
-
-    def device_get(self, id):
-        path = "{}{}/".format(self.device_url, id)
-        logger.debug("Getting the device {}".format(path))
-        r = zget(path)
-        if r.status_code == 200:
-            data = r.json()
-            return Device.from_json(data["device"])
-        else:
-            logger.debug(r.text)
-            logger.error("Error in getting the device {}")
-            raise NotFoundError(r.text)
-
-    def device_update(self, device_id, name, fleet_id):
-        path = "{}{}/".format(self.device_url, device_id)
-        logger.debug("Updating device {}: path {}".format(device_id, path))
-        payload = {"Name": name, "fleet_id": fleet_id}
-        try:
-            res = zput(path, data=payload)
-            if res.status_code == 200:
-                return "ok"
-            else:
-                print("Error in getting all devices {}".format(res.text))
-                raise NotFoundError(res.text)
-        except TimeoutException as e:
-            print("No answer yet")
-        except Exception as e:
-            print("Can't get devices: err s{}".format(e))
-
-    def device_all(self):
-        try:
-            res = zget(self.device_url)
-            if res.status_code == 200:
-                data = res.json()
-                if "devices" in data and data["devices"] is not None:
-                    return [Device.from_json(w) for w in data["devices"]]
-                else:
-                    return []
-            else:
-                print("Error in getting all devices {}".format(res.text))
-                raise NotFoundError(res.text)
-        except TimeoutException as e:
-            print("No answer yet")
-        except Exception as e:
-            print("Can't get devices: err s{}".format(e))
-
     def device_create_key(self, name, devid):
         path = "{}{}/key".format(self.device_url, devid)
         payload = {"Name": name}
@@ -126,18 +66,6 @@ class ADMClient(object):
         else:
             logger.error("Error in getting the workspace of a device {}".format(res.text))
             raise NotFoundError(res.text)
-
-    def device_get_workspace(self, devid):
-        path = "{}{}/workspace".format(self.device_url, devid)
-        logger.debug("Getting the workspace of a device")
-        logger.debug("Getting the workspace of a device")
-        r = zget(path)
-        if r.status_code == 200:
-            data = r.json()
-            return Workspace.from_json(data["workspace"])
-        else:
-            logger.error("Error in getting the workspace of a device {}".format(r.text))
-            raise NotFoundError(r.text)
 
     ##############################
     #   Fleet

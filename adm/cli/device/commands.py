@@ -17,9 +17,7 @@ def all(zcli):
     """Get all the devices"""
     table = []
     for d in zcli.adm.devices.list():
-        # TODO: add the workspace of the devic
-        # workspace = zcli.adm.device_get_workspace(d.id)
-        table.append([d.id, d.name, d.fleet_id if d.fleet_id else "<none>"])  # , workspace.id])
+        table.append([d.id, d.name, d.fleet_id if d.fleet_id else "<none>", d.workspace_id])
     log_table(table, headers=["ID", "Name", "FleeId", "WorkspaceID"])
 
 
@@ -41,12 +39,8 @@ def create(zcli, fleet_id, name):
 def get(zcli, id):
     """Get a single device"""
     device = zcli.adm.devices.get(id)
-    # TODO: add the workspace of the device
-    #workspace = zcli.adm.device_get_workspace(device.id)
-    # log_table([[device.id, device.name, device.fleet_id, workspace.id]],
-    #           headers=["ID", "Name", "FleetID", "WorkspaceID"])
-    log_table([[device.id, device.name, device.fleet_id]],
-              headers=["ID", "Name", "FleetID"])
+    log_table([[device.id, device.name, device.fleet_id, device.workspace_id]],
+               headers=["ID", "Name", "FleetID", "WorkspaceID"])
 
 @device.command()
 @click.option('--fleet-id', default=None, help='Id of the new fleet')

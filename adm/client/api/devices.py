@@ -78,3 +78,21 @@ class DeviceApiMixin(object):
         u = self._url("/device/{0}/", device_id)
         res = self._result(self._put(u, data=payload))
         return res
+
+    def workspace_of_device(self, device_id):
+       """
+       Get the Workspace ID of the Device
+
+       Args:
+          device_id (str): The device id to get
+
+       Returns:
+          (dict): a dictionary of  workspace
+
+       Raises:
+          :py:class:`adm.errors.APIError`
+              If the server returns an error.
+       """
+       u = self._url("/device/{0}/workspace", device_id)
+       res = self._result(self._get(u))
+       return res["workspace"]
