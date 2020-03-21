@@ -1,5 +1,4 @@
 from .base import Model, Collection
-from .workspacetest import WorkspaceCollection
 
 class DeviceModel(Model):
 

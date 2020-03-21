@@ -82,21 +82,6 @@ class ADMClient(object):
             logger.error("Error in getting the workspace {}".format(r.text))
             raise NotFoundError(r.text)
 
-    def fleet_all(self):
-        try:
-            res = zget(self.fleet_url)
-            if res.status_code == 200:
-                data = res.json()
-                fleets = [Fleet.from_json(w) for w in data["fleets"]]
-                return fleets
-            else:
-                print("Error in getting all fleets {}".format(res.text))
-                raise NotFoundError(res.text)
-        except TimeoutException as e:
-            print("No answer yet")
-        except Exception as e:
-            print("Can't get fleets: err s{}".format(e))
-
     def fleet_get(self, id):
         path = "{}{}".format(self.fleet_url, id)
         logger.debug("Getting the fleet {}".format(path))

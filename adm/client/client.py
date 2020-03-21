@@ -1,6 +1,7 @@
 from .models.workspacetest import WorkspaceCollection
 from .models.datatag import DataTagCollection
 from .models.device import DeviceCollection
+from .models.fleet import FleetCollection
 from .api.client import APIClient
 
 class ZdmClient(object):
@@ -22,6 +23,12 @@ class ZdmClient(object):
         """
         return DeviceCollection(client=self)
 
+    @property
+    def fleets(self):
+        """
+        An object for managing fleets on the server.
+        """
+        return FleetCollection(client=self)
 
     @property
     def data(self):
