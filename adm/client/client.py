@@ -1,13 +1,17 @@
 from .api.client import APIClient
+from .logging import MyLogger
 from .models.datatag import DataTagCollection
 from .models.device import DeviceCollection
 from .models.devicekey import DeviceKeyCollection
 from .models.firmware import FirmwareCollection
 from .models.fleet import FleetCollection
 from .models.fota import FotaCollection
+from .models.gate import GateCollection
 from .models.job import JobCollection
 from .models.workspacetest import WorkspaceCollection
-from .models.gate import GateCollection
+
+logger = MyLogger().get_logger()
+
 
 class ZdmClient(object):
     """

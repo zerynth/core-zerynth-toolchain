@@ -3,9 +3,9 @@ import adm
 from functools import wraps
 from base.base import error
 
-from adm.client.admclient import ADMClient
+from ..client.client import ZdmClient
 
-pass_adm = click.make_pass_decorator(ADMClient, ensure=True)
+pass_adm = click.make_pass_decorator(ZdmClient, ensure=True)
 
 
 
