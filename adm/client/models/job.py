@@ -3,6 +3,11 @@ from .changeset import ChangeSetModel
 
 
 class JobModel(ChangeSetModel):
+
+    @property
+    def status(self):
+        return self.value.get("status") if "status" in self.value else "<not set>"
+
     @property
     def name(self):
         # delete the "@" at the begining of the key
@@ -46,8 +51,44 @@ class JobCollection(Collection):
         id = self.client.api.create_changeset(key, value, targets)
         return id
 
-    def status(self, name, device_id):
+    def status_current(self, name, device_id):
+        """
+        Returns the current status of the job. The status of the job from the device to the zdm.
+
+        Args:
+            name (str): Name of the job.
+            device_id (str): The Device id.
+
+        Returns:
+            A :py:class:`JobModel` object.
+
+        Raises:
+            :py:class:`adm.errors.APIError`
+                If the server returns an error.
+        """
         status = self.client.api.get_current_device_status(device_id)
+        mstatus = [self.prepare_model(s) for s in status]
+        for s in mstatus:
+            if s.name == name:
+                return s
+        return None
+
+    def status_expected(self, name, device_id):
+        """
+       Returns the expected status of the job. The status of the job requested by the zdm to the device.
+
+       Args:
+           name (str): Name of the job.
+           device_id (str): The Device id.
+
+       Returns:
+           A :py:class:`JobModel` object.
+
+       Raises:
+           :py:class:`adm.errors.APIError`
+               If the server returns an error.
+       """
+        status = self.client.api.get_expected_device_status(device_id)
         mstatus = [self.prepare_model(s) for s in status]
         for s in mstatus:
             if s.name == name:

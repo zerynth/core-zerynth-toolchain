@@ -39,23 +39,6 @@ class ADMClient(object):
     #   Change set
     ##############################
 
-    def _get_current_device_status(self, device_id):
-        # /status/currentstatus/{devid}
-        path = "{}currentstatus/{}".format(self.status_url, device_id)
-        logger.debug("Get the current status of {} device: {}".format(device_id, path))
-        r = zget(path)
-        if r.status_code == 200:
-            data = r.json()
-            datastatus = data['status'] if "status" in data and data["status"] and not None else {}
-            status = []
-            for key, value in datastatus.items():
-                s = Status(key, value['v'], value['t'])
-                status.append(s)
-            return status
-        else:
-            logger.error("Error in creating the changeset {}, {}".format(r.status_code, r.text))
-            raise NotFoundError(r.text)
-
     def _get_expected_device_status(self, device_id):
         path = "{}expected/{}".format(self.status_url, device_id)
         logger.debug("Get the expected status of {} device: {}".format(device_id, path))
@@ -145,8 +128,6 @@ class ADMClient(object):
             d = {"device": dev, "status": status_msg}
             map_fota.append(d)
         return map_fota
-
-
 
 
     ##############################

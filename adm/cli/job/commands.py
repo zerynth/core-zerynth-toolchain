@@ -1,7 +1,8 @@
 import click
-
 from base.base import info, pass_zcli, log_table
+
 from ..helper import handle_error
+
 
 @click.group()
 def job():
@@ -29,6 +30,7 @@ def schedule(zcli, name, arg, devices):
     print(res)
     info("Job [{}] scheduled correctly.".format(name))
 
+
 def check_int(s):
     if s[0] in ('-', '+'):
         return s[1:].isdigit()
@@ -40,11 +42,34 @@ def check_int(s):
 @click.argument('device-id', nargs=1, type=click.STRING)
 @pass_zcli
 @handle_error
-def status(zcli, name, device_id):
-    """Check the job status sent to a device."""
+def check(zcli, name, device_id):
+    """Check the job status for a single device."""
 
-    status = zcli.adm.jobs.status(name, device_id)
-    if status:
-         log_table([[status.name, status.value, status.version]],headers=["Name", "Value", "Timestamp"])
+    status_exp = zcli.adm.jobs.status_expected(name, device_id)
+    status_cur = zcli.adm.jobs.status_current(name, device_id)
+
+    schedule_at = status_exp.version if status_exp else "<none>"
+
+    if status_exp is None and status_cur is not None:
+        # the job has been scheduled (exp is None)  and the device has sent the response (status_cur not None)
+        status = "done"
+    elif status_exp is None and status_cur is None:
+        # the job has not been scheduled nor a response has been received
+        status = "<none>"
+    elif status_exp is not None and status_cur is not None:
+        # job has been scheduled and the device has sent a response
+        status = "done"
+    elif status_exp is not None and status_cur is None:
+        # the job has been scheduled bu the device has not sent a response
+        status = "pending"
     else:
-        info("No job [{}] for device [{}].".format(name, device_id))
+        status = "<unknown>"
+
+    if status_cur is not None:
+        status = status_cur.status
+
+    result = status_cur.value if status_cur is not None else "<no result>"
+    result_at = status_cur.version if status_cur is not None else "<no result>"
+
+    log_table([[name, status, schedule_at, result, result_at, ]],
+              headers=["Name", "Status", "ScheduleAt", "Result", "ResultAt"])
