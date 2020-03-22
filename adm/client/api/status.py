@@ -13,7 +13,7 @@ class StatusApiMixin(object):
             id (str). The id of the created changeset
 
         Raises:
-            :py:class:`docker.errors.APIError`
+            :py:class:`zdm.errors.APIError`
                 If the server returns an error.
         """
         payload = {"key": key,
@@ -34,7 +34,7 @@ class StatusApiMixin(object):
             (list of dicts): a list of changesets
 
         Raises:
-            :py:class:`docker.errors.APIError`
+            :py:class:`zdm.errors.APIError`
                 If the server returns an error.
 
         Example:
@@ -74,7 +74,7 @@ class StatusApiMixin(object):
             (list of dicts): a list of changesets
 
         Raises:
-            :py:class:`docker.errors.APIError`
+            :py:class:`zdm.errors.APIError`
                 If the server returns an error.
 
         Example:

@@ -8,7 +8,7 @@ class DataApiMixin(object):
             workspace_id (str): The  workspace id
 
         Raises:
-            :py:class:`docker.errors.APIError`
+            :py:class:`zdm.errors.APIError`
                 If the server returns an error.
         """
 

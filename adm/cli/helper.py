@@ -20,4 +20,6 @@ def handle_error(f):
             error("{}. {}.".format(err.title, err.msg))
         except adm.client.errors.APIError as err:
             error("Internal Server error. Details: {}.".format(err.msg))
+        except adm.client.errors.ZdmException as err:
+            error("ZDM general error. Details: {}.".format(err.message))
     return wrapper

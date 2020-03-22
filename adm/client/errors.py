@@ -27,7 +27,7 @@ def create_api_error_from_http_exception(e):
         err_title= None
     cls = APIError
     if response.status_code == 403:
-        cls = ForbiddenException
+        cls = ForbiddenError
     if response.status_code == 404:
         # if explanation and ('No such image' in str(explanation) or
         #                     'not found: does not exist or no pull access'
@@ -106,7 +106,7 @@ class APIError(requests.exceptions.HTTPError, ZdmException):
         return 500 <= self.status_code < 600
 
 
-class ForbiddenException(APIError):
+class ForbiddenError(APIError):
     pass
 
 
