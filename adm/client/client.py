@@ -7,7 +7,7 @@ from .models.fleet import FleetCollection
 from .models.fota import FotaCollection
 from .models.job import JobCollection
 from .models.workspacetest import WorkspaceCollection
-
+from .models.gate import GateCollection
 
 class ZdmClient(object):
     """
@@ -86,3 +86,10 @@ class ZdmClient(object):
         An object for managing the firmwares.
         """
         return FirmwareCollection(client=self)
+
+    @property
+    def gates(self):
+        """
+        An object for managing the gates.
+        """
+        return GateCollection(client=self)

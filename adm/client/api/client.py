@@ -2,18 +2,20 @@ from functools import partial
 
 import requests
 import six
-from base.zrequests import zget, zpost, zput
+from base.zrequests import zget, zpost, zput, zdelete
 
 from .datatag import DataApiMixin
 from .devices import DeviceApiMixin
 from .fleets import FleetApiMixin
-from .workspace import WorkspaceApiMixin
+from .gates import GateApiMixin
 from .status import StatusApiMixin
+from .workspace import WorkspaceApiMixin
 from ..constants import DEFAULT_TIMEOUT_SECONDS, DEFAULT_USER_AGENT, DEFAULT_ZDM_API_VERSION
 from ..errors import create_api_error_from_http_exception
 
 
-class APIClient(requests.Session, WorkspaceApiMixin, DataApiMixin, DeviceApiMixin, FleetApiMixin, StatusApiMixin):
+class APIClient(requests.Session, WorkspaceApiMixin, DataApiMixin, DeviceApiMixin, FleetApiMixin, StatusApiMixin,
+                GateApiMixin):
     """
     A low-level client for the ZDM API
     """
@@ -44,6 +46,9 @@ class APIClient(requests.Session, WorkspaceApiMixin, DataApiMixin, DeviceApiMixi
 
     def _put(self, url, **kwargs):
         return zput(url, **self._set_request_timeout(kwargs))
+
+    def _delete(self, url, **kwargs):
+        return zdelete(url, **self._set_request_timeout(kwargs))
 
     def _set_request_timeout(self, kwargs):
         """Prepare the kwargs for an HTTP request by inserting the timeout

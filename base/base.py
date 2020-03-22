@@ -210,7 +210,7 @@ class ZCliContext(object):
         from adm.client import ADMClient
         from adm import ZdmClient
         from base.cfg import env
-        self.adm_client = ADMClient(status_url=env.adm.status, gates_url=env.adm.gates)
+        self.adm_client = ADMClient(gates_url=env.adm.gates)
         self.adm_test = ZdmClient(base_url=env.connector)
 
     @property
