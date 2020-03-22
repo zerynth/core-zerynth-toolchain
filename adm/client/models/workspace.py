@@ -1,43 +1,90 @@
-import json
-from .fleet import Fleet
+from .base import Model, Collection
 
-class Workspace:
-    """Workspace class represent a device"""
 
-    def __init__(self, id, name, fleets=[], account_id=None, description=""):
-        self.id = id
-        self.name = name
-        self.account_id = account_id
-        self.fleets = fleets
-        self.description = description
-
-    @staticmethod
-    def from_json(wks):
-        fleets = []
-        if wks['fleet'] is not None:
-            fleets = [Fleet(fleet["id"], fleet["name"], fleet["workspace_id"] if fleet["workspace_id"] is not "" else None, []) for fleet in wks['fleet']]
-        return Workspace(wks["id"], wks["name"], fleets, wks["account_id"] if wks["account_id"] is not "" else None, wks["description"])
-
-    def __str__(self):
-        return "Workspace: id: {}, name:{}, account:{}".format(self.id, self.name, self.account_id)
-
-    def toJSON(self):
-        return json.dumps(self, default=lambda o: o.__dict__,
-                          sort_keys=True, indent=4)
+class WorkspaceModel(Model):
+    """Workspace class represent a Workspace"""
 
     @property
-    def Description(self):
-        return self.description
+    def fleets(self):
+        if self.attrs.get("fleets"):
+            return [fleet["id"] for fleet in self.attrs.get("fleets")]
+        else:
+            return []
 
     @property
-    def Name(self):
-        return self.name
+    def devices(self):
+        devices = []
+        if self.attrs.get("fleets"):
+            for fleet in self.attrs.get("fleets"):
+                if fleet["devices"]:
+                    for d in fleet["devices"]:
+                        devices.append(d["id"])
+        return devices
 
-    @property
-    def Id(self):
-        return self.id
+    def tags(self):
+        """
+        Get all available tags of the data published in the workspace.
 
-    @property
-    def Fleets(self):
-        return self.fleets
+        Args:
+            workspace_id (str): workspace ID.
 
+        Returns:
+             (list of string): The response of the search.
+
+        Raises:
+            :py:class:`adm.errors.NotFound`
+                If the container does not exist.
+            :py:class:`adm.errors.APIError`
+                If the server returns an error.
+        """
+        return self.client.api.tags(self.id)
+
+
+
+class WorkspaceCollection(Collection):
+    model = WorkspaceModel
+
+    def list(self, all=False, before=None, filters=None, limit=-1):
+        """
+        List Workspaces
+        """
+        resp = self.client.api.containers(all=all, filters=filters, limit=limit)
+        return [self.prepare_model(r) for r in resp]
+
+    def get(self, workspace_id):
+        """
+        Get a workspace by ID.
+
+        Args:
+            workspace_id (str): Workspace ID.
+
+        Returns:
+            A :py:class:`Workspace` object.
+
+        Raises:
+            :py:class:`adm.errors.NotFound`
+                If the container does not exist.
+            :py:class:`adm.errors.APIError`
+                If the server returns an error.
+        """
+        resp = self.client.api.get_workspace(workspace_id)
+
+        return self.prepare_model(resp)
+
+    def create(self, name, description=""):
+        """
+        Create a workspace
+
+        Args:
+            name (str): name of the workspace.
+            description (str): short description of the wokspace
+
+        Returns:
+            A :py:class:`Workspace` object.
+
+        Raises:
+            :py:class:`adm.errors.APIError`
+                If the server returns an error.
+        """
+        resp = self.client.api.create_workspace(name, description)
+        return self.prepare_model(resp)

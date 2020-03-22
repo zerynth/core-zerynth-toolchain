@@ -8,7 +8,7 @@ from .models.fleet import FleetCollection
 from .models.fota import FotaCollection
 from .models.gate import GateCollection
 from .models.job import JobCollection
-from .models.workspacetest import WorkspaceCollection
+from .models.workspace import WorkspaceCollection
 
 logger = MyLogger().get_logger()
 
