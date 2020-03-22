@@ -27,7 +27,6 @@ def schedule(zcli, name, arg, devices):
             arg_value = int(a[1])
         args_dict[arg_name] = arg_value
     res = zcli.adm.jobs.schedule(name, args_dict, devices, on_time="")
-    print(res)
     info("Job [{}] scheduled correctly.".format(name))
 
 

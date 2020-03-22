@@ -77,3 +77,16 @@ def data(zcli, workspace_id, tag):
         log_table(table, headers=["Tag", "Payload", "Device", "Timestamp"])
     else:
         info("No data present for to tag [{}].".format(tag))
+
+
+@workspace.command()
+@click.argument('workspace-id')
+@pass_zcli
+@handle_error
+def firmwares(zcli, workspace_id):
+    """Get all the firmwares of a workspace"""
+    table = []
+    firmwares = zcli.adm.firmwares.list(workspace_id)
+    for d in firmwares:
+        table.append([d.id, d.version, d.metadata, d.workspace_id])
+    log_table(table, headers=["ID", "Version", "Metadata", "WorkspaceID"])

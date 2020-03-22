@@ -1,5 +1,6 @@
 from .base import Model, Collection
 
+
 class WorkspaceModel(Model):
     """Workspace class represent a Workspace"""
 
@@ -24,19 +25,21 @@ class WorkspaceModel(Model):
         """
         Get all available tags of the data published in the workspace.
 
-       Args:
-           workspace_id (str): workspace ID.
+        Args:
+            workspace_id (str): workspace ID.
 
-       Returns:
-            (list of string): The response of the search.
+        Returns:
+             (list of string): The response of the search.
 
-       Raises:
-           :py:class:`adm.errors.NotFound`
-               If the container does not exist.
-           :py:class:`adm.errors.APIError`
-               If the server returns an error.
-       """
+        Raises:
+            :py:class:`adm.errors.NotFound`
+                If the container does not exist.
+            :py:class:`adm.errors.APIError`
+                If the server returns an error.
+        """
         return self.client.api.tags(self.id)
+
+
 
 class WorkspaceCollection(Collection):
     model = WorkspaceModel
@@ -85,5 +88,3 @@ class WorkspaceCollection(Collection):
         """
         resp = self.client.api.create_workspace(name, description)
         return self.prepare_model(resp)
-
-
