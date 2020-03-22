@@ -3,6 +3,8 @@ from base.base import info, log_table, fatal, pass_zcli
 from base.fs import fs
 from base.tools import tools
 
+from ..helper import handle_error
+
 
 @click.group()
 def fota():
@@ -21,13 +23,13 @@ def fota():
 
 @fota.command()
 @click.argument('workspace-id')
-# @click.argument('file', type=click.Path(exists=True))
 @click.argument('files', nargs=-1, type=click.Path(True))
 @click.argument('version')
 @click.argument("vm-uid")
 @pass_zcli
+@handle_error
 def prepare(zcli, workspace_id, files, version, vm_uid):
-    """Prepare the FOTA uploading the firmware"""
+    """Upload the firmwares for the FOTA."""
     # file bin di prova = /home/davide/test-esp32/main.vbo
     filevm = tools.get_vm_by_uid(vm_uid)
     if not filevm or not fs.exists(filevm):
@@ -39,22 +41,11 @@ def prepare(zcli, workspace_id, files, version, vm_uid):
     if 'version' not in j:
         fatal("Can't find the version of vm", vm_uid)
     vm_version = j['version']
+
     metadata = {"vm_version": vm_version, "vm_feature": vm_hash_featues}
-    # TODO: add a list of binaries in base64 instead of one binary.
-    res = zcli.adm.firmware_upload(workspace_id, files, version, metadata)
-    info("Uploaded firmware " + res.Id)
 
-
-@fota.command()
-@click.argument('workspace-id')
-@pass_zcli
-def all(zcli, workspace_id):
-    """Get all the firmware of a workspace"""
-    table = []
-    firmwares = zcli.adm.firmware_all(workspace_id)
-    for d in firmwares:
-        table.append([d.Id, d.Version, d.WorkspaceID if d.WorkspaceID else "<none>"])
-    log_table(table, headers=["ID", "Version", "WorkspaceID"])
+    res = zcli.adm.firmwares.upload(workspace_id, version, files, metadata)
+    log_table([[res.id, res.version, res.metadata]], headers=["ID", "Version", "Metadata"])
 
 
 @fota.command()
@@ -62,19 +53,45 @@ def all(zcli, workspace_id):
 @click.argument('devices', nargs=-1)
 # @click.command("on-time")
 @pass_zcli
+@handle_error
 def schedule(zcli, firmware_version, devices):
     """Start a fota"""
-    devs = [d for d in devices]
-    res = zcli.adm.fota_schedule(firmware_version, devs)
-    info("Sent fota to devices ", devs)
+    zcli.adm.fota.schedule(firmware_version, devices)
+    info("Sent Fota to devices {}. Firmware Version [{}] ".format(devices, firmware_version))
 
 
 @fota.command()
-@click.argument('devices', nargs=-1)
+@click.argument('device-id')
 @pass_zcli
-def check(zcli, devices):
-    """Check the status of a fota on multiple devices"""
-    table = []
-    for dmsg in zcli.adm.fota_check(devices):
-        table.append([dmsg["device"], dmsg['status']])
-    log_table(table, headers=["Device", "Status"])
+@handle_error
+def check(zcli, device_id):
+    """Check the status of a fota on a single device."""
+
+    fota_exp = zcli.adm.fota.status_expected(device_id)
+    fota_cur = zcli.adm.fota.status_current(device_id)
+
+    schedule_at = fota_exp.version if fota_exp else "<none>"
+
+    if fota_exp is None and fota_cur is not None:
+        # the job has been scheduled (exp is None)  and the device has sent the response (fota_cur not None)
+        status = "done"
+    elif fota_exp is None and fota_cur is None:
+        # the job has not been scheduled nor a response has been received
+        status = "<none>"
+    elif fota_exp is not None and fota_cur is not None:
+        # job has been scheduled and the device has sent a response
+        status = "done"
+    elif fota_exp is not None and fota_cur is None:
+        # the job has been scheduled bu the device has not sent a response
+        status = "pending"
+    else:
+        status = "<unknown>"
+
+    if fota_cur is not None:
+        status = fota_cur.status
+
+    result = fota_cur.value if fota_cur is not None else "<no result>"
+    result_at = fota_cur.version if fota_cur is not None else "<no result>"
+
+    log_table([[ status, schedule_at, result, result_at, ]],
+              headers=[ "Status", "ScheduleAt", "Result", "ResultAt"])

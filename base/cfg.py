@@ -312,8 +312,6 @@ def init_cfg(cli_type="ztc"):
 
     testmode = int(os.environ.get("ZERYNTH_TESTMODE", 0))
 
-
-
     # main directories TODO: change zdir to official zdir
     if testmode == 2:
         # special testing mode
@@ -356,7 +354,8 @@ def init_cfg(cli_type="ztc"):
         # CI
         env.git_url = os.environ.get("ZERYNTH_GIT_URL", "https://test.zerynth.com/git")
         env.backend = os.environ.get("ZERYNTH_BACKEND_URL", "https://test.zerynth.com/v1")
-        env.connector = os.environ.get("ZERYNTH_ADM_URL", "https://api.adm.zerinth.com/v1")
+        # env.connector = os.environ.get("ZERYNTH_ADM_URL", "https://api.adm.zerinth.com/v1")
+        env.connector = os.environ.get("ZERYNTH_ADM_URL", "https://api.adm.zerinth.com")
         env.patchurl = os.environ.get("ZERYNTH_PATCH_URL", "https://test.zerynth.com/installer")
         env.packurl = os.environ.get("ZERYNTH_PACK_URL", "https://test.zerynth.com")
         github_app = "882c71c6f98cd0354d97"
@@ -364,7 +363,8 @@ def init_cfg(cli_type="ztc"):
         # remote
         env.git_url = "https://backend.zerynth.com/git"
         env.backend = "https://backend.zerynth.com/v1"
-        env.connector = os.environ.get("ZERYNTH_ADM_URL", "https://api.zdm.stage.zerynth.com/v1")
+        # env.connector = os.environ.get("ZERYNTH_ADM_URL", "https://api.zdm.stage.zerynth.com/v1")
+        env.connector = os.environ.get("ZERYNTH_ADM_URL", "https://api.zdm.stage.zerynth.com")
         env.patchurl = os.environ.get("ZERYNTH_PATCH_URL", "https://backend.zerynth.com/installer")
         env.packurl = os.environ.get("ZERYNTH_PACK_URL", "https://backend.zerynth.com")
         github_app = "99fdc1e39d8ce3051ce6"
@@ -409,9 +409,9 @@ def init_cfg(cli_type="ztc"):
 
     sso_params = ""
     # the cli_type is set if the cfg are loaded by the ztc or zdm
-    #
+
     if cli_type == "zdm":
-        sso_params = "?redirect=" + env.connector + "/login/ztc/"
+        sso_params = "?redirect=" + env.connector + "/v1/login/ztc/"
 
     # backend & apiNr
     env.api = Var({

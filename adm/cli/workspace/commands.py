@@ -1,6 +1,8 @@
 import click
-from base.base import log_table, log_json, error, pass_zcli, info
+from base.base import log_table, log_json, pass_zcli, info
 from base.cfg import env
+
+from ..helper import handle_error
 
 
 @click.group()
@@ -11,15 +13,15 @@ def workspace():
 
 @workspace.command()
 @pass_zcli
+@handle_error
 def all(zcli):
-    """List the  workspace"""
-    wks = zcli.adm.workspace_all()
+    """List all the workspace"""
+    wks = zcli.adm.workspaces.list()
     if env.human:
         table = []
         for ws in wks:
-            devices = zcli.adm.workspace_get_devices(ws.Id)
-            table.append([ws.Id, ws.Name, ws.Description, [fleet.Id for fleet in ws.Fleets], [device.Id for device in devices]])
-        log_table(table, headers=["ID", "Name", "Description", "Fleets", "Devices"])
+            table.append([ws.id, ws.name, ws.description, ws.fleets, ws.devices])
+        log_table(table, headers=["ID", "Name", "Description" "Fleets", "Devices"])
     else:
         for ws in wks:
             log_json(ws.toJSON())
@@ -28,54 +30,63 @@ def all(zcli):
 @workspace.command()
 @click.argument('id')
 @pass_zcli
+@handle_error
 def get(zcli, id):
     """Get a workspace"""
-    try:
-        workspace = zcli.adm.workspace_get(id)
-        devices = zcli.adm.workspace_get_devices(workspace.Id)
-        log_table([[workspace.Id, workspace.Name, workspace.Description, [fleet.Id for fleet in workspace.Fleets], [device.Id for device in devices]]], headers=["ID", "Name", "Description", "Fleets", "Devices"])
-    except Exception as e:
-        error(e)
+    ws = zcli.adm.workspaces.get(id)
+    data = [ws.id, ws.name, ws.description, ws.fleets, ws.devices]
+    log_table([data], headers=["ID", "Name", "Description", "Fleets", "Devices"])
 
 
 @workspace.command()
 @click.argument('name')
 @click.option('--description', default="", type=click.STRING, help="Small description af the workspace.")
 @pass_zcli
+@handle_error
 def create(zcli, name, description):
     """Create a workspace"""
-    wks = zcli.adm.workspace_create(name, description)
-    log_table([[wks.Id, wks.Name, wks.Description]], headers=["ID", "Name", "Description"])
-
+    wks = zcli.adm.workspaces.create(name, description)
+    log_table([[wks.id, wks.name, wks.description]], headers=["ID", "Name", "Description"])
 
 
 @workspace.command()
 @click.argument('workspace-id')
 @pass_zcli
+@handle_error
 def tags(zcli, workspace_id):
     """Get all the tags of a workspace"""
-    tags = zcli.adm.workspace_tags_all(workspace_id)
+    tags = zcli.adm.data.list(workspace_id)
     if len(tags) > 0:
-        table = []
-        for tag in tags:
-            table.append([tag])
-        log_table(table, headers=["Name"])
+        log_table([[tags]], headers=["Tags"])
     else:
-        info("No tags associated with the workspace ", workspace_id)
+        info("Empty tags for workspace {}.".foramt(workspace_id))
 
 
 @workspace.command()
 @click.argument('workspace-id')
 @click.argument('tag')
 @pass_zcli
+@handle_error
 def data(zcli, workspace_id, tag):
     """Get all the data of a workspace associated to a tag"""
-    tags = zcli.adm.workspace_data_get(workspace_id, tag)
+    tags = zcli.adm.data.get(workspace_id, tag)
     if len(tags) > 0:
         table = []
         for tag in tags:
             table.append([tag.Tag, tag.Payload, tag.DeviceId, tag.Timestamp])
         log_table(table, headers=["Tag", "Payload", "Device", "Timestamp"])
     else:
-        info("No data for ", tag, " in workspace ", workspace_id)
+        info("No data present for to tag [{}].".format(tag))
 
+
+@workspace.command()
+@click.argument('workspace-id')
+@pass_zcli
+@handle_error
+def firmwares(zcli, workspace_id):
+    """Get all the firmwares of a workspace"""
+    table = []
+    firmwares = zcli.adm.firmwares.list(workspace_id)
+    for d in firmwares:
+        table.append([d.id, d.version, d.metadata, d.workspace_id])
+    log_table(table, headers=["ID", "Version", "Metadata", "WorkspaceID"])

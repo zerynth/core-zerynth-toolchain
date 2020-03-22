@@ -1,7 +1,7 @@
 import click
-
 from base.base import info, pass_zcli, log_table
-from adm.client.helper import convert_into_job, from_job_name
+
+from ..helper import handle_error
 
 
 @click.group()
@@ -12,13 +12,13 @@ def job():
 
 @job.command()
 @click.argument('name')
-@click.option('--arg', type=(str, str), multiple=True)
 @click.argument('devices', nargs=-1, type=click.STRING)
+@click.option('--arg', type=(str, str), multiple=True)
 @pass_zcli
+@handle_error
 def schedule(zcli, name, arg, devices):
-    """Send a Job """
-    # add a "@" to the name of the job
-    # args is a nttyple of typle (('er', 's'), ('caio', '23'))
+    """Schedule a Job"""
+    # args is a tuple of typle (('temp', 'yes'), ('on', True))
     args_dict = {}
     for a in arg:
         arg_name = a[0]
@@ -26,7 +26,9 @@ def schedule(zcli, name, arg, devices):
         if check_int(a[1]):
             arg_value = int(a[1])
         args_dict[arg_name] = arg_value
-    res = zcli.adm.job_schedule(name, args_dict, devices, on_time="")
+    res = zcli.adm.jobs.schedule(name, args_dict, devices, on_time="")
+    info("Job [{}] scheduled correctly.".format(name))
+
 
 def check_int(s):
     if s[0] in ('-', '+'):
@@ -36,14 +38,37 @@ def check_int(s):
 
 @job.command()
 @click.argument('name')
-@click.argument('device', nargs=1, type=click.STRING)
+@click.argument('device-id', nargs=1, type=click.STRING)
 @pass_zcli
-def status(zcli, name, device):
-    """Check the jo result of a device"""
-    status = zcli.adm._get_current_device_status(device)
-    result = list(filter(lambda x: x.Name == convert_into_job(name), status))
-    table = []
-    if len(result) > 0:
-        res = result[0]
-        table.append([from_job_name(res.Name), res.Value, res.Timestamp])
-    log_table(table, headers=["Name", "Result", "Time"])
+@handle_error
+def check(zcli, name, device_id):
+    """Check the job status for a single device."""
+
+    status_exp = zcli.adm.jobs.status_expected(name, device_id)
+    status_cur = zcli.adm.jobs.status_current(name, device_id)
+
+    schedule_at = status_exp.version if status_exp else "<none>"
+
+    if status_exp is None and status_cur is not None:
+        # the job has been scheduled (exp is None)  and the device has sent the response (status_cur not None)
+        status = "done"
+    elif status_exp is None and status_cur is None:
+        # the job has not been scheduled nor a response has been received
+        status = "<none>"
+    elif status_exp is not None and status_cur is not None:
+        # job has been scheduled and the device has sent a response
+        status = "done"
+    elif status_exp is not None and status_cur is None:
+        # the job has been scheduled bu the device has not sent a response
+        status = "pending"
+    else:
+        status = "<unknown>"
+
+    if status_cur is not None:
+        status = status_cur.status
+
+    result = status_cur.value if status_cur is not None else "<no result>"
+    result_at = status_cur.version if status_cur is not None else "<no result>"
+
+    log_table([[name, status, schedule_at, result, result_at, ]],
+              headers=["Name", "Status", "ScheduleAt", "Result", "ResultAt"])

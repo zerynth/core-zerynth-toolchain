@@ -3,7 +3,9 @@ class Model(object):
     """
     A base class for representing a single object on the server.
     """
-    id_attribute = 'Id'
+    id_attribute = 'id'
+    name_attribute = 'name'
+    description_attribute = 'description'
 
     def __init__(self, attrs=None, client=None, collection=None):
         #: A client pointing at the server that this object is on.
@@ -18,7 +20,7 @@ class Model(object):
             self.attrs = {}
 
     def __repr__(self):
-        return "<%s: %s>" % (self.__class__.__name__, self.short_id)
+        return "<%s: %s>" % (self.__class__.__name__, self.id)
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.id == other.id
@@ -32,6 +34,20 @@ class Model(object):
         The ID of the object.
         """
         return self.attrs.get(self.id_attribute)
+
+    @property
+    def name(self):
+        """
+        The Name of the object.
+        """
+        return self.attrs.get(self.name_attribute)
+
+    @property
+    def description(self):
+        """
+        The Description of the object.
+        """
+        return self.attrs.get(self.description_attribute)
 
     # @property
     # def short_id(self):
@@ -65,7 +81,7 @@ class Collection(object):
     def __call__(self, *args, **kwargs):
         raise TypeError(
             "'{}' object is not callable. You might be trying to use the old "
-            "(pre-2.0) API - use docker.APIClient if so."
+            "(pre-2.0) API - use zdm.APIClient if so."
                 .format(self.__class__.__name__))
 
     def list(self):
