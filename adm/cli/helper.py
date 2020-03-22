@@ -14,7 +14,7 @@ def handle_error(f):
     def wrapper(*args, **kwargs):
         try:
              return f(*args, **kwargs)
-        except adm.client.errors.ForbiddenException as e:
+        except adm.client.errors.ForbiddenError as e:
             error("Access Denied. Run the command [zdm login]")
         except adm.client.errors.NotFoundError as err:
             error("{}. {}.".format(err.title, err.msg))
