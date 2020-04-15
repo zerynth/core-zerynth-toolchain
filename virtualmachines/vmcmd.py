@@ -61,11 +61,11 @@ def vm():
 @click.argument("alias")
 @click.argument("version")
 @click.argument("rtos")
-@click.argument("patch")
+@click.argument("patch", default="base")
 @click.option("--feat", multiple=True, type=str,help="add extra features to the requested virtual machine (multi-value option)")
 @click.option("--name", default="",help="Virtual machine name")
 @click.option("--custom_target", default="",help="Original target for custom vms")
-def create(alias,version,rtos,feat,name,patch,custom_target):
+def create(alias,version,rtos,feat,patch,name,custom_target):
     """ 
 
 .. _ztc-cmd-vm-create:
@@ -336,7 +336,7 @@ For the device target, a list of possible virtual machine configurations is retu
                     vmt = vmm["vms"]["base"]
                     for vm in vmt:
                         table.append([vm["title"],vm["description"],vm["rtos"],vm["features"],"Premium" if vm["pro"] else "Starter",vv])
-                    log_table(table,headers=["Title","Description","Rtos","Features","Type","Version"])
+                log_table(table,headers=["Title","Description","Rtos","Features","Type","Version"])
             else:
                 log_json(rj["data"])
         else:
