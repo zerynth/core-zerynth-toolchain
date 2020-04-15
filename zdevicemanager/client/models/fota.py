@@ -1,8 +1,8 @@
-from .changeset import ChangeSetModel, ChangeSetCollection
+from .status import StatusModel, StatusCollection
 from ..constants import JOB_FOTA_NAME
 
 
-class FotaModel(ChangeSetModel):
+class FotaModel(StatusModel):
 
     @property
     def status(self):
@@ -13,7 +13,7 @@ class FotaModel(ChangeSetModel):
         return self.key
 
 
-class FotaCollection(ChangeSetCollection):
+class FotaCollection(StatusCollection):
     model = FotaModel
 
     def schedule(self, fw_version, devices, on_time=""):

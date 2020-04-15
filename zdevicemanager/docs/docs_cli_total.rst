@@ -37,14 +37,6 @@ Once a correct login/registration is performed, the browser will display an auth
 
 .. warning:: multiple logins with different methods (manual or social) are allowed provided that the email linked to the social OAuth service is the same as the one used in the manual login.
 
-
-Non interactive mode is started by typing: ::
-
-    zdm login --token authentication_token
-
-The :samp:`authentication_token` can be obtained by manually opening the login/registration `page <https://backend.zerynth.com/v1/sso>`_
-
-
 .. warning:: For manual registrations, email address confirmation is needed. An email will be sent at the provided address with instructions.
 
     
@@ -61,8 +53,6 @@ Delete current session with the following command ::
 .. note:: it will be necessary to login again.
 
     
-
-
 .. _zdm-cmd-device:
 
 
@@ -179,9 +169,9 @@ Generate a device's password (jwt)
 To be able to connect your device to the ZDM you must create a key at first and then generate a password (as jwt token) from the created key.
 You can generate different keys with different names for your devices with the command: ::
 
-    zdm device key create uid name
+    zdm device key generate uid kid
 
-Where :samp:`uid` is the device uid and :samp:`name` is the name you want to give to the key
+Where :samp:`uid` is the device uid and :samp:`kid` is the id of the key created.
 This command returns the generated key information as the key id, the name, the creation date and if the key has been revoked or not.
 
     
@@ -198,7 +188,7 @@ Where :samp:`uid` is the device uid.
 
 This command returns for each key the id, the name, the creation date and if it's or not revoked.
 
-
+    
 .. _zdm-cmd-fleet:
 
 
@@ -270,34 +260,13 @@ List of FOTA commands:
     
 .. _zdm-cmd-fota-prepare:
 
-Upload a Firmware
+Prepare the FOTA
 -----------------
 
-The first step to start a FOTA is to upload a new firmware to the ZDM.
-At first, you have to compile your file: ::
+The command compiles and uploads the firmware for a device into ZDM.
+The version is a string identifying the version of the firmware (e.g., "1.0"). ::
 
-    ztc compile-o fw.c [Firmware project path] target
-
-where target is the target device, for example "esp32_devkitc"
-
-Then link the firmware for the bytecode slot 0 ::
-
-    ztc link --bc 0 --file fw0.bin  [VMUID]  fw.c.vbo
-
-and bytecode slot 1 ::
-
-    ztc link --bc 1 --file fw1.bin  [VMUID]  fw.c.vbo
-
-Now, use the zdm prepare command to upload your firmware in ZDM.
-Each firmware belongs to a workspace, and it’s identified by the couple <workspaceId, version>. ::
-
-    zdm fota prepare [WorkspaceId] [Files] [Version] [VMUID]
-
-You can get your Virtual Machine UID using the command: ::
-
-    ztc vm list
-
-    
+    zdm fota prepare [Firmware project path] [DeviceId] [Version]
 .. _zdm-cmd-fota-schedule:
 
 Start a FOTA
@@ -355,18 +324,21 @@ Webhook creation
 
 To create a new webhook use the command: ::
 
-    zdm webhook start name url token period workspace_id tag
+    zdm webhook start name url token period workspace_id
 
 where :samp:`name` is the name that you want to give to your new webhook
 :samp:`url` is the your webhook
 :samp:`token` is the authentication token for your webhook (if needed)
 
 :samp:`workspace_id` is the uid of the workspace you want to receive data from
-:samp:`tag` is the tag of the data you want to receive
 
 You also have the possibility to add filters on data using the following options:
 
+:option:`--tag` To specify a tag to filter data (you can specify more than one)
+:option:`--fleet` To specify a fleet to filter data (you can specify more than one)
 :option:`--token` Token used as value of the Authorization Bearer fot the webhook endpoint.
+:option:`--origin` Webhook source (data or events) by default is data.
+
     
 .. _zdm-cmd-webhook-get-all:
 
@@ -476,6 +448,36 @@ If you want to check the status of a job you scheduled, type the command: ::
 where :samp:`job` is the job name and :samp:`uid` is the device uid you want to check, you will see if your device sent a response to the job.
 
     
+.. _zdm-cmd-events:
+
+Events
+======
+
+In the ZDM events are used in devices to notify the occurrence of certain conditions.
+
+
+List of device commands:
+
+* :ref:`Get events <zdm-cmd-events-get>`
+
+    
+.. _zdm-cmd-workspace-events-get:
+
+Get events
+----------
+
+To get all the events of a workspace use the command: ::
+
+    zdm events uid
+
+where :samp:`uid` is the uid of the workspace.
+
+You can also filter result adding the options:
+* :option:`--device-id`
+* :option:`--start`
+* :option:`--end`
+
+    
 .. _zdm-cmd-workspace:
 
 Workspaces
@@ -491,7 +493,7 @@ The main attributes of a workspace are:
 At your first log in, a 'default' workspace containing a 'default' fleet will be created.
 
 
-List of device commands:
+List of workspace commands:
 
 * :ref:`Create <zdm-cmd-workspace-create>`
 * :ref:`List workspaces <zdm-cmd-workspace-get-all>`
@@ -564,6 +566,11 @@ To get all the data of a workspace associated to a tag use the command: ::
 
 where :samp:`uid` is the uid of the workspace.
 
+You can also filter result adding the options:
+* :option:`--device-id`
+* :option:`--start`
+* :option:`--end`
+
     
 .. _zdm-cmd-workspace-firmware:
 
@@ -575,7 +582,5 @@ To have a list of the firmwares you uploaded to the ZDM associated to a workspac
     zdm workspace tags uid
 
 where :samp:`uid` is the uid of the workspace.
-
-    
 
     

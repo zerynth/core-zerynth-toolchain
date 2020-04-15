@@ -1,8 +1,8 @@
 .. _zdm-cmd-device:
 
-
+*******
 Devices
-=======
+*******
 
 In the ZDM a device is a peripheral that can execute Zerynth bytecode. In order to do so a device must be prepared and customized with certain attributes.
 The main attributes of a device are:
@@ -114,9 +114,9 @@ Generate a device's password (jwt)
 To be able to connect your device to the ZDM you must create a key at first and then generate a password (as jwt token) from the created key.
 You can generate different keys with different names for your devices with the command: ::
 
-    zdm device key create uid name
+    zdm device key generate uid kid
 
-Where :samp:`uid` is the device uid and :samp:`name` is the name you want to give to the key
+Where :samp:`uid` is the device uid and :samp:`kid` is the id of the key created.
 This command returns the generated key information as the key id, the name, the creation date and if the key has been revoked or not.
 
     

@@ -1,8 +1,8 @@
 from .base import Collection
-from .changeset import ChangeSetModel
+from .status import StatusModel
 
 
-class JobModel(ChangeSetModel):
+class JobModel(StatusModel):
 
     @property
     def status(self):

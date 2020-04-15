@@ -15,34 +15,13 @@ List of FOTA commands:
     
 .. _zdm-cmd-fota-prepare:
 
-Upload a Firmware
+Prepare the FOTA
 -----------------
 
-The first step to start a FOTA is to upload a new firmware to the ZDM.
-At first, you have to compile your file: ::
+The command compiles and uploads the firmware for a device into ZDM.
+The version is a string identifying the version of the firmware (e.g., "1.0"). ::
 
-    ztc compile-o fw.c [Firmware project path] target
-
-where target is the target device, for example "esp32_devkitc"
-
-Then link the firmware for the bytecode slot 0 ::
-
-    ztc link --bc 0 --file fw0.bin  [VMUID]  fw.c.vbo
-
-and bytecode slot 1 ::
-
-    ztc link --bc 1 --file fw1.bin  [VMUID]  fw.c.vbo
-
-Now, use the zdm prepare command to upload your firmware in ZDM.
-Each firmware belongs to a workspace, and it’s identified by the couple <workspaceId, version>. ::
-
-    zdm fota prepare [WorkspaceId] [Files] [Version] [VMUID]
-
-You can get your Virtual Machine UID using the command: ::
-
-    ztc vm list
-
-    
+    zdm fota prepare [Firmware project path] [DeviceId] [Version]
 .. _zdm-cmd-fota-schedule:
 
 Start a FOTA

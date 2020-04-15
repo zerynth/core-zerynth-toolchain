@@ -16,7 +16,7 @@ class DataApiMixin(object):
         res = self._result(self._get(url))
         return res["tags"] if "tags" in res and res["tags"] is not None else []
 
-    def get_data(self, workspace_id, tag, device_id=None, custom=None, start=None, end=None, page=None, per_page=None, sort=None):
+    def get_data(self, workspace_id, tag, device_id=None, start=None, end=None):
         """
         Get all data associated to a tag in a workspace.
 
@@ -31,13 +31,10 @@ class DataApiMixin(object):
         """
         # TODO: filter with start date and other filters
         params = {
-            "start": "2006-01-02 15:04"
-            # "devid"
-            # "custom"
-            # "end"
-            # "page"
-            # "per_page":
-            # "sort"
+            "start": start,
+            "end": end,
+            "devid": device_id,
+            "sort": "-timestamp_device"
         }
         url = self._url("/tsmanager/workspace/{0}/tag/{1}", workspace_id, tag)
         res = self._result(self._get(url, params=params))

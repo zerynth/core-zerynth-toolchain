@@ -1,4 +1,5 @@
 from .base import Model, Collection
+from .status import StatusCollection
 from ..errors import NotFoundError
 
 class DeviceModel(Model):

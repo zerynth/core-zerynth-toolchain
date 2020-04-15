@@ -1,3 +1,7 @@
+from ..constants import STATUS_KEY_PRIVATE, STATUS_KEY_STRONG_PRIVATE
+from ..errors import ZdmException
+
+
 class StatusApiMixin(object):
 
     def create_changeset(self, key, value, targets):
@@ -23,13 +27,13 @@ class StatusApiMixin(object):
         res = self._result(self._post(url, data=payload))
         return res["id"]
 
-    def get_current_device_status(self, device_id):
+    def get_current_device_status(self, device_id, filter_key_by_prefix=None):
         """
         Returns all the request of changeset sent by the device to the zdm.
 
         Args:
             device_id (str): The device id.
-
+            filter_key_by_prefix (str): Filter the key by the prefix. Default None.
         Returns:
             (list of dicts): a list of changesets
 
@@ -39,7 +43,7 @@ class StatusApiMixin(object):
 
         Example:
             >>> from zdevicemanager import ZdmClient
-            >>> c = ZdmClient(base_url="api.zdm.stage.zerynth.com")
+            >>> c = ZdmClient(base_url="api.zdm.zerynth.com")
             >>> dev = c.devices.create("mydev")
             >>> c.get_current_device_status(dev.id)
              [
@@ -58,9 +62,17 @@ class StatusApiMixin(object):
         u = self._url("/status/currentstatus/{0}", device_id)
         res = self._result(self._get(u))
         status = []
+        if filter_key_by_prefix is not None and filter_key_by_prefix not in [STATUS_KEY_PRIVATE,
+                                                                             STATUS_KEY_STRONG_PRIVATE]:
+            raise ZdmException("Bad filter. '{}' is not a valid filter.".format(filter_key_by_prefix))
         if "status" in res and res["status"] is not None:
             for key, value in res["status"].items():
-                status.append({"key": key, "value": value['v'], "version": value['t']})
+                if filter_key_by_prefix is None:
+                    status.append({"key": key, "value": value['v'], "version": value['t']})
+                elif filter_key_by_prefix is not None and key.startswith(filter_key_by_prefix):
+                    status.append({"key": key, "value": value['v'], "version": value['t']})
+                else:
+                    pass
         return status
 
     def get_expected_device_status(self, device_id):

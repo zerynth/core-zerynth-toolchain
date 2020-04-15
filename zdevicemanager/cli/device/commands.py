@@ -1,9 +1,9 @@
 """
 .. _zdm-cmd-device:
 
-
+*******
 Devices
-=======
+*******
 
 In the ZDM a device is a peripheral that can execute Zerynth bytecode. In order to do so a device must be prepared and customized with certain attributes.
 The main attributes of a device are:
@@ -33,7 +33,8 @@ The list of supported devices is available :ref:`here <doc-supported-boards>`
     """
 
 import click
-from zdevicemanager.base.base import log_table, pass_zcli, info
+from zdevicemanager.base.base import log_table, pass_zcli, info, log_json
+from zdevicemanager.base.cfg import env
 
 from ..helper import handle_error
 
@@ -70,7 +71,10 @@ If you want, you can choose to associate the device to another fleet with the op
 If you want to associate the device to another fleet, see the :ref:`update command <zdm-cmd-device-update>`
     """
     dev = zcli.zdm.devices.create(name, fleet_id)
-    log_table([[dev.id, dev.name, dev.fleet_id]], headers=["ID", "Name", "fleet_id"])
+    if env.human:
+        log_table([[dev.id, dev.name, dev.fleet_id]], headers=["ID", "Name", "fleet_id"])
+    else:
+        log_json(dev.toJson)
 
 
 @device.command(help="Get all devices")
@@ -91,9 +95,18 @@ to see all your devices use the command: ::
     """
 
     table = []
-    for d in zcli.zdm.devices.list():
-        table.append([d.id, d.name, d.fleet_id if d.fleet_id else "<none>", d.workspace_id])
-    log_table(table, headers=["ID", "Name", "FleeId", "WorkspaceID"])
+    devs = zcli.zdm.devices.list()
+    if env.human:
+        for d in devs:
+            table.append([d.id, d.name, d.fleet_id if d.fleet_id else "<none>", d.workspace_id])
+        log_table(table, headers=["ID", "Name", "FleeId", "WorkspaceID"])
+    else:
+        dd = []
+        for d in devs:
+            dev = d.toJson
+            dev.update({"workspace_id":d.workspace_id})
+            dd.append(dev)
+        log_json(dd)
 
 
 @device.command(help="Get a single device by its uid")
@@ -116,8 +129,13 @@ where :samp:`uid` is the device uid.
     """
 
     device = zcli.zdm.devices.get(id)
-    log_table([[device.id, device.name, device.fleet_id, device.workspace_id]],
-              headers=["ID", "Name", "FleetID", "WorkspaceID"])
+    if env.human:
+        log_table([[device.id, device.name, device.fleet_id, device.workspace_id]],
+                  headers=["ID", "Name", "FleetID", "WorkspaceID"])
+    else:
+        dev = device.toJson
+        dev.update({"workspace_id":device.workspace_id})
+        log_json(dev)
 
 
 @device.command(help="Update a device")
@@ -180,7 +198,10 @@ To connect your device to the ZDM, there is one last step to follow: :ref:`jwt g
     """
 
     key = zcli.zdm.keys.create(device_id, key_name)
-    log_table([[key.id, key.name, key.is_revoked, key.created_at]], headers=["ID", "Name", "Revoked", "CreatedAt"])
+    if env.human:
+        log_table([[key.id, key.name, key.is_revoked, key.created_at]], headers=["ID", "Name", "Revoked", "CreatedAt"])
+    else:
+        log_json(key.toJson)
 
 
 @key.command(help="Generate a password (jwt) from a key for your device")
@@ -199,16 +220,19 @@ Generate a device's password (jwt)
 To be able to connect your device to the ZDM you must create a key at first and then generate a password (as jwt token) from the created key.
 You can generate different keys with different names for your devices with the command: ::
 
-    zdm device key create uid name
+    zdm device key generate uid kid
 
-Where :samp:`uid` is the device uid and :samp:`name` is the name you want to give to the key
+Where :samp:`uid` is the device uid and :samp:`kid` is the id of the key created.
 This command returns the generated key information as the key id, the name, the creation date and if the key has been revoked or not.
 
     """
 
     key = zcli.zdm.keys.get(device_id, key_id)
     jwt = key.as_jwt(exp_delta_in_days=expiration_days)
-    log_table([[key.name, jwt, key.expire_at]], headers=["Key Name", "Password", "ExpireAt"])
+    if env.human:
+        log_table([[key.name, jwt, key.expire_at]], headers=["Key Name", "Password", "ExpireAt"])
+    else:
+        log_json(key.toJson)
 
 
 @key.command(help="List all the keys of a device")
@@ -232,10 +256,13 @@ This command returns for each key the id, the name, the creation date and if it'
 
     """
     keys = zcli.zdm.keys.list(device_id)
-    table = []
-    for key in keys:
-        table.append([key.id, key.name, key.is_revoked, key.created_at])  # key.as_jwt(), key.expire_at])
-    log_table(table, headers=["ID", "Name", "Revoked", "CreatedAt"])
+    if env.human:
+        table = []
+        for key in keys:
+            table.append([key.id, key.name, key.is_revoked, key.created_at])  # key.as_jwt(), key.expire_at])
+        log_table(table, headers=["ID", "Name", "Revoked", "CreatedAt"])
+    else:
+        log_json([k.toJson for k in keys])
 
 
 device.add_command(key)

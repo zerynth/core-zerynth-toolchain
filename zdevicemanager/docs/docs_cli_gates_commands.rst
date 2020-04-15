@@ -27,18 +27,21 @@ Webhook creation
 
 To create a new webhook use the command: ::
 
-    zdm webhook start name url token period workspace_id tag
+    zdm webhook start name url token period workspace_id
 
 where :samp:`name` is the name that you want to give to your new webhook
 :samp:`url` is the your webhook
 :samp:`token` is the authentication token for your webhook (if needed)
 
 :samp:`workspace_id` is the uid of the workspace you want to receive data from
-:samp:`tag` is the tag of the data you want to receive
 
 You also have the possibility to add filters on data using the following options:
 
+:option:`--tag` To specify a tag to filter data (you can specify more than one)
+:option:`--fleet` To specify a fleet to filter data (you can specify more than one)
 :option:`--token` Token used as value of the Authorization Bearer fot the webhook endpoint.
+:option:`--origin` Webhook source (data or events) by default is data.
+
     
 .. _zdm-cmd-webhook-get-all:
 

@@ -16,72 +16,98 @@ List of FOTA commands:
     """
 
 import click
-from zdevicemanager.base.base import info, log_table, fatal, pass_zcli
+import json
+from zdevicemanager.base import proc
+from zdevicemanager.base.base import info, error, log_table, pass_zcli, debug, fatal, log_json, warning
 from zdevicemanager.base.fs import fs
 from zdevicemanager.base.tools import tools
-
+from zdevicemanager.base.cfg import env
 from ..helper import handle_error
-
 
 @click.group(help="Manage the FOTA update")
 def fota():
     pass
 
 
-@fota.command(help="Upload a firmware to the ZDM")
-@click.argument('workspace-id')
-@click.argument('files', nargs=-1, type=click.Path(True))
+@fota.command(help="Prepare FOTA to the ZDM")
+@click.argument("project", type=click.Path())
+@click.argument("device-id")
 @click.argument('version')
-@click.argument("vm-uid")
 @pass_zcli
 @handle_error
-def prepare(zcli, workspace_id, files, version, vm_uid):
+def prepare(zcli, project, device_id, version):
     """
     .. _zdm-cmd-fota-prepare:
 
-    Upload a Firmware
+    Prepare the FOTA
     -----------------
 
-    The first step to start a FOTA is to upload a new firmware to the ZDM.
-    At first, you have to compile your file: ::
+    The command compiles and uploads the firmware for a device into ZDM.
+    The version is a string identifying the version of the firmware (e.g., "1.0"). ::
 
-        ztc compile-o fw.c [Firmware project path] target
+        zdm fota prepare [Firmware project path] [DeviceId] [Version]
 
-    where target is the target device, for example "esp32_devkitc"
+    """
+    # if device_id:
+    #    get 'vm_uid', 'vm_target' from status service of a device (__vm_info)
+    #    get the 'workspace_id' of the device
+    #    ztc compile(project_path, vm_target, vbo)
+    #    ztc link(project_path, target, vbo_file)
+    #    (ztc get metadata)
+    #    upload firmwares
+    # else:
+    #    zdm device all    # with the 'vm_uid', and 'vm_target' of ztc vm list. user must select one of them.
 
-    Then link the firmware for the bytecode slot 0 ::
+    status = zcli.zdm.status.get_device_vm_info(device_id)
+    if status is None:
+        fatal("Fota cannot be prepared. Please connect device '{}' to the ZDM at least one time.".format(device_id))
 
-        ztc link --bc 0 --file fw0.bin  [VMUID]  fw.c.vbo
+    vm_info = status.value
 
-    and bytecode slot 1 ::
+    if "vm_target" not in vm_info:
+        fatal("The target of the virutal machine is missing. Please reconnect the device '{}' to the ZDM.".format(device_id))
+    vm_target = vm_info['vm_target']
+    if "vm_uid" not in vm_info:
+        fatal("The ID of the virtual machine is missing. Please reconnect the device '{}' to the ZDM.".format(device_id))
+    vm_uid = vm_info['vm_uid']
+    if "vm_version" in vm_info:
+        vm_version = vm_info['vm_version']
 
-        ztc link --bc 1 --file fw1.bin  [VMUID]  fw.c.vbo
+    vm_hash_feature = ""
+    target_device = ""
 
-    Now, use the zdm prepare command to upload your firmware in ZDM.
-    Each firmware belongs to a workspace, and it’s identified by the couple <workspaceId, version>. ::
+    vms = _ztc_vm_list()
+    if vms['total'] > 0:
+        for vm in vms['list']:
+            if vm['uid'] == vm_uid:
+                if "ota" not in vm['features']:
+                    fatal("The vm '{}' of device '{}' doesn't support FOTA. Please use a VM with feature OTA enabled.".format(vm_uid, device_id))
+                else:
+                    vm_hash_feature = vm['hash_features']
+                    target_device  = vm['dev_type']
+    else:
+        fatal("No virtual machine found. Please create a virtual machine")
 
-        zdm fota prepare [WorkspaceId] [Files] [Version] [VMUID]
+    device = zcli.zdm.devices.get(device_id)
+    workspace_id = device.workspace_id
+    info("workspace id '{}'".format(workspace_id))
+    vbo_file = fs.path(env.tmp, 'test_temp_fw.vbo')
 
-    You can get your Virtual Machine UID using the command: ::
+    try:
+        _ztc_compile(project, vm_target, vbo_file)
+        fw_json = _ztc_link(vbo_file, vm_uid)
+        fw_bin = fw_json['bcbin']
+    except Exception as e:
+        fatal(e)
 
-        ztc vm list
-
-        """
-    filevm = tools.get_vm_by_uid(vm_uid)
-    if not filevm or not fs.exists(filevm):
-        fatal("Can't find vm", vm_uid)
-    j = fs.get_json(filevm)
-    if 'hash_features' not in j:
-        fatal("Can't find hash feature of vm", vm_uid)
-    vm_hash_featues = j['hash_features']
-    if 'version' not in j:
-        fatal("Can't find the version of vm", vm_uid)
-    vm_version = j['version']
-
-    metadata = {"vm_version": vm_version, "vm_feature": vm_hash_featues}
-
-    res = zcli.zdm.firmwares.upload(workspace_id, version, files, metadata)
-    log_table([[res.id, res.version, res.metadata]], headers=["ID", "Version", "Metadata"])
+    metadata = {"vm_version": vm_version, "vm_feature": vm_hash_feature, "dev_type": target_device}
+    res = zcli.zdm.firmwares.upload(workspace_id, version, [fw_bin, fw_bin], metadata)
+    if env.human:
+        log_table([[res.id, res.version, res.metadata]], headers=["ID", "Version", "Metadata"])
+    else:
+        raw = res.toJson
+        del raw['firmware']
+        log_json(raw)
 
 
 @fota.command(help="Start a fota")
@@ -155,5 +181,60 @@ def check(zcli, device_id):
     result = fota_cur.value if fota_cur is not None else "<no result>"
     result_at = fota_cur.version if fota_cur is not None else "<no result>"
 
-    log_table([[ status, schedule_at, result, result_at, ]],
-              headers=[ "Status", "ScheduleAt", "Result", "ResultAt"])
+    log_table([[status, schedule_at, result, result_at, ]],
+              headers=["Status", "ScheduleAt", "Result", "ResultAt"])
+
+
+def _ztc_vm_list():
+    debug('ZTC: vm list')
+    # ztc compile -o fw.c [Firmware project path] [target]
+    e, out_vmlist_raw, err = proc.runzcmd(
+        '-J',
+        'vm',
+        'list'
+    )
+    if e:
+        fatal(err)
+    else:
+        res = _split_raw_json(out_vmlist_raw)
+        return res
+
+def _ztc_compile(project_path, target, vbo_file):
+    debug('ZTC: compiling', project_path)
+    # ztc compile -o fw.c [Firmware project path] [target]
+    e, out_fw_raw, err = proc.runzcmd(
+        'compile',
+        '-o',
+        vbo_file,
+        project_path,
+        target,
+    )
+    if e:
+        fatal(err)
+
+
+def _ztc_link(vbo_file, vm_uid):
+    debug('Linking firmware ', vbo_file)
+    e, out_fw_raw, err = proc.runzcmd(
+        '-J',
+        'link',
+        vm_uid,
+        vbo_file
+    )
+
+    if e:
+        fatal(err)
+    else:
+        res = _split_raw_json(out_fw_raw)
+        return res
+
+def _split_raw_json(raw_output):
+    """Split the raw output of the ztc and parse only json"""
+    raw = raw_output.split("\n")
+    for r in raw:
+        try:
+            j = json.loads(r)
+            return j
+        except e:
+            pass
+            error(r)

@@ -21,7 +21,8 @@ List of fleet commands:
     """
 
 import click
-from zdevicemanager.base.base import  log_table, info, pass_zcli
+from zdevicemanager.base.base import log_table, info, pass_zcli, log_json
+from zdevicemanager.base.cfg import env
 from ..helper import handle_error
 
 
@@ -50,7 +51,10 @@ where :samp:`name` is the name you want to give to your new fleet and :samp:`wor
 
     """
     fleet = zcli.zdm.fleets.create(name, workspaceid)
-    log_table([[fleet.id, fleet.name, fleet.workspace_id]], headers=["ID", "Name", "WorkspaceID"])
+    if env.human:
+        log_table([[fleet.id, fleet.name, fleet.workspace_id]], headers=["ID", "Name", "WorkspaceID"])
+    else:
+        log_json(fleet.toJson)
 
 
 @fleet.command(help="Get all the fleets")
@@ -69,9 +73,13 @@ If you want to list all your fleets, you can use this command to have informatio
 
     """
     table = []
-    for f in zcli.zdm.fleets.list():
-        table.append([f.id, f.name, f.workspace_id if f.workspace_id else "<none>", f.devices])
-    log_table(table, headers=["ID", "Name", "WorkspaceId", "Devices"])
+    fleets = zcli.zdm.fleets.list()
+    if env.human:
+        for f in fleets:
+            table.append([f.id, f.name, f.workspace_id if f.workspace_id else "<none>", f.devices])
+        log_table(table, headers=["ID", "Name", "WorkspaceId", "Devices"])
+    else:
+        log_json([f.toJson for f in fleets])
 
 
 @fleet.command(help="Get a single fleet by its uid")

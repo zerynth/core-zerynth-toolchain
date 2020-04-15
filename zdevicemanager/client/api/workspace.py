@@ -63,14 +63,14 @@ class WorkspaceApiMixin(object):
         res = self._result(self._get(self._url("/workspace/{0}/firmware", workspace_id)))
         return res["firmwares"] if "firmwares" in res and res["firmwares"] is not None else []
 
-    def firmwares_upload(self, workspace_id, version, file_paths, metadata={}, description=""):
+    def firmwares_upload(self, workspace_id, version, fw_bins, metadata={}, description=""):
         """
         Upload a firmware with a version associated to a workspace.
 
         Args:
             workspace_id (str): The workspace id.
             version (str): the version of the firmware.
-            file_paths (list of str): path of the firmware to upload.
+            fw_bins (list of str): path of the binary firmwares in base64 to upload.
             metadata (dict): any other info as dict.
             description (str): short description of the fiirmware.
 
@@ -82,13 +82,13 @@ class WorkspaceApiMixin(object):
                 If the server returns an error.
         """
         u = self._url("/workspace/{0}/firmware/{1}", workspace_id, version)
-        binsbase64 = []
-        for filename in file_paths:
-            print("reading file", filename)
-            with open(filename, "rb") as image_file:
-                enc64 = base64.b64encode(image_file.read())
-                binsbase64.append(enc64.decode("utf8"))
-        payload = {"bin": binsbase64,
+        # binsbase64 = []
+        # for filename in file_paths:
+        #     #print("reading file", filename)
+        #     with open(filename, "rb") as image_file:
+        #         enc64 = base64.b64encode(image_file.read())
+        #         binsbase64.append(enc64.decode("utf8"))
+        payload = {"bin": fw_bins,  #binsbase64,
                    "metadata": metadata,
                    "description": ""}
         res = self._result(self._post(u, data=payload))

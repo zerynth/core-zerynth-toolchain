@@ -3,11 +3,13 @@ from .logging import MyLogger
 from .models.datatag import DataTagCollection
 from .models.device import DeviceCollection
 from .models.devicekey import DeviceKeyCollection
+from .models.event import EventCollection
 from .models.firmware import FirmwareCollection
 from .models.fleet import FleetCollection
 from .models.fota import FotaCollection
 from .models.gate import GateCollection
 from .models.job import JobCollection
+from .models.status import StatusCollection
 from .models.workspace import WorkspaceCollection
 
 logger = MyLogger().get_logger()
@@ -18,9 +20,6 @@ class ZdmClient(object):
     A client for communicating with a ZDM cloud.
 
     Example:
-
-    >>> import zdm
-    >>> client = zdm.ZdmClient(base_url="https://api.zdm.stage.zerynth.com")
 
     Args:
         base_url (str): URL to the Docker server. For example,
@@ -55,6 +54,13 @@ class ZdmClient(object):
         An object for managing fleets on the server.
         """
         return FleetCollection(client=self)
+
+    @property
+    def events(self):
+        """
+        An object for managing events on the server
+        """
+        return EventCollection(client=self)
 
     @property
     def data(self):
@@ -97,3 +103,10 @@ class ZdmClient(object):
         An object for managing the gates.
         """
         return GateCollection(client=self)
+
+    @property
+    def status(self):
+        """
+        An object for managing the status of a device.
+        """
+        return StatusCollection(client=self)

@@ -5,3 +5,9 @@ DEFAULT_USER_AGENT = "zdm-sdk-python"
 DEFAULT_ZDM_API_VERSION = "1"
 
 JOB_FOTA_NAME = "@fota"
+MANIFEST_KEY = "__manifest"
+VM_INFO_KEY = "__vm_info"
+
+STATUS_KEY_REQUEST = "#"
+STATUS_KEY_PRIVATE = "_"
+STATUS_KEY_STRONG_PRIVATE = "__"

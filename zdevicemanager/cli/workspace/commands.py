@@ -14,7 +14,7 @@ The main attributes of a workspace are:
 At your first log in, a 'default' workspace containing a 'default' fleet will be created.
 
 
-List of device commands:
+List of workspace commands:
 
 * :ref:`Create <zdm-cmd-workspace-create>`
 * :ref:`List workspaces <zdm-cmd-workspace-get-all>`
@@ -62,9 +62,7 @@ To see the list of all your workspaces, use the command: ::
             table.append([ws.id, ws.name, ws.description, ws.fleets, ws.devices])
         log_table(table, headers=["ID", "Name", "Description" "Fleets", "Devices"])
     else:
-        for ws in wks:
-            log_json(ws.toJSON())
-
+        log_json([wk.toJson for wk in wks])
 
 @workspace.command(help="Get a workspace by its uid")
 @click.argument('id')
@@ -85,8 +83,11 @@ where :samp:`uid` is the workspace uid.
 
     """
     ws = zcli.zdm.workspaces.get(id)
-    data = [ws.id, ws.name, ws.description, ws.fleets, ws.devices]
-    log_table([data], headers=["ID", "Name", "Description", "Fleets", "Devices"])
+    if env.human:
+        data = [ws.id, ws.name, ws.description, ws.fleets, ws.devices]
+        log_table([data], headers=["ID", "Name", "Description", "Fleets", "Devices"])
+    else:
+        log_json(ws.toJson)
 
 
 @workspace.command(help="Create a new workspace")
@@ -111,7 +112,10 @@ You can also insert a description of your workspace adding the option :option:`-
 
     """
     wks = zcli.zdm.workspaces.create(name, description)
-    log_table([[wks.id, wks.name, wks.description]], headers=["ID", "Name", "Description"])
+    if env.human:
+        log_table([[wks.id, wks.name, wks.description]], headers=["ID", "Name", "Description"])
+    else:
+        log_json(wks.toJson)
 
 
 @workspace.command(help="Get all the tags of a workspace")
@@ -134,18 +138,23 @@ where :samp:`uid` is the uid of the workspace
 
     """
     tags = zcli.zdm.data.list(workspace_id)
-    if len(tags) > 0:
-        log_table([[tags]], headers=["Tags"])
+    if env.human:
+        if len(tags) > 0:
+            log_table([[tags]], headers=["Tags"])
+        else:
+            info("Empty tags for workspace {}.".format(workspace_id))
     else:
-        info("Empty tags for workspace {}.".foramt(workspace_id))
-
+        log_json([tag.toJson for tag in tags])
 
 @workspace.command(help="Get all the data of a workspace associated to a tag")
 @click.argument('workspace-id')
 @click.argument('tag')
+@click.option('--device-id', default=None, help='Device ID to filter events')
+@click.option('--start', default=None, help='start date filter (RFC3339)')
+@click.option('--end', default=None, help='end date filter (RFC3339')
 @pass_zcli
 @handle_error
-def data(zcli, workspace_id, tag):
+def data(zcli, workspace_id, tag, device_id, start, end):
 
     """
 .. _zdm-cmd-workspace-data:
@@ -159,17 +168,24 @@ To get all the data of a workspace associated to a tag use the command: ::
 
 where :samp:`uid` is the uid of the workspace.
 
+You can also filter result adding the options:
+* :option:`--device-id`
+* :option:`--start`
+* :option:`--end`
+
     """
 
-    tags = zcli.zdm.data.get(workspace_id, tag)
-    if len(tags) > 0:
-        table = []
-        for tag in tags:
-            table.append([tag.Tag, tag.Payload, tag.DeviceId, tag.Timestamp])
-        log_table(table, headers=["Tag", "Payload", "Device", "Timestamp"])
+    tags = zcli.zdm.data.get(workspace_id, tag, device_id=device_id, start=start, end=end)
+    if env.human:
+        if len(tags) > 0:
+            table = []
+            for tag in tags:
+                table.append([tag.Tag, tag.Payload, tag.DeviceId, tag.Timestamp])
+            log_table(table, headers=["Tag", "Payload", "Device", "Timestamp"])
+        else:
+            info("No data present for to tag [{}].".format(tag))
     else:
-        info("No data present for to tag [{}].".format(tag))
-
+        log_json([tag.toJson for tag in tags])
 
 @workspace.command(help="Get all the firmwares of a workspace")
 @click.argument('workspace-id')
@@ -191,6 +207,10 @@ where :samp:`uid` is the uid of the workspace.
     """
     table = []
     firmwares = zcli.zdm.firmwares.list(workspace_id)
-    for d in firmwares:
-        table.append([d.id, d.version, d.metadata, d.workspace_id])
-    log_table(table, headers=["ID", "Version", "Metadata", "WorkspaceID"])
+    if env.human:
+        for d in firmwares:
+            table.append([d.id, d.version, d.metadata, d.workspace_id])
+        log_table(table, headers=["ID", "Version", "Metadata", "WorkspaceID"])
+    else:
+        log_json([frm.toJson for frm in firmwares])
+

@@ -1,6 +1,6 @@
 class GateApiMixin(object):
 
-    def gates(self, workspace_id, status="active", origin="data"):
+    def gates(self, workspace_id, status="active", origin=None):
         """
         Get all the gates associated to a workspace.
 
@@ -16,7 +16,10 @@ class GateApiMixin(object):
             :py:class:`zdevicemanager.errors.APIError`
                 If the server returns an error.
         """
-        params = {"status": status, "origin": origin}
+        params = {"status": status}
+        if origin:
+            params['origin'] = origin
+
         u = self._url("/gate/workspace/{0}", workspace_id)
         res = self._result(self._get(u, params=params))
         return res["gates"] if "gates" in res and res["gates"] is not None else []
@@ -38,7 +41,7 @@ class GateApiMixin(object):
         res = self._result(self._get(self._url("/gate/{0}/", gate_id)))
         return res["gate"]
 
-    def create_webhook(self, name, url, token, period, workspace_id, tag):
+    def create_webhook(self, name, url, token, period, workspace_id, tags=None, fleets=None, origin=None):
         """
         Create e new gate.
 
@@ -52,20 +55,31 @@ class GateApiMixin(object):
            :py:class:`zdevicemanager.errors.APIError`
                If the server returns an error.
         """
-        payload = {"name": name,
-                   "url": url,
-                   "content-type": "application/json",
-                   "period": period,
-                   "origin": "data",
-                   "payload": {
-                       "tag": tag,
-                       "workspace_id": workspace_id},
-                   "tokens": {
-                       "X-Auth-Token": token
-                   }
-                   }
+        body = {"name": name,
+                "url": url,
+                "content-type": "application/json",
+                "period": period,
+                "payload": {
+                    "workspace_id": workspace_id},
+
+                "tokens": {
+                    "X-Auth-Token": token
+                }
+                }
+
+        if origin is not None:
+            body["origin"] = origin
+        else:
+            body["origin"] = "data"
+
+        if tags is not None:
+            body["payload"]["tags"] = tags
+
+        if fleets is not None:
+            body["payload"]["fleets"] = fleets
+
         u = self._url("/gate/webhook/")
-        res = self._result(self._post(u, data=payload))
+        res = self._result(self._post(u, data=body))
         return res
 
     def update_webhook(self, gate_id, name=None, status=None, period=None, url=None):
@@ -97,7 +111,6 @@ class GateApiMixin(object):
         u = self._url("/gate/{0}/", gate_id)
         res = self._result(self._put(u, data=payload))
         return res
-
 
     def delete_webhook(self, gate_id):
 

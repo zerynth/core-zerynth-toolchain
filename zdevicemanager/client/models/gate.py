@@ -19,6 +19,10 @@ class GateModel(Model):
     def type(self):
         return self.attrs.get("type")
 
+    @property
+    def origin(self):
+        return self.attrs.get("origin")
+
 
 class GateCollection(Collection):
     model = GateModel
@@ -30,7 +34,7 @@ class GateCollection(Collection):
         resp = self.client.api.gates(workspace_id, status, origin)
         return [self.prepare_model(r) for r in resp]
 
-    def create_webhook(self, name, url, token, period, workspace_id, tag):
+    def create_webhook(self, name, url, token, period, workspace_id, tags, fleets, origin):
         """
         Create a webhook gate.
 
@@ -44,7 +48,7 @@ class GateCollection(Collection):
             :py:class:`adm.errors.APIError`
                 If the server returns an error.
         """
-        resp = self.client.api.create_webhook(name, url, token, period, workspace_id, tag)
+        resp = self.client.api.create_webhook(name, url, token, period, workspace_id, tags, fleets, origin)
         return resp['id']  # self.prepare_model(resp)
 
     def get_webhook(self, gate_id):

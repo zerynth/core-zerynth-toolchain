@@ -57,16 +57,19 @@ class prc():
         except subprocess.CalledProcessError as e:
             return e.returncode,e.output,e.output
 
+
+
     def run_get_lines(self,cmd,*args):
         r,out,err = self.run(cmd,*args)
         for line in out.split("\n"):
             yield line
 
-    def run_ztc(self,*args,outfn=None,shell=False):
-        cmd = fs.path(env.ztc,"ztc.py")
-        return self.runcmd("python",cmd,*args,outfn=outfn,shell=shell)
-
-
+    def runzcmd(self,*args):
+        return self.run(
+            env.zpython,
+            env.ztc_cli,
+            *args
+        )
 
 proc = prc()
 

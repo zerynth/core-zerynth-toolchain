@@ -37,14 +37,6 @@ Once a correct login/registration is performed, the browser will display an auth
 
 .. warning:: multiple logins with different methods (manual or social) are allowed provided that the email linked to the social OAuth service is the same as the one used in the manual login.
 
-
-Non interactive mode is started by typing: ::
-
-    zdm login --token authentication_token
-
-The :samp:`authentication_token` can be obtained by manually opening the login/registration `page <https://backend.zerynth.com/v1/sso>`_
-
-
 .. warning:: For manual registrations, email address confirmation is needed. An email will be sent at the provided address with instructions.
 
     

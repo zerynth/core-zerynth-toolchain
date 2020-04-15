@@ -29,6 +29,13 @@ class Model(object):
         return hash("%s:%s" % (self.__class__.__name__, self.id))
 
     @property
+    def toJson(self):
+        """
+        The json representation of the model
+        """
+        return self.attrs
+
+    @property
     def id(self):
         """
         The ID of the object.

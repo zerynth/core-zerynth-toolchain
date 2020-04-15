@@ -13,7 +13,7 @@ The main attributes of a workspace are:
 At your first log in, a 'default' workspace containing a 'default' fleet will be created.
 
 
-List of device commands:
+List of workspace commands:
 
 * :ref:`Create <zdm-cmd-workspace-create>`
 * :ref:`List workspaces <zdm-cmd-workspace-get-all>`
@@ -85,6 +85,11 @@ To get all the data of a workspace associated to a tag use the command: ::
     zdm workspace data uid tag
 
 where :samp:`uid` is the uid of the workspace.
+
+You can also filter result adding the options:
+* :option:`--device-id`
+* :option:`--start`
+* :option:`--end`
 
     
 .. _zdm-cmd-workspace-firmware:

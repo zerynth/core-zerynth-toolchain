@@ -23,12 +23,14 @@ It can be used to emulate a Zerynth device and connect it to the ZDM.
 The ZDMClient class
 -------------------
 
-.. class:: ZDMClient(device_id, jobs=None)
+.. class:: ZDMClient(device_id, jobs=None, endpoint=ENDPOINT, verbose=False)
 
     Creates a ZDM client instance with device id :samp:`device_id`. All other parameters are optional and have default values.
 
-    * :samp:`jobs` is the dictionary that defines the device's available jobs.
-    * :samp:`endpoint` endpoint of the ZDM broker.
+    * :samp:`device_id` is the id of the device.
+    * :samp:`jobs` is the dictionary that defines the device's available jobs (default None).
+    * :samp:`endpoint` is the url of the ZDM broker (default rmq.zdm.zerynth.com).
+    * :samp:`verbose` boolean flag for verbose output (default False).
 
     
 .. method:: id(pw)
@@ -49,4 +51,3 @@ The ZDMClient class
 
     * :samp:`tag`, is a label for the device's data into your workspace. More than one device can publish message to the same tag
     * :samp:`payload` is the message payload, represented by a dictionary
-    

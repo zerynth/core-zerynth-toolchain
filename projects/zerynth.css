@@ -10,15 +10,15 @@ body {
 }
 
 .wy-nav-content-wrap a {
-    color: #468c8c !important;
+    color: #0070EF !important;
 }
 
 .wy-nav-top {
-    background: #468c8c !important;
+    background: #0070EF !important;
 }
 
 .wy-side-nav-search {
-    background: #468c8c !important;
+    background: #0070EF !important;
 }
 
 @font-face {
@@ -63,7 +63,7 @@ width:48px;
 height:48px;
 border-radius:50%;
 font-size:32px;
-color:#468c8c;
+color:#0070EF;
 line-height:52px;
 text-align:center;
 background:#fff;

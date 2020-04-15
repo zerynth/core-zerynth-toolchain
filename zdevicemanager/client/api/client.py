@@ -6,6 +6,7 @@ from zdevicemanager.base.zrequests import zget, zpost, zput, zdelete
 
 from .datatag import DataApiMixin
 from .devices import DeviceApiMixin
+from .events import EventApiMixin
 from .fleets import FleetApiMixin
 from .gates import GateApiMixin
 from .status import StatusApiMixin
@@ -14,8 +15,8 @@ from ..constants import DEFAULT_TIMEOUT_SECONDS, DEFAULT_USER_AGENT, DEFAULT_ZDM
 from ..errors import create_api_error_from_http_exception
 
 
-class APIClient(requests.Session, WorkspaceApiMixin, DataApiMixin, DeviceApiMixin, FleetApiMixin, StatusApiMixin,
-                GateApiMixin):
+class APIClient(requests.Session, WorkspaceApiMixin, EventApiMixin, DataApiMixin, DeviceApiMixin, FleetApiMixin,
+                GateApiMixin, StatusApiMixin):
     """
     A low-level client for the ZDM API
     """
