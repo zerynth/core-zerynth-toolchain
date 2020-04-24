@@ -33,7 +33,7 @@ try:
             print("wifi connect err", e)
 
     # create a ZDM Device instance with your id and the fota callback
-    client = zdm.Device(device_id, fota_callback=fota_callback, endpoint="rmq.zdm.test.zerynth.com")
+    client = zdm.Device(device_id, fota_callback=fota_callbackg)
     # set the device's password (jwt)
     client.set_password(password)
     # connect your device to ZDM enabling the device to receive incoming messages

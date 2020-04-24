@@ -345,6 +345,7 @@ def init_cfg():
         env.connector = os.environ.get("ZERYNTH_ADM_URL","https://testapi.zerynth.com:444/v1" )
         env.patchurl  = os.environ.get("ZERYNTH_PATCH_URL","https://test.zerynth.com/installer")
         env.packurl   = os.environ.get("ZERYNTH_PACK_URL","https://test.zerynth.com")
+        env.zdmurl    = os.environ.get("ZERYNTH_ZDM_URL","https://api.zdm.test.zerynth.com")
         github_app = "882c71c6f98cd0354d97"
     else:
         # remote
@@ -353,6 +354,7 @@ def init_cfg():
         env.connector="https://api.zerynth.com/v1"
         env.patchurl= os.environ.get("ZERYNTH_PATCH_URL","https://backend.zerynth.com/installer")
         env.packurl= os.environ.get("ZERYNTH_PACK_URL","https://backend.zerynth.com")
+        env.zdmurl    = os.environ.get("ZERYNTH_ZDM_URL","https://api.zdm.zerynth.com")
         github_app = "99fdc1e39d8ce3051ce6"
 
     if env.skin:
@@ -399,6 +401,8 @@ def init_cfg():
         "project":env.backend+"/projects",
         "renew":env.backend+"/user/renew",
         "sso":env.backend+"/sso",
+        "zdmredirect":env.zdmurl+"/v1/login/ztc/",
+        "zdmredirectstudio":env.zdmurl+"/v1/login/zstudio/",
         "github_api":"https://api.github.com",
         "github":"https://github.com/login/oauth/authorize?client_id="+github_app+"&scope=user,repo",
         "pwd_reset":env.backend+"/user/reset",

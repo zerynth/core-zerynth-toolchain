@@ -98,7 +98,7 @@ def start_probe(target,probe):
     dev = tools.get_target(target)
     if not dev:
         fatal("Can't find target",target)
-    jtagdir = tools.get_tool_dir("openocd")
+    jtagdir = tools.get_tool_dir(dev.jtag_tool or "openocd")
     if not jtagdir:
         fatal("Can't find OpenOCD!")
     interface_script = interface_to_script(probe)
@@ -122,7 +122,7 @@ def start_probe(target,probe):
     if dev.custom_openocd:
         e,_,_ = proc.runcmd(dev.jtag_tool or "openocd","-s", fs.path(env.devices, dev.target),"-f", fs.path(env.devices, dev.target,"custom_openocd.cfg"), outfn=log)
     else:
-        e,_,_ = proc.runcmd(dev.jtag_tool or "openocd","-f",jtag_interface,"-c",jtag_target_options,"-f",jtag_target,outfn=log)
+        e,_,_ = proc.runcmd(dev.jtag_tool or "openocd","-s",fs.path(jtagdir,"scripts"),"-f",jtag_interface,"-c",jtag_target_options,"-f",jtag_target,outfn=log)
 
 
 

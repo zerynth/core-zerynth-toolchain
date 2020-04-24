@@ -30,9 +30,9 @@ def fota():
 
 
 @fota.command(help="Prepare FOTA to the ZDM")
-@click.argument("project", type=click.Path())
-@click.argument("device-id")
-@click.argument('version')
+@click.argument("project", type=click.Path(), required=False)
+@click.argument("device-id",required=False)
+@click.argument('version',required=False)
 @pass_zcli
 @handle_error
 def prepare(zcli, project, device_id, version):
@@ -48,6 +48,32 @@ def prepare(zcli, project, device_id, version):
         zdm fota prepare [Firmware project path] [DeviceId] [Version]
 
     """
+    if project is None or device_id is None or version is None:
+        # search for information in project.yml
+        project = "." if not project else project
+        cfg = fs.get_project_config(project,fail=True)
+        device_id = cfg.get("zdm",{}).get("device_id")
+        version = cfg.get("zdm",{}).get("fota",{}).get("version")
+        if "zdm" not in cfg:
+            cfg["zdm"]={}
+        if not device_id:
+            cfg["zdm"]["device_id"] = None
+            fs.set_project_config(project,cfg)
+        if not version:
+            if "fota" not in cfg["zdm"]:
+                cfg["zdm"]["fota"]={}
+            cfg["zdm"]["fota"]["version"] = None
+            fs.set_project_config(project,cfg)
+
+        if not device_id:
+            fatal("Please add ZDM device_id in the project configuration in zdm section")
+        if not version:
+            fatal("Please add firmware version in the project configuration in zdm section")
+        else:
+            # convert to string
+            version = str(version)
+
+    do_prepare(zcli,project,device_id,version)
     # if device_id:
     #    get 'vm_uid', 'vm_target' from status service of a device (__vm_info)
     #    get the 'workspace_id' of the device
@@ -58,6 +84,8 @@ def prepare(zcli, project, device_id, version):
     # else:
     #    zdm device all    # with the 'vm_uid', and 'vm_target' of ztc vm list. user must select one of them.
 
+
+def do_prepare(zcli,project,device_id,version):
     status = zcli.zdm.status.get_device_vm_info(device_id)
     if status is None:
         fatal("Fota cannot be prepared. Please connect device '{}' to the ZDM at least one time.".format(device_id))
@@ -163,23 +191,32 @@ def check(zcli, device_id):
     if fota_exp is None and fota_cur is not None:
         # the job has been scheduled (exp is None)  and the device has sent the response (fota_cur not None)
         status = "done"
+        result = fota_cur.value if fota_cur is not None else "<no result>"
+        result_at = fota_cur.version if fota_cur is not None else "<no result>"
     elif fota_exp is None and fota_cur is None:
         # the job has not been scheduled nor a response has been received
         status = "<none>"
+        result = "<none>"
+        result_at = "<none>"
     elif fota_exp is not None and fota_cur is not None:
-        # job has been scheduled and the device has sent a response
-        status = "done"
+        if fota_cur.version > fota_exp.version:
+            # fota has been scheduled and the device has sent a response
+            status = "done"
+            result = fota_cur.value if fota_cur is not None else "<no result>"
+            result_at = fota_cur.version if fota_cur is not None else "<no result>"
+        else:
+            status = "pending"
+            result = "<none>"
+            result_at = "<none>"
     elif fota_exp is not None and fota_cur is None:
         # the job has been scheduled bu the device has not sent a response
         status = "pending"
+        result = "<none>"
+        result_at = "<none>"
     else:
         status = "<unknown>"
-
-    if fota_cur is not None:
-        status = fota_cur.status
-
-    result = fota_cur.value if fota_cur is not None else "<no result>"
-    result_at = fota_cur.version if fota_cur is not None else "<no result>"
+        result = "<none>"
+        result_at = "<none>"
 
     log_table([[status, schedule_at, result, result_at, ]],
               headers=["Status", "ScheduleAt", "Result", "ResultAt"])

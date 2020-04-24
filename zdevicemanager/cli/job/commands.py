@@ -76,7 +76,6 @@ def check_int(s):
 @pass_zcli
 @handle_error
 def check(zcli, name, device_id):
-
     """
 
 .. _zdm-cmd-job-check:
@@ -93,29 +92,38 @@ where :samp:`job` is the job name and :samp:`uid` is the device uid you want to 
     """
     status_exp = zcli.zdm.jobs.status_expected(name, device_id)
     status_cur = zcli.zdm.jobs.status_current(name, device_id)
-
-    schedule_at = status_exp.version if status_exp else "<none>"
+    schedule_at = status_exp.version if status_exp else "<unknown>"
 
     if status_exp is None and status_cur is not None:
         # the job has been scheduled (exp is None)  and the device has sent the response (status_cur not None)
         status = "done"
+        result = status_cur.value if status_cur is not None else "<no result>"
+        result_at = status_cur.version if status_cur is not None else "<no result>"
+
     elif status_exp is None and status_cur is None:
         # the job has not been scheduled nor a device has not sent a response
         status = "<none>"
+        result = "<none>"
+        result_at = "<none>"
     elif status_exp is not None and status_cur is not None:
-        # job has been scheduled and the device has sent a response
-        status = "done"
+        if status_cur.version > status_exp.version:
+            # job has been scheduled and the device has sent a response
+            status = "done"
+            result = status_cur.value if status_cur is not None else "<no result>"
+            result_at = status_cur.version if status_cur is not None else "<no result>"
+        else:
+            status = "pending"
+            result = "<none>"
+            result_at = "<none>"
     elif status_exp is not None and status_cur is None:
         # the job has been scheduled bu the device has not sent a response
         status = "pending"
+        result = "<none>"
+        result_at = "<none>"
     else:
         status = "<unknown>"
-
-    if status_cur is not None:
-        status = status_cur.status
-
-    result = status_cur.value if status_cur is not None else "<no result>"
-    result_at = status_cur.version if status_cur is not None else "<no result>"
+        result = "<none>"
+        result_at = "<none>"
 
     log_table([[name, status, schedule_at, result, result_at, ]],
               headers=["Name", "Status", "ScheduleAt", "Result", "ResultAt"])

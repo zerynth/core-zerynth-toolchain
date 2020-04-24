@@ -152,6 +152,12 @@ The command: ::
 performs an uplink on the device of type :samp:`target` using the bytecode file at :samp:`bytecode` using the serial port :samp:`port`.
 
     """
+    _uplink_raw(target,bytecode,loop,__specs,skip_layout,layout_root)
+
+def do_uplink_raw(target,bytecode,loop,__specs,skip_layout,layout_root):
+    _uplink_raw(target,bytecode,loop,__specs,skip_layout,layout_root)
+
+def _uplink_raw(target,bytecode,loop,__specs,skip_layout,layout_root):
     options = {}
     for spec in __specs:
         pc = spec.find(":")
@@ -161,7 +167,12 @@ performs an uplink on the device of type :samp:`target` using the bytecode file 
     dev = get_device_by_target(target,options)
     if not skip_layout:
         _uplink_layout(dev,bytecode,dczpath=layout_root)
-    _uplink_dev(dev,bytecode,loop)
+    if dev.preferred_uplink_with_jtag:
+        # uplink code with jtag
+        _link_uplink_jtag(dev,bytecode)
+    else:
+        _uplink_dev(dev,bytecode,loop)
+    # _uplink_dev(dev,bytecode,loop)
 
 @cli.command(help="Uplink bytecode to a device using a probe.")
 @click.argument("target")

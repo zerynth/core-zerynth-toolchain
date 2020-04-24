@@ -115,6 +115,7 @@ def _vm_create(vminfo,custom_target=None):
             vminfo["uid"]=rj["data"]["uid"]
             info("VM",vminfo["name"],"created with uid:", vminfo["uid"])
             download_vm(vminfo["uid"],custom_target)
+            return vminfo["uid"]
         else:
             critical("Error while creating vm:", rj["message"])
     except TimeoutException as e:
@@ -134,6 +135,13 @@ def _vm_create(vminfo,custom_target=None):
 @click.option("--reshare", default=False, flag_value=True, help="Create shareable VM")
 @click.option("--locked", default=False, flag_value=True, help="Create a locked VM")
 def create_by_uid(dev_uid,version,rtos,feat,name,patch,custom_target,share,reshare,locked):
+    _create_by_uid(dev_uid,version,rtos,feat,name,patch,custom_target,share,reshare,locked)
+
+
+def do_create_by_uid(dev_uid,version,rtos,feat,name,patch,custom_target,share,reshare,locked):
+    return _create_by_uid(dev_uid,version,rtos,feat,name,patch,custom_target,share,reshare,locked)
+
+def _create_by_uid(dev_uid,version,rtos,feat,name,patch,custom_target,share,reshare,locked):
     vminfo = {
         "name": "dev:"+dev_uid,
         "dev_uid":dev_uid,
@@ -146,7 +154,7 @@ def create_by_uid(dev_uid,version,rtos,feat,name,patch,custom_target,share,resha
         "locked":locked
         }
     log_json(vminfo)
-    _vm_create(vminfo,custom_target=None if not custom_target else custom_target)
+    return _vm_create(vminfo,custom_target=None if not custom_target else custom_target)
 
 
 def _own_vm(vm_uid):
@@ -325,6 +333,12 @@ For the device target, a list of possible virtual machine configurations is retu
 * free/pro only
 
     """
+    __vm_available(target)
+
+def do_vm_available(target):
+    __vm_available(target)
+
+def __vm_available(target):
     table=[]
     try:
         res = zget(url=env.api.vmlist+"/"+target+"/"+env.var.version)
@@ -336,6 +350,7 @@ For the device target, a list of possible virtual machine configurations is retu
                     vmt = vmm["vms"]["base"]
                     for vm in vmt:
                         table.append([vm["title"],vm["description"],vm["rtos"],vm["features"],"Premium" if vm["pro"] else "Starter",vv])
+                table = sorted(table, key= lambda x: x[5],reverse=True)
                 log_table(table,headers=["Title","Description","Rtos","Features","Type","Version"])
             else:
                 log_json(rj["data"])

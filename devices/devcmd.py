@@ -413,7 +413,16 @@ Device registration is performed by issuing the command: ::
 It is necessary to provide at least one device parameter and the registration will be attempted gibing priority to the probe parameter. Registration by probe is very fast (and recommended for production scenarios) beacuse the registration firmware is not required.
 
     """
+    __register_raw(target,__skip_remote,__specs,__skip_probe)
+
+def do_register_raw(target,__skip_remote,__specs,__skip_probe):
+    return __register_raw(target,__skip_remote,__specs,__skip_probe)
+
+def __register_raw(target,__skip_remote,__specs,__skip_probe):
+    global _dsc
     options = tools.get_specs(__specs)
+    if not _dsc:
+        _dsc = Discover()
     dev =  _dsc.get_target(target,options)    
     if not dev:
         fatal("No such target!")
@@ -447,7 +456,7 @@ It is necessary to provide at least one device parameter and the registration wi
             "on_chip_id": chipid,
             "type": dev.original_target or target
         }
-        _register_device(dinfo)
+        return _register_device(dinfo)
     
 
 
@@ -529,6 +538,15 @@ where :samp:`vmuid` is the unique identifier of the chosen vm. :samp:`vmuid` can
 The virtualization by probe has priority over the other device parameters and is recommended for production scenarios.
 
     """
+    _virtualize_raw(vmuid,__specs)
+
+def do_virtualize_raw(vmuid,__specs):
+    _virtualize_raw(vmuid,__specs)
+
+def _virtualize_raw(vmuid,__specs):
+    global _dsc
+    if not _dsc:
+        _dsc = Discover()
     vms = tools.get_vm_by_prefix(vmuid)
     if len(vms)==0:
         fatal("No such VM uid")
@@ -617,6 +635,13 @@ The command: ::
 tries to open :samp:`port` with the correct parameters for the device. Output from the device is printed to stdout while stdin is redirected to the serial port. Adding the option :option:`--echo` to the command echoes back the characters from stdin to stdout.
 
     """
+    _open_raw(port,__echo,__baud,__parity,__bits,__stopbits,__dsrdtr,__rtscts)
+
+def do_open_raw(port,__echo,__baud,__parity,__bits,__stopbits,__dsrdtr,__rtscts):
+    _open_raw(port,__echo,__baud,__parity,__bits,__stopbits,__dsrdtr,__rtscts)
+
+
+def _open_raw(port,__echo,__baud,__parity,__bits,__stopbits,__dsrdtr,__rtscts):
     conn = ConnectionInfo()
     options={
         "baudrate":__baud,
@@ -630,18 +655,14 @@ tries to open :samp:`port` with the correct parameters for the device. Output fr
     ch = Channel(conn,__echo)
     ch.open()
     ch.run()
-    # import serial
-    # ser = serial.Serial(tgt.port,115200)
-    # while True:
-    #     data = ser.read()
-    #     log(data.decode("ascii","replace"),sep="",end="")
-    #     #print(,sep="",end="")
+
 
 
 @device.command(help="List of supported devices.")
 @click.option("--type",default="board",type=click.Choice(["board","jtag","usbtoserial"]),help="type of device [board, jtag,usbtoserial]")
 @click.option("--single",default=False,flag_value=True)
-def supported(type,single):
+@click.option("--nice",default=False,flag_value=True)
+def supported(type,single,nice):
     """ 
 .. _ztc-cmd-device-supported:
 
@@ -655,12 +676,25 @@ Different versions of the ZTC may have a different set of supported devices. To 
 and a table of :samp:`target` names and paths to device support packages will be printed.
 
     """
+    do_get_supported(type,single,nice)
+
+def do_get_supported(type,single,nice):
     table = []
     jst = []
+    inserted = set()
+    global _dsc
+    if not _dsc:
+        _dsc = Discover()
     for k,v in _dsc.device_cls.items():
         if v["type"]==type:
             if env.human:
-                table.append([v["target"],v["path"]])
+                if not nice:
+                    table.append([v["target"],v["path"]])
+                else:
+                    if v["target"] in inserted:
+                        continue
+                    inserted.add(v["target"])
+                    table.append([v["target"],v["name"],v.get("preferred_uplink_with_jtag",{"probe":"none"})["probe"]])
             else:
                 tt ={
                     "target":v["target"],
@@ -670,7 +704,11 @@ and a table of :samp:`target` names and paths to device support packages will be
                 if not single:
                     log_json(tt)
     if env.human:
-        log_table(table,headers=["Target","Path"])
+        if not nice:
+            log_table(table,headers=["Target","Path"])
+        else:
+            table = sorted(table,key=lambda x:x[0])
+            log_table(table,headers=["Target","Name","Probe"])
     elif single:
         log_json(jst)
 
@@ -682,6 +720,16 @@ def ports_and_disks():
     }
     log_json(res)
 
+def do_get_serial_ports():
+    global _dsc
+    if not _dsc:
+        _dsc = Discover()
+    table = []
+    for p in _dsc.devsrc.find_all_serial_ports():
+        table.append([p])
+    log_table(table,headers=["Port"])
+
+    
 
 @device.command(help="Erase the flash of the device. \n\n Arguments: \n\n ALIAS: device alias")
 @click.argument("alias")

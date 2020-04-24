@@ -2,11 +2,15 @@
 # 
 # Under the section "config" a list of options can be specified and activated;
 # such options change the way Python and C modules are compiled.
-# A detailed guide can be found here: 
 #
-#
+# If you are using "ztc project" commands to compile, uplink, etc... please
+# fill the sections target and specs with the required information
 #
 
+target: your_target_device_here
+specs:
+    port: your_device_port_here
+    probe: your_jtag_probe_here
 config: {}
 
 

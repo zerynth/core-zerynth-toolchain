@@ -24,6 +24,11 @@ import json
 import sys
 import webbrowser
 import re
+from compiler import do_compile
+from packages import do_install_deps
+from uplinker import do_uplink_raw
+from devices import do_register_raw, do_virtualize_raw, do_get_serial_ports, do_open_raw, do_get_supported
+from virtualmachines import do_vm_available, do_create_by_uid, download_vm
 
 def create_project_entity(path):
     if fs.exists(fs.path(path,".zproject")):
@@ -47,6 +52,225 @@ def create_project_entity(path):
 @cli.group(help="Manage projects.")
 def project():
     pass
+
+############# PROJECT COMMAND FOR MANUAL DEVELOPMENT
+
+@project.command(help="Compile a project. \n\n Arguments: \n\n PROJECT: project path.")
+@click.argument("project",type=click.Path(),nargs=-1)
+@click.option("--output","-o",default=False,help="output file path")
+@click.option("--include","-I",default=[],multiple=True,help="additional include path (multi-value option)")
+@click.option("--proj","-P",default=[],multiple=True,help="include project as library (multi-value option)")
+@click.option("--define","-D",default=[],multiple=True,help="additional C macro definition (multi-value option)")
+@click.option("--imports","-m",flag_value=True,default=False,help="only generate the list of imported modules")
+@click.option("--config","-cfg",flag_value=True,default=False,help="only generate the configuration table")
+def compile(project,output,include,define,imports,proj,config):
+    project = "." if not project else project[0]
+    cfg = fs.get_project_config(project,fail=True)
+    target = cfg.get("target")
+    if not target:
+        fatal("Please add target device in project configuration")
+    if not output:
+        fs.makedirs(fs.path(project,"build"))
+        output = fs.path(project,"build","main.vbo")
+    do_compile(project,target,output,include,define,imports,proj,config)
+
+@project.command(help="Retrieve and store current available packages for this project")
+@click.argument("project",nargs=-1)
+def deps(project):
+    project = "." if not project else project[0]
+    cfg = fs.get_project_config(project,fail=True)
+    target = cfg["target"]
+    fullname = "board.zerynth."+target
+    do_install_deps(fullname)
+
+@project.command(help="Clean current project")
+@click.argument("project",nargs=-1)
+def clean(project):
+    project = "." if not project else project[0]
+    info("Cleaning temp folder...")
+    sz = fs.dir_size(env.tmp)
+    fs.rmtree(env.tmp)
+    fs.makedirs(env.tmp)
+    info("Cleaned up",sz//(1024*1024),"Mb")
+
+@project.command(help="Register project's device")
+@click.argument("project",nargs=-1)
+@click.option("--skip-remote","__skip_remote",default=False,flag_value=True)
+@click.option("--skip-probe","__skip_probe",default=False,flag_value=True)
+@click.option("--spec","__specs",default=[],multiple=True)
+def register(project,__skip_remote,__specs,__skip_probe):
+    project = "." if not project else project[0]
+    cfg = fs.get_project_config(project,fail=True)
+    target = cfg["target"]
+    specs = cfg.get("specs",{})
+    if not __specs:
+        __specs = [str(k)+":"+str(v) for k,v in specs.items() if v is not None]
+    devuid = do_register_raw(target,__skip_remote,__specs,__skip_probe)
+    if not devuid:
+        fatal("Can't get device id!")
+    if "vm" not in cfg:
+        cfg["vm"] = {}
+    cfg["vm"]["dev_uid"] = devuid
+    cfg["vm"]["uid"] = None  #unset vm uid
+    if "rtos" not in cfg["vm"]:
+        cfg["vm"]["rtos"] = None
+    if "features" not in cfg["vm"]:
+        cfg["vm"]["features"] = []
+    if "version" not in cfg["vm"]:
+        cfg["vm"]["version"] = None
+    fs.set_project_config(project,cfg)
+
+@project.command(help="List available vm for project's device")
+@click.argument("project",nargs=-1)
+def vms(project):
+    project = "." if not project else project[0]
+    cfg = fs.get_project_config(project,fail=True)
+    target = cfg["target"]
+    do_vm_available(target)
+
+@project.command(help="List available devices")
+@click.argument("project",nargs=-1)
+def targets(project):
+    do_get_supported("board",False,True)
+
+@project.command(help="List available vm for project's device")
+@click.argument("project",nargs=-1)
+@click.option("--echo","__echo",flag_value=True, default=False,help="print typed characters to stdin")
+@click.option("--baud","__baud", default=115200,type=int,help="open with a specific baudrate")
+@click.option("--parity","__parity", default="n",type=str,help="open with a specific parity")
+@click.option("--bits","__bits", default=8,type=int,help="")
+@click.option("--stopbits","__stopbits", default=1,type=int,help="")
+@click.option("--dsrdtr","__dsrdtr", default=False,flag_value=True,help="")
+@click.option("--rtscts","__rtscts", default=False,flag_value=True,help="")
+def console(project,__echo,__baud,__parity,__bits,__stopbits,__dsrdtr,__rtscts):
+    project = "." if not project else project[0]
+    cfg = fs.get_project_config(project,fail=True)
+    target = cfg["target"]
+    port  = cfg.get("specs",{}).get("port")
+    if not port:
+        fatal("Please specify a device port in project configuration")
+    do_open_raw(port,__echo,__baud,__parity,__bits,__stopbits,__dsrdtr,__rtscts)
+
+
+
+@project.command(help="List available devices ports")
+@click.argument("project",nargs=-1)
+def ports(project):
+    project = "." if not project else project[0]
+    do_get_serial_ports()
+
+@project.command(help="Virtualize project's device")
+@click.argument("project",nargs=-1)
+@click.option("--feat", multiple=True, type=str,help="add extra features to the requested virtual machine (multi-value option)")
+@click.option("--name", default="",help="Virtual machine name")
+@click.option("--custom_target", default="",help="Original target for custom vms")
+@click.option("--share", default=False, flag_value=True, help="Create shareable VM")
+@click.option("--reshare", default=False, flag_value=True, help="Create shareable VM")
+@click.option("--locked", default=False, flag_value=True, help="Create a locked VM")
+@click.option("--spec","__specs",default=[],multiple=True)
+def virtualize(project,__specs,feat,name,custom_target,share,reshare,locked):
+    project = "." if not project else project[0]
+    cfg = fs.get_project_config(project,fail=True)
+    target = cfg["target"]
+    specs = cfg.get("specs",{})
+    if not __specs:
+        __specs = [str(k)+":"+str(v) for k,v in specs.items() if v is not None]
+    devuid = cfg.get("vm",{}).get("dev_uid")
+    if not devuid:
+        fatal("Please register the device first")
+    vmuid = cfg.get("vm",{}).get("uid")
+    if not vmuid:
+        rtos = cfg.get("vm",{}).get("rtos")
+        features = feat or cfg.get("vm",{}).get("features",[]) 
+        version = cfg.get("vm",{}).get("version")
+        if not version or not rtos:
+            fatal("Please specify VM version and rtos in project configuration")
+        vmuid = do_create_by_uid(devuid,version,rtos,features,name,"base",custom_target,share,reshare,locked)
+        if not vmuid:
+            fatal("Can't create VM")
+        download_vm(vmuid)
+        cfg["vm"]["uid"] = vmuid
+        cfg["vm"]["rtos"] = rtos
+        cfg["vm"]["features"] = [f for f in features]
+        cfg["vm"]["version"] = version
+        fs.set_project_config(project,cfg)
+
+    do_virtualize_raw(vmuid,__specs)
+
+
+
+
+
+    # info("Cleaning temp folder...")
+    # sz = fs.dir_size(env.tmp)
+    # fs.rmtree(env.tmp)
+    # fs.makedirs(env.tmp)
+    # info("Cleaned up",sz//(1024*1024),"Mb")
+
+@project.command(help="Uplink project firmware to device")
+@click.argument("project",nargs=-1)
+@click.option("--loop",default=5,type=click.IntRange(1,20),help="number of retries during device discovery.")
+@click.option("--spec","__specs",default="",multiple=True)
+@click.option("--skip-layout","skip_layout",default=False,flag_value=True,help="ignore a device configuration file if present")
+@click.option("--layout-root","layout_root",default=None,type=click.Path(),help="root folder for configuration files")
+def uplink(project,loop,__specs,skip_layout,layout_root):
+    project = "." if not project else project[0]
+    cfg = fs.get_project_config(project,fail=True)
+    target = cfg["target"]
+    specs = cfg.get("specs",{})
+    if not __specs:
+        __specs = [str(k)+":"+str(v) for k,v in specs.items() if v is not None]
+    bytecode = fs.path(project,"build","main.vbo")
+    if not fs.exists(bytecode):
+        fail("No bytecode at",bytecode," -- Compile the project first")
+    do_uplink_raw(target,bytecode,loop,__specs,skip_layout,layout_root)
+
+@project.command(help="Prepare a project. \n\n Arguments: \n\n PATH: path of the project.")
+@click.argument("path",type=click.Path(),nargs=-1)
+@click.option("--target",default="",help="Set the device target")
+@click.option("--port",default="",help="Set the device port")
+@click.option("--probe",default="",help="Set the device probe")
+@click.option("--disk",default="",help="Set the device disk")
+def prepare(path,target,port,probe,disk):
+    path = "." if not path else path[0]
+    fs.makedirs(path)
+    mainfile = fs.path(path,"main.py")
+    if not fs.exists(mainfile):
+        info("Writing",mainfile)
+        fs.write_file("# "+title+"\n# Created at "+str(datetime.datetime.utcnow())+"\n\n",mainfile)
+    makefile = fs.path(path,"Makefile")
+    if not fs.exists(makefile):
+        info("Writing",makefile)
+        fs.copyfile(fs.path(fs.dirname(__file__),"Makefile"),makefile)
+    projfile = fs.path(path,"project.yml")
+    try:
+        prj = fs.get_project_config(path)
+        if "target" not in prj:
+            prj["target"] = "your_target_device_here"
+        if "specs" not in prj:
+            prj["specs"]={}
+        if "port" not in prj["specs"]:
+            prj["specs"]["port"] = None
+        if "probe" not in prj["specs"]:
+            prj["specs"]["probe"] = None
+        if "disk" not in prj["specs"]:
+            prj["specs"]["disk"] = None
+        if target:
+            prj["target"]=target
+        if probe:
+            prj["specs"]["probe"]=probe
+        if disk:
+            prj["specs"]["disk"]=disk
+        if port:
+            prj["specs"]["port"]=port
+        info("Rewriting",fs.path(path,"project.yml"))
+        fs.set_project_config(path,prj)
+    except Exception as e:
+        info("Writing",fs.path(path,"project.yml"))
+        fs.copyfile(fs.path(fs.dirname(__file__),"project.yml"),projfile)
+
+########################  END OF PROJECT MANUAL COMMANDS
+
 
 @project.command(help="Create a new project. \n\n Arguments: \n\n TITLE: title of the project. \n\n PATH: path of the project.")
 @click.argument("title")

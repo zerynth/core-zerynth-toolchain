@@ -75,11 +75,12 @@ Every successful ZDM installation or update is kept in a separate directory (:sa
 import sys
 import os
 
+sys.path = [os.path.dirname(os.path.realpath(__file__))]+sys.path
+
 from zdevicemanager.base import init_all
 from zdevicemanager.base.tools import tools
 from zdevicemanager.base.base import cli
 
-sys.path = [os.path.dirname(os.path.realpath(__file__))]+sys.path
 
 
 if __name__=="__main__":

@@ -351,6 +351,26 @@ class zfs():
                 if os.path.isfile(fp):
                     total_size += os.path.getsize(fp)
         return total_size
+    def get_project_config(self,project,fail=False):
+        #search for project configuration file
+        cfgfile = self.path(project,"project.yml")
+        if not self.exists(cfgfile):
+            if fail:
+                fatal(cfgfile, "does not exist! Create a project configuration file first...")
+            else:
+                raise Exception("Project config file missing")
+        try:
+            cfg = self.get_yaml_or_json(cfgfile)
+        except Exception as e:
+            if fail:
+                fatal(cfgfile, "is not readable")
+            else:
+                raise Exception("Project config file not readable")
+        return cfg
+    def set_project_config(self,project,cfg):
+        cfgfile = self.path(project,"project.yml")
+        fs.set_yaml(cfg,cfgfile,False)
+
 
     # def remove_readonly_no_output(self, func, path, excinfo):
     #     #used to hide the whooosh bug when updating the index in, guess.., windows -_-

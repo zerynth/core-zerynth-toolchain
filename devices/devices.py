@@ -63,7 +63,7 @@ class Device():
                 for line in lines:
                     if line.startswith("wrote 0 "):
                         return False,"0 bytes written!"
-                    if line.startswith("wrote"):
+                    if line.startswith("** Programming Started **"):
                         wait_verification=True
                     if wait_verification and line.startswith("** Verified OK"):
                         if self.get("jtag_burn_end"):
@@ -89,7 +89,10 @@ class Device():
         try:
             pb = Probe()
             pb.connect()
-            pb.send(self.jtag_chipid_command)
+            cmds = self.jtag_chipid_command.split(";")
+            for cmd in cmds:
+                warning(cmd)
+                pb.send(cmd)
             # pb.send("halt; mdw 0x1fff7a10; mdw 0x1fff7a14; mdw 0x1fff7a18")
             lines = pb.read_lines(timeout=1)
             ids = []
@@ -100,9 +103,10 @@ class Device():
                 fld = line.split(":")
                 ids.append(fld[1].strip())
             # if len(ids)!=3:
-            if len(ids)!=self.jtag_chipid_len:
+            if len(ids)<self.jtag_chipid_len:
                 warning("Probe result too short!")
                 return None
+            ids = ids[:self.jtag_chipid_len]
             chipid = "".join([id[::-1] for id in ids])
             return chipid
         except Exception as e:
@@ -115,6 +119,10 @@ class Device():
         cmd="reset halt;"
         addr = self.vmstore_offset
         cmd+="; ".join(["mdw "+hex(int(addr,16)+i) for i in range(0,32,4)])
+        cmds = cmd.split(";")
+        for cmd in cmds:
+            warning(cmd)
+            pb.send(cmd)
         # halt and read 8 words
         pb.send(cmd)
         lines = pb.read_lines(timeout=1)
@@ -124,7 +132,7 @@ class Device():
                 continue
             fld = line.split(":")
             ids.append(fld[1].strip())
-        if len(ids)!=8:
+        if len(ids)<8:
             warning("Probe result too short!",len(ids),ids)
             return None
         # first word is length

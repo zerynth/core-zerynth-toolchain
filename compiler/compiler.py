@@ -37,8 +37,9 @@ class Compiler():
     PREPROCESS = 0
     COMPILE = 1
 
-    def __init__(self, inputfile, target, syspath=[],cdefines=[],mode=COMPILE,localmods={}):
+    def __init__(self, inputfile, target, syspath=[],cdefines=[],mode=COMPILE,localmods={},tempdir=None):
         # build syspath
+        self.tempdir=tempdir
         self.syspath = []
         # add current mainfile dir
         self.curpath = fs.apath(fs.dirname(inputfile))
@@ -590,7 +591,7 @@ class Compiler():
 
             ofilecnt = None
             self.cncache.set_target(self.maindir,self.board.target,self.cdefines)
-            tmpdir = env.tmp
+            tmpdir = self.tempdir or env.tmp
             ofiles = {}
             for cfile in self.cfiles:
                 if not fs.exists(cfile):

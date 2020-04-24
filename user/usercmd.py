@@ -91,11 +91,11 @@ The :samp:`authentication_token` can be obtained by manually opening the login/r
         log("In a few seconds a browser will open to the login page")
         log("Once logged, copy the authorization token and paste it here")
         time.sleep(1)
-        webbrowser.open(env.api.sso + "?redirect=https://api.zdm.test.zerynth.com/v1/login/ztc/v1/login/ztc/")
+        webbrowser.open(env.api.sso + "?redirect="+env.api.zdmredirect)
         token = input("Paste the token here and press enter -->")
     if token:
         env.set_token(token)
-        zget("https://test.zerynth.com/v1/sso?redirect=https://api.zdm.test.zerynth.com/v1/login/zstudio")
+        zget(env.api.sso + "?redirect="+env.api.zdmredirectstudio)
         check_installation()
     elif user and passwd:
         try:
@@ -109,7 +109,7 @@ The :samp:`authentication_token` can be obtained by manually opening the login/r
                 rj = res.json()
                 if rj["status"]=="success":
                     env.set_token(rj["data"]["token"])
-                    zget("https://test.zerynth.com/v1/sso?redirect=https://api.zdm.test.zerynth.com/v1/login/ztc/")
+                    zget(env.api.sso + "?redirect="+env.api.zdmredirect)
                     info("Ok")
                 else:
                     fatal(rj["message"])

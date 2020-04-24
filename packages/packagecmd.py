@@ -193,9 +193,16 @@ def get_info(fullname):
         fatal("Can't find package",fullname)
 
 
+
 @package.command(help="Retrieve and store current available packages")
 @click.argument("fullname")
 def install_deps(fullname):
+    _install_deps(fullname)
+
+def do_install_deps(fullname):
+    _install_deps(fullname)
+
+def _install_deps(fullname):
     pack = tools.get_package(fullname)
     has_deps = tools.has_all_deps(fullname)
     if has_deps:

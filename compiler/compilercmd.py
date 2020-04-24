@@ -47,6 +47,10 @@ import click
 def compile(project,target,output,include,define,imports,proj,config):
     _zcompile(project,target,output,include,define,imports,proj,config)
 
+
+def do_compile(project,target,output,include,define,imports,proj,config):
+    _zcompile(project,target,output,include,define,imports,proj,config)
+
 def _zcompile(project,target,output,include,define,imports,proj,config):
     if project.endswith(".py"):
         mainfile=project

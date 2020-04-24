@@ -231,8 +231,12 @@ class Relocator():
 
         if vcobj2.bss_end() or vcobj2.data_end():
             hsize = max(vcobj2.bss_end(),vcobj2.data_end())-_memstart
-        else:
+        elif vcobj2.data_end():
             hsize = data_end-data_start
+        else:
+            hsize = 0
+            data_start = 0
+            data_end = 0
 
         debug("ram data size",hex(hsize))
         debug("ram data start",hex(data_start))
