@@ -44,14 +44,15 @@ import click
 @click.option("--define","-D",default=[],multiple=True,help="additional C macro definition (multi-value option)")
 @click.option("--imports","-m",flag_value=True,default=False,help="only generate the list of imported modules")
 @click.option("--config","-cfg",flag_value=True,default=False,help="only generate the configuration table")
-def compile(project,target,output,include,define,imports,proj,config):
-    _zcompile(project,target,output,include,define,imports,proj,config)
+@click.option("--tmpdir","-tmp",default="",help="set temp directory")
+def compile(project,target,output,include,define,imports,proj,config,tmpdir):
+    _zcompile(project,target,output,include,define,imports,proj,config,tmpdir)
 
 
-def do_compile(project,target,output,include,define,imports,proj,config):
-    _zcompile(project,target,output,include,define,imports,proj,config)
+def do_compile(project,target,output,include,define,imports,proj,config,tmpdir):
+    _zcompile(project,target,output,include,define,imports,proj,config,tmpdir)
 
-def _zcompile(project,target,output,include,define,imports,proj,config):
+def _zcompile(project,target,output,include,define,imports,proj,config,tmpdir):
     if project.endswith(".py"):
         mainfile=project
         project=fs.dirname(project)
@@ -78,7 +79,7 @@ def _zcompile(project,target,output,include,define,imports,proj,config):
 
 
     #TODO: check target is valid
-    compiler = Compiler(mainfile,target,include,define,localmods=prjs)
+    compiler = Compiler(mainfile,target,include,define,localmods=prjs,tempdir=tmpdir)
     try:
         if not imports and not config:
             binary, reprs = compiler.compile()

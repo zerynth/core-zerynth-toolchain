@@ -250,6 +250,19 @@ class Discover():
             return res[0]
         return res
 
+    def search_for_attached_device(self,target=None):
+        devs = self.run_one(True)
+        res = []
+        for h,dev in devs.items():
+            if target:
+                if dev.target==target:
+                    return dev
+            else:
+                res.append(dev)
+        if len(res) > 0:
+            return res[0]
+        return res
+
 
     def run_one(self,matchdb):
         nd = self.parse()

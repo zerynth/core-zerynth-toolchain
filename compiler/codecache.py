@@ -3,8 +3,9 @@ import hashlib
 import base64
 
 class CodeCache():
-    def __init__(self):
-        self.basepath = fs.path(env.tmp,"native_cache")
+    def __init__(self,tmpdir=None):
+        tmp = env.tmp if not tmpdir else tmpdir
+        self.basepath = fs.path(tmp,"native_cache")
         self.cache = {}
         self.target=""
 

@@ -39,7 +39,7 @@ class Compiler():
 
     def __init__(self, inputfile, target, syspath=[],cdefines=[],mode=COMPILE,localmods={},tempdir=None):
         # build syspath
-        self.tempdir=tempdir
+        self.tempdir=tempdir or env.tmp
         self.syspath = []
         # add current mainfile dir
         self.curpath = fs.apath(fs.dirname(inputfile))
@@ -89,7 +89,7 @@ class Compiler():
             self.moduletable = {}
             self.maindir=None
             self.resources={}
-            self.cncache = CodeCache()
+            self.cncache = CodeCache(self.tempdir)
             self.scratch()
             self.mode=mode
             genByteCodeMap()
@@ -376,7 +376,7 @@ class Compiler():
                                 kl = vmacro!=cval
                         except:
                             #in case of error, failsafe to false (can happen of typeerror)
-                            kl = false
+                            kl = False
                     else:
                         #no expr
                         if not negated:
@@ -591,7 +591,7 @@ class Compiler():
 
             ofilecnt = None
             self.cncache.set_target(self.maindir,self.board.target,self.cdefines)
-            tmpdir = self.tempdir or env.tmp
+            tmpdir = self.tempdir
             ofiles = {}
             for cfile in self.cfiles:
                 if not fs.exists(cfile):

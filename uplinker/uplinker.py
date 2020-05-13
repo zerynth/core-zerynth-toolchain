@@ -83,7 +83,8 @@ def handshake(ch):
 @click.option("--loop",default=5,type=click.IntRange(1,20),help="number of retries during device discovery.")
 @click.option("--skip-layout","skip_layout",default=False,flag_value=True,help="ignore a device configuration file if present")
 @click.option("--layout-root","layout_root",default=None,type=click.Path(),help="root folder for configuration files")
-def uplink(alias,bytecode,loop,skip_layout,layout_root):
+@click.option("--tmpdir","-tmp",default="",help="set temp directory")
+def uplink(alias,bytecode,loop,skip_layout,layout_root,tmpdir):
     """
 .. _ztc-cmd-uplink:
 
@@ -123,9 +124,9 @@ The :command:`uplink` may the additional :option:`--loop times` option that spec
 
     if dev.preferred_uplink_with_jtag:
         # uplink code with jtag
-        _link_uplink_jtag(dev,bytecode)
+        _link_uplink_jtag(dev,bytecode,tmpdir)
     else:
-        _uplink_dev(dev,bytecode,loop)
+        _uplink_dev(dev,bytecode,loop,tmpdir)
 
 
 
@@ -136,7 +137,8 @@ The :command:`uplink` may the additional :option:`--loop times` option that spec
 @click.option("--spec","__specs",default="",multiple=True)
 @click.option("--skip-layout","skip_layout",default=False,flag_value=True,help="ignore a device configuration file if present")
 @click.option("--layout-root","layout_root",default=None,type=click.Path(),help="root folder for configuration files")
-def uplink_raw(target,bytecode,loop,__specs,skip_layout,layout_root):
+@click.option("--tmpdir","-tmp",default="",help="set temp directory")
+def uplink_raw(target,bytecode,loop,__specs,skip_layout,layout_root,tmpdir):
     """
 .. _ztc-cmd-uplink-raw:
 
@@ -152,12 +154,12 @@ The command: ::
 performs an uplink on the device of type :samp:`target` using the bytecode file at :samp:`bytecode` using the serial port :samp:`port`.
 
     """
-    _uplink_raw(target,bytecode,loop,__specs,skip_layout,layout_root)
+    _uplink_raw(target,bytecode,loop,__specs,skip_layout,layout_root,tmpdir)
 
-def do_uplink_raw(target,bytecode,loop,__specs,skip_layout,layout_root):
-    _uplink_raw(target,bytecode,loop,__specs,skip_layout,layout_root)
+def do_uplink_raw(target,bytecode,loop,__specs,skip_layout,layout_root,tmpdir):
+    _uplink_raw(target,bytecode,loop,__specs,skip_layout,layout_root,tmpdir)
 
-def _uplink_raw(target,bytecode,loop,__specs,skip_layout,layout_root):
+def _uplink_raw(target,bytecode,loop,__specs,skip_layout,layout_root,tmpdir):
     options = {}
     for spec in __specs:
         pc = spec.find(":")
@@ -169,9 +171,9 @@ def _uplink_raw(target,bytecode,loop,__specs,skip_layout,layout_root):
         _uplink_layout(dev,bytecode,dczpath=layout_root)
     if dev.preferred_uplink_with_jtag:
         # uplink code with jtag
-        _link_uplink_jtag(dev,bytecode)
+        _link_uplink_jtag(dev,bytecode,tmpdir)
     else:
-        _uplink_dev(dev,bytecode,loop)
+        _uplink_dev(dev,bytecode,loop,tmpdir)
     # _uplink_dev(dev,bytecode,loop)
 
 @cli.command(help="Uplink bytecode to a device using a probe.")
@@ -181,7 +183,8 @@ def _uplink_raw(target,bytecode,loop,__specs,skip_layout,layout_root):
 @click.option("--address",default="")
 @click.option("--skip-layout","skip_layout",default=False,flag_value=True,help="ignore a device configuration file if present")
 @click.option("--layout-root","layout_root",default=None,type=click.Path(),help="root folder for configuration files")
-def uplink_by_probe(target,probe,linked_bytecode,address,skip_layout,layout_root):
+@click.option("--tmpdir","-tmp",default="",help="set temp directory")
+def uplink_by_probe(target,probe,linked_bytecode,address,skip_layout,layout_root,tmpdir):
     """
 .. _ztc-cmd-uplink-by-probe:
 
@@ -213,7 +216,8 @@ It is possible to change the address where the bytecode will be flashed by speci
 
 
 
-def _link_uplink_jtag(dev,bytecode):
+def _link_uplink_jtag(dev,bytecode,tmpdir=None):
+    tmpdir = tmpdir or env.tmp
     probe = dev.preferred_uplink_with_jtag["probe"]
     
     info("Searching for vm...")
@@ -235,8 +239,8 @@ def _link_uplink_jtag(dev,bytecode):
         fatal("Please switch to the correct version of Zerynth or virtualize the device with a compatible VM...")
 
     info("Linking bytecode...")
-    fwbin = fs.path(env.tmp,"fw.bin")
-    res, out, _ = proc.run_ztc("link",vm_uid,bytecode,"--bin","--file",fwbin,outfn=log)
+    fwbin = fs.path(tmpdir,"fw.bin")
+    res, out, _ = proc.run_ztc("link",vm_uid,bytecode,"--bin","--file",fwbin,"--tmpdir",tmpdir, outfn=log)
     if res:
         fatal("Can't link!")
 
@@ -281,7 +285,7 @@ def _uplink_layout(dev,bytecode,dczpath=None):
 
 
 
-def _uplink_dev(dev,bytecode,loop):
+def _uplink_dev(dev,bytecode,loop,tmpdir=None):
     try:
         bf = fs.get_json(bytecode)
     except:
@@ -342,7 +346,7 @@ def _uplink_dev(dev,bytecode,loop):
     symbols,_memend_or_start,_romstart,_flashspace = handshake(ch)
 
     relocator = Relocator(bf,vm,dev)
-    thebin = relocator.relocate(_memend_or_start,_romstart)
+    thebin = relocator.relocate(_memend_or_start,_romstart,tempdir=tmpdir)
     totsize = len(thebin)
 
     #self.log("Sending %i bytes..."%totsize)
@@ -434,7 +438,8 @@ def _uplink_dev(dev,bytecode,loop):
 @click.option("--vmfile",default="", type=str,help="Save binary to specified file")
 @click.option("--bin",default=False,flag_value=True,help="Save in binary format")
 @click.option("--debug_bytecode",default=False,flag_value=True,help="Save debug info in bytecode")
-def link(vmuid,bytecode,include_vm,vm_ota,bc_ota,file,otavm,bin,debug_bytecode,vmfile):
+@click.option("--tmpdir","-tmp",default="",help="set temp directory")
+def link(vmuid,bytecode,include_vm,vm_ota,bc_ota,file,otavm,bin,debug_bytecode,vmfile,tmpdir):
     """
 .. _ztc-cmd-link:
 
@@ -522,7 +527,7 @@ For example, assuming a project has been compiled to the bytecode file :samp:`pr
             "rodata_in_ram":vm.get("rodata_in_ram",False)
         },recursive=False))
     dbginfo = []
-    thebin = relocator.relocate(-1,_romstart,dbginfo)
+    thebin = relocator.relocate(-1,_romstart,dbginfo,tempdir=tmpdir)
     bcbin = thebin
 
     if debug_bytecode:

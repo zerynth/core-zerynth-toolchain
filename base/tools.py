@@ -131,6 +131,14 @@ class Tools():
                 vm=vmf
         return vm
 
+    def get_vminfo_by_uid(self,vmuid):
+        pth = self.get_vm_by_uid(vmuid)
+        if not pth:
+            return None,None,None,None
+        else:
+            vm = fs.get_json(pth)
+            return vm["version"],vm["rtos"],vm["features"],vm["on_chip_id"]
+
     def get_vm_by_uid(self,vmuid):
         #for root,dirnames,files in os.walk(fs.path(env.vms)):
         for target in fs.dirs(env.vms):

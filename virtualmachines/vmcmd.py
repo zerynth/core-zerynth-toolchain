@@ -143,7 +143,7 @@ def do_create_by_uid(dev_uid,version,rtos,feat,name,patch,custom_target,share,re
 
 def _create_by_uid(dev_uid,version,rtos,feat,name,patch,custom_target,share,reshare,locked):
     vminfo = {
-        "name": "dev:"+dev_uid,
+        "name": name or ("dev:"+dev_uid),
         "dev_uid":dev_uid,
         "version": version,
         "rtos": rtos,
@@ -153,7 +153,6 @@ def _create_by_uid(dev_uid,version,rtos,feat,name,patch,custom_target,share,resh
         "reshareable":reshare,
         "locked":locked
         }
-    log_json(vminfo)
     return _vm_create(vminfo,custom_target=None if not custom_target else custom_target)
 
 
@@ -314,7 +313,8 @@ Additional options can be provided to filter the returned virtual machine set:
 
 @vm.command(help="List available virtual machine parameters. \n\n Arguments: \n\n TARGET: target of the virtual machine")
 @click.argument("target")
-def available(target):
+@click.option("--oneperline", default=False,flag_value=True, help="If Json output, one VM per line")
+def available(target,oneperline):
     """ 
 .. _ztc-cmd-vm-available:
 
@@ -333,12 +333,19 @@ For the device target, a list of possible virtual machine configurations is retu
 * free/pro only
 
     """
-    __vm_available(target)
+    __vm_available(target,oneperline)
 
-def do_vm_available(target):
-    __vm_available(target)
+def do_vm_available(target,oneperline=False):
+    __vm_available(target,oneperline)
 
-def __vm_available(target):
+def do_get_latest_vm(target):
+    hh = env.human
+    env.human = False
+    lvm = __vm_available(target,oneperline=True,return_last=True)
+    env.human = hh
+    return lvm
+
+def __vm_available(target,oneperline=False,return_last=False):
     table=[]
     try:
         res = zget(url=env.api.vmlist+"/"+target+"/"+env.var.version)
@@ -353,7 +360,31 @@ def __vm_available(target):
                 table = sorted(table, key= lambda x: x[5],reverse=True)
                 log_table(table,headers=["Title","Description","Rtos","Features","Type","Version"])
             else:
-                log_json(rj["data"])
+                if oneperline:
+                    data = rj["data"]
+                    if not data:
+                        return
+                    info = data.get("info")
+                    vms = []
+                    for v,vmi in data.get("versions",{}).items():
+                        for vx in vmi["vms"]["base"]:
+                            vm = {}
+                            vm["target"]=target
+                            vm["version"]=v
+                            vm["rtos"]=vx["rtos"]
+                            vm["features"]=vx["features"]
+                            vf = [ info["features"].get(x,"") for x in vm["features"] ]
+                            vf = sorted(vf)
+                            vm["xfeatures"] = vf
+                            vm["description"] = ", ".join(vf) or "Standard"
+                            vms.append(vm)
+                    vms=sorted(vms,key=lambda x: -int32_version(x["version"]))
+                    if return_last:
+                        return vms[0]
+                    for vm in vms:
+                        log_json(vm)
+                else:
+                    log_json(rj["data"])
         else:
             fatal("Can't get vm list",rj["message"])
     except Exception as e:

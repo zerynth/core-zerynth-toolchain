@@ -231,12 +231,12 @@ class Relocator():
 
         if vcobj2.bss_end() or vcobj2.data_end():
             hsize = max(vcobj2.bss_end(),vcobj2.data_end())-_memstart
-        elif vcobj2.data_end():
-            hsize = data_end-data_start
         else:
-            hsize = 0
-            data_start = 0
-            data_end = 0
+            hsize = data_end-data_start
+        # else:
+        #     hsize = 0
+        #     data_start = 0
+        #     data_end = 0
 
         debug("ram data size",hex(hsize))
         debug("ram data start",hex(data_start))
@@ -310,7 +310,7 @@ class Relocator():
         return cobj,header,pyobjs,_textstart
 
     # old relocation, with memdelta, before r19.09.16
-    def relocate_with_memstart(self,_memstart,_romstart,debug_info=None):
+    def relocate_with_memstart(self,_memstart,_romstart,debug_info=None,tempdir=None):
         #logger.info("Relocating Bytecode for %s",self.upl.board["shortname"])
         # cc = gcc(tools[self.device.cc],opts=self.device.gccopts)
         # unpack zcode
@@ -319,7 +319,7 @@ class Relocator():
         rodata_in_ram=self.device.get("rodata_in_ram",False)
 
         if cobj:
-            tmpdir = fs.get_tempdir()
+            tmpdir = tempdir or fs.get_tempdir()
             ofile = fs.path(tmpdir,"zerynth.rlo")
             lfile = fs.path(tmpdir,"zerynth.lo")
             fs.write_file(cobj,ofile)
@@ -344,7 +344,7 @@ class Relocator():
         return self._fill_thebin(thebin)
 
 
-    def relocate_with_memend(self,_memend,_romstart,debug_info=None):
+    def relocate_with_memend(self,_memend,_romstart,debug_info=None,tempdir=None):
         #logger.info("Relocating Bytecode for %s",self.upl.board["shortname"])
         # cc = gcc(tools[self.device.cc],opts=self.device.gccopts)
         # unpack zcode
@@ -353,7 +353,7 @@ class Relocator():
         rodata_in_ram=self.device.get("rodata_in_ram",False)
 
         if cobj:
-            tmpdir = fs.get_tempdir()
+            tmpdir = tempdir or fs.get_tempdir()
             ofile = fs.path(tmpdir,"zerynth.rlo")
             lfile = fs.path(tmpdir,"zerynth.lo")
             fs.write_file(cobj,ofile)
@@ -399,7 +399,7 @@ class Relocator():
         return self._fill_thebin(thebin)
 
 
-    def relocate(self,_memstart_or_memend,_romstart,debug_info=None):
+    def relocate(self,_memstart_or_memend,_romstart,debug_info=None,tempdir=None):
         vm = self.thevm
         vmversion = vm["version"]
         if vmversion<"r20.01.30":
@@ -411,7 +411,7 @@ class Relocator():
             else:
                 debug("Relocating with dev.memstart strategy")
 
-            return self.relocate_with_memstart(_memstart_or_memend,_romstart,debug_info)
+            return self.relocate_with_memstart(_memstart_or_memend,_romstart,debug_info,tempdir)
         else:
             if _memstart_or_memend == -1:
                 # linking without knowning memdelta (called by ztc.link)
@@ -421,5 +421,5 @@ class Relocator():
                 debug("Relocating with dev.memend strategy")
 
             # new vm without memdelta
-            return self.relocate_with_memend(_memstart_or_memend,_romstart,debug_info)
+            return self.relocate_with_memend(_memstart_or_memend,_romstart,debug_info,tempdir)
 

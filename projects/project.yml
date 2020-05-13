@@ -7,10 +7,17 @@
 # fill the sections target and specs with the required information
 #
 
-target: your_target_device_here
+target: null
 specs:
-    port: your_device_port_here
-    probe: your_jtag_probe_here
+    port: null
+    probe: null
+    disk: null
+vm:
+    uid: null
+    dev_uid: null
+    rtos: null
+    version: null
+    features: []
 config: {}
 
 

@@ -331,12 +331,12 @@ The option :option:`--skip_burn` avoid flashing the device with the registering 
     tgt = tgt.to_dict()
     tgt["chipid"]=chipid
     tgt["remote_id"]=remote_uid
+    do_put_dev(tgt)
+
+def do_put_dev(tgt):
     env.put_dev(tgt,linked=tgt["sid"]=="no_sid")
-    if alter_ego:
-        alter_ego = alter_ego.to_dict()
-        alter_ego["chipid"]=chipid
-        alter_ego["remote_id"]=remote_uid
-        env.put_dev(alter_ego)
+    if tgt["has_alter_ego"]:
+        env.put_dev(tgt)
 
 
 def _register_device(dinfo):
@@ -415,6 +415,12 @@ It is necessary to provide at least one device parameter and the registration wi
     """
     __register_raw(target,__skip_remote,__specs,__skip_probe)
 
+def do_search_attached_device(target=None):
+    global _dsc
+    if not _dsc:
+        _dsc = Discover()
+    return _dsc.search_for_attached_device(target)
+
 def do_register_raw(target,__skip_remote,__specs,__skip_probe):
     return __register_raw(target,__skip_remote,__specs,__skip_probe)
 
@@ -428,7 +434,11 @@ def __register_raw(target,__skip_remote,__specs,__skip_probe):
         fatal("No such target!")
    
     probe = options.get("probe")
+    port = options.get("port")
+    disk = options.get("disk")
     if probe:
+        if not dev.jtag_capable:
+            fatal("Registration by probe not supported, check your configuration")
         chipid,err = dev.do_get_chipid(probe,__skip_probe)
         if err:
             fatal(err)
@@ -436,6 +446,8 @@ def __register_raw(target,__skip_remote,__specs,__skip_probe):
         # open register.vm
         reg = fs.get_json(fs.path(dev.path,"register.vm"))
         info("Burning bootloader...")
+        if not port:
+            fatal("Unknown serial port. Please specify device serial port in configuration")
         res, out = dev.do_burn_vm(reg,options,info)
         if not res:
             fatal("Can't burn bootloader! -->",out)
@@ -456,12 +468,17 @@ def __register_raw(target,__skip_remote,__specs,__skip_probe):
             "on_chip_id": chipid,
             "type": dev.original_target or target
         }
-        return _register_device(dinfo)
-    
-
-
-    
-
+        remote_uid = _register_device(dinfo)
+        try:
+            tgt = do_search_attached_device(dev.target)
+            tgt = tgt.to_dict()
+            tgt["chipid"]=chipid
+            tgt["remote_id"]=remote_uid
+            do_put_dev(tgt)
+        except Exception as e:
+            debug(e)
+            pass
+        return remote_uid
 
 @device.command(help="Virtualize a device. \n\n Arguments: \n\n ALIAS: device alias. \n\n VMUID: Virtual Machine identifier.")
 @click.argument("alias")
