@@ -19,7 +19,6 @@ List of device commands:
 Schedule a job
 ---------------
 
-In the ZDM will be soon available to schedule jobs in time, At the moment, it's only possible to send it immediately to a device.
 To call remotely a function defined in your firmware, use the command: ::
 
     zdm job schedule job uid

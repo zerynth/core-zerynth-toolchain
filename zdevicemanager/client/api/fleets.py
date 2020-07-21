@@ -2,7 +2,7 @@ class FleetApiMixin(object):
 
     def fleets(self):
         """
-        Get all the devices
+        Get all the fleets
 
         Returns:
             (list of dicts): a list of dictionaries

@@ -8,8 +8,12 @@ class DataTagModel(Model):
         return self.attrs.get("tag")
 
     @property
-    def Timestamp(self):
+    def TimestampDevice(self):
         return self.attrs.get("timestamp_device")
+
+    @property
+    def TimestampCloud(self):
+        return self.attrs.get("timestamp_in")
 
     @property
     def DeviceId(self):

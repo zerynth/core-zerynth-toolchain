@@ -49,7 +49,7 @@ class AstPreprocessor(ast.NodeTransformer):
     
     def visit_Name(self,node):
         name = node.id
-        #print("CHECKING NAME",name,"IN",self.allnames)
+        # print("CHECKING NAME",name,"IN",self.allnames)
         if name in self.allnames:
             pos = self.allnames[name]
         else:

@@ -15,6 +15,7 @@ class Resource():
         resargs = res.get("args",[])
         resmaps = res["mapping"]
         resmaps = [int(x,16) if isinstance(x,str) else x for x in resmaps]
+        resfilter = res.get("filter","")
         resenc = res.get("encrypt",False)
         if not isinstance(resmaps,list):
             resmaps = [resmaps]
@@ -28,7 +29,8 @@ class Resource():
             "mapping":resmaps,
             "format":resfrmt,
             "args":resargs,
-            "encrypt":resenc
+            "encrypt":resenc,
+            "filter":resfilter
         }
 
     def load_from_file(self,ppath=None):
@@ -63,8 +65,9 @@ class Resource():
         return self._res
 
 class Layout():
-    def __init__(self):
+    def __init__(self,has_error=False):
         self.layout = {"bin":[],"loc":[],"dsc":[],"chk":[],"sz":[]}
+        self.has_error = has_error
 
     def add(self,bin,loc,dsc):
         self.layout["bin"].append(bin)
@@ -99,6 +102,9 @@ class Layout():
 
     def is_empty(self):
         return not bool(self.layout["bin"])
+
+    def with_errors(self):
+        return self.has_error
 
     def to_table(self):
         table = []
@@ -185,8 +191,8 @@ def parse_resources(mapping,ppath=None):
                 raise DCZResourceDuplicate("Resource "+str(rr.name)+" has duplicated definition")
             resources[rr.name]=rr
         pmethod = provisioning.get("method","manual")
-        if pmethod in ["manual","aws_iot_key_cert"]:
-            provisioner = Provisioner.create(pmethod,mapping)
+        if pmethod in ["manual","aws_iot_key_cert","zdm"]:
+            provisioner = Provisioner.create(pmethod,mapping,ppath)
             for resname,res in resources.items():
                 if res.type=="file":
                     res.load_from_file(ppath)
@@ -231,7 +237,7 @@ def get_layout_at(ppath,fail=False):
     except Exception as e:
         warning("Resource parsing failed")
         logm(e)
-        return Layout()
+        return Layout(has_error=e)
     if provisioner:
         try:
             provisioner.finalize(resources)
@@ -239,7 +245,7 @@ def get_layout_at(ppath,fail=False):
         except Exception as e:
             warning("Provisioner failed")
             logm(e)
-            return Layout()
+            return Layout(has_error=e)
     try:
         if dcz_map:
             dczres = dcz_compile(dcz_map,resources)
@@ -247,7 +253,7 @@ def get_layout_at(ppath,fail=False):
     except Exception as e:
         warning("DCZ parsing failed")
         logm(e)
-        return Layout()
+        return Layout(has_error=e)
 
     layout.add_resources(resources)
     # table = layout.to_table()
@@ -257,7 +263,7 @@ def get_layout_at(ppath,fail=False):
     except Exception as e:
         warning("Layout validation failed")
         logm(e)
-        return Layout()
+        return Layout(has_error=e)
 
     return layout
 

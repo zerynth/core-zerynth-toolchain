@@ -1,7 +1,7 @@
 .. _zdm-main:
 
 *****************************
-Zerynth Device Manager (Beta)
+Zerynth Device Manager
 *****************************
 
 Zerynth Device Manager is a data aggregation and device management service that speeds up the development of scalable, secure and reliable IoT solutions.
@@ -15,8 +15,8 @@ Main features:
 
 To start using the Zerynth Device Manager have a look at the following guides:
 
-* `Getting Started <https://www.zerynth.com/blog/docs/the-tools/zdm/getting-started/>`_.
-* `How to connect Raspberry Pi and PC applications to the ZDM <https://www.zerynth.com/blog/docs/the-tools/zdm/getting-started-with-zdm-client-library-for-pc-and-raspberry/>`_.
+* `Getting Started <https://www.zerynth.com/blog/docs/zdm/getting-started/>`_.
+* `How to connect Raspberry Pi and PC applications to the ZDM <https://www.zerynth.com/blog/docs/zdm/projects/connect-a-raspberry-pi-or-pc-application-to-the-zerynth-device-manager/>`_.
 * :ref:`ZDM Device Library for Zerynth OS (Programming Guide)<lib.zerynth.zdm>`
 * :ref:`ZDM Client Library for MCU devices (Programming Guide)<zdm-client-main>`
 

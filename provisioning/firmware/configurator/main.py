@@ -4,6 +4,7 @@
 import streams
 import json
 import threading
+import mcu
 
 #-if !PROVISIONING_CONFIGURATOR_LIGHT
 import x509
@@ -96,7 +97,7 @@ class CommandHandler:
         self._csr = None
         self._csr_subject_str = None
         self._csr_event = threading.Event()
-        thread(self._csr_thread, size=12288)
+        thread(self._csr_thread, size=16384)
 #-endif
 
     def write_cfg(self, offset, content):
@@ -251,15 +252,24 @@ load_certificates()
 #-endif
 
 while True:
-    try:
-        crypto_element_init(crypto_info.addr)
-        if crypto_element_info_check():
-            crypto_element_init(crypto_info.addr, crypto_info.detected_cryptotype)
-            break
-    except Exception:
-        pass
-    if discover_retries > 5:
+    bkr = False
+    for addr in crypto_info.addr:
+        # print("> ",addr)
+        try:
+            crypto_element_init(addr)
+            if crypto_element_info_check():
+                crypto_info.addr = addr
+                crypto_element_init(crypto_info.addr, crypto_info.detected_cryptotype)
+                bkr = True
+                break
+            sleep(1000)
+        except Exception as e:
+            # print("> ",e)
+            pass
+    if bkr:
         break
+    if discover_retries > 5:
+        mcu.reset()
     discover_retries += 1
     sleep(100)
 

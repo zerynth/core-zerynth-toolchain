@@ -328,10 +328,9 @@ def init_cfg():
     env.is_production = True
 
     # main directories TODO: change zdir to official zdir
-    if testmode == 3:  # enable STAGE on zdm, and TEST on Zerynth. Because Zerynth doesn't have Stage env.
-        zdir = "zerynth2_test" if env.is_windows() else ".zerynth2_test"
-        env.is_production = False
-    if testmode == 2:
+    if testmode == 3:  # enable STAGE on zdm, and REMOTE on Zerynth. Because Zerynth doesn't have Stage env.
+        zdir = "zerynth2" if env.is_windows() else ".zerynth2"
+    elif testmode == 2:
         # special testing mode
         zdir = "zerynth2_test" if env.is_windows() else ".zerynth2_test"
         env.is_production = False
@@ -367,7 +366,7 @@ def init_cfg():
         # env.backend = os.environ.get("ZERYNTH_BACKEND_URL", "http://localhost/v1")
         env.backend = os.environ.get("ZERYNTH_BACKEND_URL", "https://test.zerynth.com/v1")
         env.connector = os.environ.get("ZERYNTH_ADM_URL", "http://localhost/v1")
-        env.zdm = os.environ.get("ZERYNTH_ZDM_URL", "http://api.localhost")
+        env.zdm = os.environ.get("ZERYNTH_ZDM_URL", "http://api.zdm.localhost")
         env.patchurl = os.environ.get("ZERYNTH_PATCH_URL", "http://localhost/installer")
         env.packurl = os.environ.get("ZERYNTH_PACK_URL", "http://localhost")
         github_app = "NO_APP"
@@ -381,14 +380,14 @@ def init_cfg():
         env.packurl = os.environ.get("ZERYNTH_PACK_URL", "https://test.zerynth.com")
         github_app = "882c71c6f98cd0354d97"
     elif testmode == 3:
-        # STAGE of ZDM, and TEST for Zerynth
-        env.git_url = os.environ.get("ZERYNTH_GIT_URL", "https://test.zerynth.com/git")
+        # STAGE of ZDM, and REMOTE for Zerynth
+        env.git_url = os.environ.get("ZERYNTH_GIT_URL", "https://backend.zerynth.com/git")
         env.backend = os.environ.get("ZERYNTH_BACKEND_URL", "https://backend.zerynth.com/v1")
-        env.connector = os.environ.get("ZERYNTH_ADM_URL", "https://testapi.zerynth.com:444/v1")
+        env.connector = os.environ.get("ZERYNTH_ADM_URL", "https://api.zerynth.com/v1")
         env.zdm = os.environ.get("ZERYNTH_ZDM_URL", "https://api.zdm.stage.zerynth.com")
-        env.patchurl = os.environ.get("ZERYNTH_PATCH_URL", "https://test.zerynth.com/installer")
-        env.packurl = os.environ.get("ZERYNTH_PACK_URL", "https://test.zerynth.com")
-        github_app = "882c71c6f98cd0354d97"
+        env.patchurl = os.environ.get("ZERYNTH_PATCH_URL", "https://backend.zerynth.com/installer")
+        env.packurl = os.environ.get("ZERYNTH_PACK_URL", "https://backend.zerynth.com")
+        github_app = "99fdc1e39d8ce3051ce6"
     else:
         # remote
         env.git_url = "https://backend.zerynth.com/git"

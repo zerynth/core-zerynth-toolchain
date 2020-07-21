@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # @Author: Lorenzo
 # @Date:   2018-06-05 17:31:01
-# @Last Modified by:   l.rizzello
-# @Last Modified time: 2019-03-22 15:27:32
+# @Last Modified by:   m.cipriani
+# @Last Modified time: 2020-07-15 12:44:31
 
 """
 .. _ztc-cmd-provisioning:
@@ -48,7 +48,7 @@ def provisioning():
 
 @provisioning.command("uplink-config-firmware", help="uplink configurator firmware")
 @click.argument("alias")
-@click.option("--i2caddr",default='0x60')
+@click.option("--i2caddr",multiple=True)
 @click.option("--i2cdrv",default='I2C0')
 @click.option("--cryptofamily",default='ateccx08a',type=click.Choice(_supported_cryptofamilies))
 @click.option("--cryptodevice",default=None)
@@ -95,11 +95,15 @@ Available command options are:
 
     configurator_conf_path = fs.path(tmpdir, "config.json")
     configurator_conf = fs.get_json(configurator_conf_path)
-    configurator_conf["i2caddr"] = int(i2caddr,16) if i2caddr.startswith('0x') else int(i2caddr, 10) 
+    if not i2caddr:
+         configurator_conf["i2caddr"] = [88, 96]
+    else:
+        configurator_conf["i2caddr"] = []
+        for address in i2caddr:
+            configurator_conf["i2caddr"].append(int(address,16) if address.startswith('0x') else int(address, 10)) 
     configurator_conf["i2cdrv"]  = int(i2cdrv[3:])
     fs.set_json(configurator_conf, configurator_conf_path)
-
-    compilercmd._zcompile(tmpdir, dev.target, False, [], [], False, [], False)
+    compilercmd._zcompile(tmpdir, dev.target, False, [], [], False, [], False, "")
 
     # reset before uplink
     dev = uplinker.get_device(alias,loop)

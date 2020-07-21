@@ -17,7 +17,7 @@ Global options
 
 The following global options are accepted by :command:`zdm`
 
-* :option:`--help` shows the global options and avaialable commands. :option:`--help` can also be used as a local option showing the help relative to the given command.
+* :option:`--help` shows the global options and available commands. :option:`--help` can also be used as a local option showing the help relative to the given command.
 * :option:`--colors / --no-colors` enables/disables colored output. Default is enabled. :command:`zdm` automatically detect if it is launched in a terminal capable of colored output and disables colors if not supported.
 * :option:`--traceback / --no-traceback` enables/disables the full output for exceptions. The ZDM is written in Python and in case of unexpected errors can output the full Python traceback for debugging purposes.
 * :option:`--user-agent agent` set the user-agent http header used in REST calls. It is used to monitor the integration of the ZDM in different tools. In general the :samp:`agent` value should be the name of the tool integrating the ZDM. The value :samp:`zdm` and :samp:`ide` are reserved for command line usage of the ZDM or usage through Zerynth Studio, respectively.
@@ -35,8 +35,8 @@ The ZDM contains many different commands to manage different entities (fleets, d
 * :ref:`Device related commands <zdm-cmd-device>`
 * :ref:`Fleet related commands <zzdm-cmd-fleet>`
 * :ref:`Fota related commands <zdm-cmd-fota>`
+* :ref:`Gate related commands <zdm-cmd-gates>`
 * :ref:`Job related commands <zdm-cmd-job>`
-* :ref:`Webhook related commands <zdm-cmd-webhook>`
 * :ref:`Workspace related commands <zdm-cmd-workspace>`
 
 
@@ -66,7 +66,7 @@ The ZDM is organized on disk in a set of directories stored under :file:`~/zeryn
     |
     |--vms    # virtual machines storage
     |
-    \--dist   # all installed ZDM versions
+    |--dist   # all installed ZDM versions
 
 Every successful ZDM installation or update is kept in a separate directory (:samp:`dist/version`) so that in case of corrupted installation, the previous working ZDM can be used.
 
@@ -75,15 +75,13 @@ Every successful ZDM installation or update is kept in a separate directory (:sa
 import sys
 import os
 
-sys.path = [os.path.dirname(os.path.realpath(__file__))]+sys.path
+sys.path = [os.path.dirname(os.path.realpath(__file__))] + sys.path
 
 from zdevicemanager.base import init_all
 from zdevicemanager.base.tools import tools
 from zdevicemanager.base.base import cli
 
-
-
-if __name__=="__main__":
+if __name__ == "__main__":
     init_all()
     # load tools
     tools.init()

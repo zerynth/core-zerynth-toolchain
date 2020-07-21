@@ -1,6 +1,4 @@
 from .base import Model, Collection
-from .status import StatusCollection
-from ..errors import NotFoundError
 
 class DeviceModel(Model):
 
@@ -27,7 +25,7 @@ class DeviceCollection(Collection):
         resp = self.client.api.devices()
         return [self.prepare_model(r) for r in resp]
 
-    def create(self, name, description=""):
+    def create(self, name, fleet_id=None):
         """
         Create a device
 
@@ -42,7 +40,7 @@ class DeviceCollection(Collection):
             :py:class:`adm.errors.APIError`
                 If the server returns an error.
         """
-        resp = self.client.api.create_device(name, description)
+        resp = self.client.api.create_device(name, fleet_id)
         return self.prepare_model(resp)
 
     def get(self, device_id):
@@ -84,3 +82,36 @@ class DeviceCollection(Collection):
         """
         resp = self.client.api.update_device(device_id, name, fleet_id)
         return resp
+
+    def remove(self, device_id):
+        """
+        Remove a device.
+
+        Args:
+            device_id (str): Device ID.
+
+        Raises:
+            :py:class:`adm.errors.NotFound`
+                If the device does not exist.
+            :py:class:`adm.errors.APIError`
+                If the server returns an error.
+        """
+        resp = self.client.api.remove_device(device_id)
+
+    def credentials(self, device_id, mode, endpoint_mode="secure"):
+        """
+        Provision a device.
+
+        Args:
+            device_id (str): Device ID.
+            mode (str): Provisioning mode (cloud_token, device_token)
+
+        Raises:
+            :py:class:`adm.errors.NotFound`
+                If the device does not exist.
+            :py:class:`adm.errors.APIError`
+                If the server returns an error.
+        """
+        resp = self.client.api.provision_device(device_id, mode, endpoint_mode)
+        return resp
+

@@ -1,25 +1,4 @@
-"""
 
-##########################
-Zerynth Device Manager CLI
-##########################
-
-ZDM Command Line Interface (CLI) allows managing the ZDM via command line. The ZDM CLI directly interface with the ZDM API allowing the creation of scripts that goes beyond the simplified ZDM web user interface.
-
-.. _zdm-cmd-auth:
-
-
-Authentication
-==============
-
-The ZDM allows the user to authenticate against the Zerytnh backend.
-
-The following commands are available:
-
-* :ref:`login <zdm-cmd-auth-login>` to retrieve an authentication token.
-* :ref:`logout <zdm-cmd-auth-logout>` to delete the current session.
-
-"""
 import base64
 import time
 import webbrowser
@@ -147,7 +126,7 @@ def check_installation():
         warning("Exception while checking installation", str(e))
 
 
-@cli.command("logout", help="Close current session. A new login is needed")
+@cli.command("logout", help="Delete the current session")
 def logout():
     """
 .. _zdm-cmd-auth-logout:

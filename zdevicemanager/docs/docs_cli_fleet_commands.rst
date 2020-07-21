@@ -4,7 +4,8 @@
 Fleets
 ======
 
-In the ZDM a fleet is a set of devices. When you log in for the first time, a 'default' fleet will be created.
+In the ZDM a fleet is a set of devices. When you log in for the first time, a 'default' workspace containing a
+'default' fleet will be created.
 The main attributes of a fleet are:
 
 * :samp:`uid`, a unique id provided by the ZDM after the :ref:`fleet creation <zdm-cmd-fleet-create>` command

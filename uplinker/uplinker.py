@@ -273,13 +273,16 @@ def _uplink_layout(dev,bytecode,dczpath=None):
     info("Checking layout...")
     layout = get_layout_at(ppath)
     if layout.is_empty():
-        info("No active layout found")
+        if layout.with_errors():
+            fatal("Can't create resource layout!",layout.with_errors())
+        else:
+            info("No active layout found")
         # no dcz at project location or active:False
         return
     info("Burning layout")
     res, out = dev.do_burn_layout(layout,outfn=log)
     if not res:
-        warning("Failed to burn layout",out)
+        fatal("Failed to burn layout",out)
     info("Done")
 
 

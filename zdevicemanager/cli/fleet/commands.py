@@ -5,7 +5,8 @@
 Fleets
 ======
 
-In the ZDM a fleet is a set of devices. When you log in for the first time, a 'default' fleet will be created.
+In the ZDM a fleet is a set of devices. At the first login, a 'default' workspace containing a
+'default' fleet will be created.
 The main attributes of a fleet are:
 
 * :samp:`uid`, a unique id provided by the ZDM after the :ref:`fleet creation <zdm-cmd-fleet-create>` command
@@ -26,7 +27,7 @@ from zdevicemanager.base.cfg import env
 from ..helper import handle_error
 
 
-@click.group(help="Manage the Fleets")
+@click.group(help="Manage the fleets")
 def fleet():
     pass
 
@@ -47,7 +48,7 @@ To create a new fleet of devices inside a workspace use the command: ::
 
     zdm fleet create name workspace_uid
 
-where :samp:`name` is the name you want to give to your new fleet and :samp:`workspace_id` is the uid of the workspace that will contain the fleet.
+where :samp:`name` is the fleet name and :samp:`workspace_id` is the uid of the workspace that will contain the fleet.
 
     """
     fleet = zcli.zdm.fleets.create(name, workspaceid)
@@ -67,7 +68,7 @@ def all(zcli):
 List fleets
 ------------
 
-If you want to list all your fleets, you can use this command to have information about the associated workspace, and the list of devices inside: ::
+Use this command to have information about the associated workspace, and the list of devices inside: ::
 
     zdm fleet all
 
@@ -93,7 +94,7 @@ def get(zcli, id):
 Get fleet
 ---------
 
-To get a single fleet information, you can use this command to see its name, the uid of the workspace that contains it and the list of devices inside::
+To get a single fleet information, use this command to see its name, the uid of the workspace that contains it and the list of devices inside::
 
     zdm fleet get uid
 
@@ -101,5 +102,8 @@ where :samp:`uid` is the fleet uid
 
     """
     fleet = zcli.zdm.fleets.get(id)
-    log_table([[fleet.id, fleet.name, fleet.workspace_id, fleet.devices]],
+    if env.human:
+        log_table([[fleet.id, fleet.name, fleet.workspace_id, fleet.devices]],
               headers=["ID", "Name", "WorkspaceID", "Devices"])
+    else:
+        log_json(fleet.toJson)

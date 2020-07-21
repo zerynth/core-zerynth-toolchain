@@ -13,6 +13,7 @@ from .test_fleet import FleetTestSuite
 from .test_fota import FotaTestSuite
 from .test_gates import GatesTestSuite
 from .test_job import JobTestSuite
+from .test_export import ExportsTestSuite
 from .test_workspace import WorkspaceTestSuite
 
 # initialize the test suite
@@ -28,8 +29,10 @@ suite.addTests(loader.loadTestsFromTestCase(EventTestSuite))
 suite.addTests(loader.loadTestsFromTestCase(FotaTestSuite))
 suite.addTests(loader.loadTestsFromTestCase(GatesTestSuite))
 suite.addTests(loader.loadTestsFromTestCase(JobTestSuite))
+suite.addTests(loader.loadTestsFromTestCase(ExportsTestSuite))
 
-# initialize a runner, pass it your suite and run itù
+
+# initialize a runner, pass it your suite and run it
 if __name__ == '__main__':
     runner = unittest.TextTestRunner(verbosity=3)
     result = runner.run(suite)

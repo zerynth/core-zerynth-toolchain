@@ -192,11 +192,11 @@ class ZCliContext(object):
 
 pass_zcli = click.make_pass_decorator(ZCliContext, ensure=True)
 
-@click.group(help="Zerynth Device Manger (ZDM) command line interface (Beta Version)")
+@click.group(help="Zerynth Device Manger (ZDM) command line interface")
 @click.option("-v","verbose",flag_value=True,default=False,help="Verbose.")
 @click.option("--colors/--no-colors","nocolors",default=True,help="To enable/disable colors.")
 @click.option("--traceback/--no-traceback","notraceback",default=False,help="To enable/disable exception traceback printing on criticals.")
-@click.option("--user_agent",default="zdm/version/platform",help="To insert custom user agent.")
+@click.option("--user_agent",default="zdmcli",help="To insert custom user agent.")
 @click.option("--pretty","pretty",flag_value=True, default=False,help="To display pretty json output.")
 @click.option("-J","__j",flag_value=True,default=False,help="To display the output in json format.")
 @click.pass_context
@@ -207,8 +207,8 @@ def cli(ctx, verbose,nocolors,notraceback,user_agent,__j,pretty):
     _options["verbose"]=verbose
     from zdevicemanager.base.cfg import env
 
-    if verbose and not env.is_production:
-        warning("You are not in production mode. ZDM endpoint: {}".format(env.zdm))
+    if verbose:
+        info("You are using the ZDM endpoint: {}".format(env.zdm))
 
     env.user_agent = user_agent+"/"+env.var.version+"/"+env.platform
     env.human = not __j

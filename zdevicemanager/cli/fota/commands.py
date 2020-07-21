@@ -5,7 +5,7 @@
 Fota
 ====
 
-The ZDM allows you to enable FOTA (over the air firmware updates) on your devices.
+The ZDM allows to enable FOTA (over the air firmware updates) on devices.
 
 List of FOTA commands:
 
@@ -31,8 +31,8 @@ def fota():
 
 @fota.command(help="Prepare FOTA to the ZDM")
 @click.argument("project", type=click.Path(), required=False)
-@click.argument("device-id",required=False)
-@click.argument('version',required=False)
+@click.argument("device-id", required=False)
+@click.argument('version', required=False)
 @pass_zcli
 @handle_error
 def prepare(zcli, project, device_id, version):
@@ -123,13 +123,15 @@ def do_prepare(zcli,project,device_id,version):
 
     try:
         _ztc_compile(project, vm_target, vbo_file)
-        fw_json = _ztc_link(vbo_file, vm_uid)
-        fw_bin = fw_json['bcbin']
+        fw_json1 = _ztc_link(vbo_file, vm_uid, '0')
+        fw_json2 = _ztc_link(vbo_file, vm_uid, '1')
+        fw_bin1 = fw_json1['bcbin']
+        fw_bin2 = fw_json2['bcbin']
     except Exception as e:
         fatal(e)
 
     metadata = {"vm_version": vm_version, "vm_feature": vm_hash_feature, "dev_type": target_device}
-    res = zcli.zdm.firmwares.upload(workspace_id, version, [fw_bin, fw_bin], metadata)
+    res = zcli.zdm.firmwares.upload(workspace_id, version, [fw_bin1, fw_bin2], metadata)
     if env.human:
         log_table([[res.id, res.version, res.metadata]], headers=["ID", "Version", "Metadata"])
     else:
@@ -150,16 +152,18 @@ def schedule(zcli, firmware_version, devices):
     Start a FOTA
     -----------------
 
-    Once you’ve uploaded your firmware, you can send the FOTA command to a device that will download it from the ZDM and uplink it.
-    If the FOTA operation is finished, you can see if the device has accepted or refused it using the :ref:`check fota status<zdm-cmd-fota-check>` command.
+    Once uploaded a firmware, it's possible to send the FOTA command to a device that will download it from the ZDM and uplink it.
+    If the FOTA operation is finished, ZDM allows to check if the device has accepted or refused it using the :ref:`check fota status<zdm-cmd-fota-check>` command.
 
     To start a fota, type the command: ::
 
         zdm fota schedule fw_version device_id
 
-    where :samp:`fw_version` is the firmware version associated to the device's workspace uid and :samp:`device_id` is the device you want to send the command to.
+    where :samp:`fw_version` is the firmware version associated to the device's workspace uid and :samp:`device_id` is the id of the device that will receive the command.
 
         """
+
+    print(devices)
     zcli.zdm.fota.schedule(firmware_version, devices)
     info("Sent Fota to devices {}. Firmware Version [{}] ".format(devices, firmware_version))
 
@@ -175,12 +179,12 @@ def check(zcli, device_id):
     Check FOTA status
     -----------------
 
-    To check the status of a FOTA you started, to know if the device finished the task or if an error occurred, type the
+    To check the status of a FOTA update, to know if the device finished the task or if an error occurred, type the
     following command: ::
 
         zdm fota check device_uid
 
-    where :samp:`device_uid` is the uid of the device you want to check.
+    where :samp:`device_uid` is the uid of the device to check.
 
         """
     fota_exp = zcli.zdm.fota.status_expected(device_id)
@@ -250,11 +254,28 @@ def _ztc_compile(project_path, target, vbo_file):
         fatal(err)
 
 
-def _ztc_link(vbo_file, vm_uid):
+# def _ztc_link(vbo_file, vm_uid, bytecode, out_file):
+#     debug('Linking firmware ', vbo_file, "on bytecode", bytecode)
+#     e, out_fw_raw, err = proc.runzcmd(
+#         '-J',
+#         'link',
+#         '--bc',
+#         bytecode,
+#         '--file',
+#         out_file,
+#         vm_uid,
+#         vbo_file
+#     )
+#     if e:
+#         fatal(err)
+
+def _ztc_link(vbo_file, vm_uid, bytecode):
     debug('Linking firmware ', vbo_file)
     e, out_fw_raw, err = proc.runzcmd(
         '-J',
         'link',
+        '--bc',
+        bytecode,
         vm_uid,
         vbo_file
     )

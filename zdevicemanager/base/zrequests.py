@@ -4,7 +4,6 @@ import json
 from .base import *
 from .cfg import *
 from .fs import *
-from encodings import idna
 import time
 import os
 

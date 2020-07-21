@@ -103,3 +103,22 @@ class DeviceTestSuite(unittest.TestCase):
         self.assertIn(str(key1_id), result.output)
         self.assertIn(str(key2_id), result.output)
         self.assertIn(str(key3_id), result.output)
+
+
+    def test_device_provision(self):
+        name = "test" + randomString()
+        result = self.runner.invoke(cli, ["-J", 'device', "create", name])
+        self.assertEqual(result.exit_code, 0)
+        rjson = _result_to_json(result)
+        device_id = rjson['id']
+        result = self.runner.invoke(cli, ["-J", 'device', "credentials", device_id])
+        print(result)
+        self.assertEqual(0, result.exit_code)
+        self.assertIn("id", result.output)
+        self.assertIn("devinfo", result.output)
+        self.assertIn("endpoint", result.output)
+        self.assertIn("mode", result.output["devinfo"])
+        self.assertEqual("cloud_token", result.output["devinfo"]["mode"])
+        self.assertIn("mode", result.output["endpoint"])
+        self.assertEqual("secure", result.output["endpoint"]["mode"])
+

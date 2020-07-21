@@ -48,14 +48,18 @@ class Device():
     def virtualize(self,bin):
         pass
 
-    def burn_with_probe(self,bin,offset=0):
+    def burn_with_probe(self,bin,offset=0,reset=True):
         #TODO: add support for multifile vms
         offs = offset if isinstance(offset,str) else hex(offset)
         fname = fs.get_tempfile(bin)
         try:
             pb  = Probe()
             pb.connect()
-            pb.send("program "+fs.wpath(fname)+" verify reset "+offs)
+            jcmd ="program "+fs.wpath(fname)+" verify "
+            if reset:
+                jcmd+="reset "
+            jcmd+=offs
+            pb.send(jcmd,info)
             now = time.time()
             wait_verification = False
             while time.time()-now<self.get("jtag_timeout",30):
@@ -205,8 +209,10 @@ class Device():
                         options = self.preferred_burn_with_jtag
                     tp = start_temporary_probe(self.target,options.get("probe"))
                     for chunk in layout.chunks():
-                        res,out = self.burn_with_probe(chunk["bin"],chunk["loc"])
+                        info("Burning chunk at",hex(chunk["loc"]) if not isinstance(chunk["loc"],str) else chunk["loc"],"size",len(chunk["bin"]),"bytes")
+                        res,out = self.burn_with_probe(chunk["bin"],chunk["loc"],reset=False)
                         if not res:
+                            stop_temporary_probe(tp)
                             return False,"Burning failed for "+str(chunk["dsc"])
                     stop_temporary_probe(tp)
                     return True,""

@@ -137,3 +137,9 @@ def get_token_data():
     data = decode_base64(data).decode("utf-8")
     data = json.loads(data)
     return data
+
+def download_url(url,target_file):
+    r = requests.get(url, allow_redirects=True)
+    open(target_file, 'wb').write(r.content)
+    return True
+

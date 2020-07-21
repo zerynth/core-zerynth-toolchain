@@ -4,6 +4,6 @@
     .. toctree::
        :maxdepth: 2
 
-       docs_cli_total
+       zdm_cli
        docs_zdm_device_zdmclient
 

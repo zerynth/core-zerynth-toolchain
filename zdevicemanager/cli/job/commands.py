@@ -5,7 +5,7 @@
 Jobs
 ====
 
-In the ZDM a job is a function defined in your firmware that you can call remotely through the ZDM.
+In the ZDM a job is a function defined in device's firmware that can be called remotely through the ZDM.
 There are to operations available in the ZDM for jobs:
 
 
@@ -22,7 +22,7 @@ from zdevicemanager.base.base import info, pass_zcli, log_table
 from ..helper import handle_error
 
 
-@click.group(help="Manage the jobs sent to a device")
+@click.group(help="Manage the jobs")
 def job():
     pass
 
@@ -41,14 +41,13 @@ def schedule(zcli, name, arg, devices):
 Schedule a job
 ---------------
 
-In the ZDM will be soon available to schedule jobs in time, At the moment, it's only possible to send it immediately to a device.
-To call remotely a function defined in your firmware, use the command: ::
+To call remotely a function defined in the firmware, use the command: ::
 
     zdm job schedule job uid
 
 where :samp:`job` is the function name and :samp:`uid` is the device uid.
 
-If your function expects parameters to work, you can use the command option :option:`--arg`
+If the function expects parameters to work, use the command option :option:`--arg`
 
     """
 
@@ -83,11 +82,11 @@ def check(zcli, name, device_id):
 Check a job status
 ------------------
 
-If you want to check the status of a job you scheduled, type the command: ::
+To check the status of a scheduled job, type the command: ::
 
     zdm job check job uid
 
-where :samp:`job` is the job name and :samp:`uid` is the device uid you want to check, you will see if your device sent a response to the job.
+where :samp:`job` is the job name and :samp:`uid` is the device uid to check
 
     """
     status_exp = zcli.zdm.jobs.status_expected(name, device_id)

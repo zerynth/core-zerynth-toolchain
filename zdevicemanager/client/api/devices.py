@@ -78,6 +78,25 @@ class DeviceApiMixin(object):
         res = self._result(self._put(u, data=payload))
         return res
 
+    def remove_device(self, device_id):
+        """
+       Remove a  device.
+
+       Args:
+          device_id (str): The device id to get
+
+       Returns:
+          (dict): a dictionary of details
+
+       Raises:
+          :py:class:`adm.errors.APIError`
+              If the server returns an error.
+       """
+
+        u = self._url("/device/{0}/", device_id)
+        res = self._result(self._delete(u))
+        return res
+
     def workspace_of_device(self, device_id):
         """
         Get the Workspace ID of the Device
@@ -149,3 +168,27 @@ class DeviceApiMixin(object):
         u = self._url("/device/{0}/key/{1}", device_id, key_id)
         res = self._result(self._get(u))
         return res["key"]
+
+    def provision_device(self, device_id, mode, endpoint_mode):
+        """
+        Provision a device.
+
+        Args:
+            device_id (str): The Device id.
+            mode (str): Credentials mode (cloud_token, device_token)
+            endpoint_mode (str): TLS enabled (secure, insecure)
+
+        Returns:
+            (dict): a key dictionary
+
+        Raises:
+            :py:class:`adm.errors.APIError`
+                If the server returns an error.
+        """
+        u = self._url("/device/{0}/credential", device_id)
+        res = self._result(self._post(u, data={
+	        "endpoint_mode": endpoint_mode,
+            "provision_mode": mode
+        }))
+        return res["credential"]
+

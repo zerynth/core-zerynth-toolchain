@@ -1,10 +1,11 @@
 from .aws import *
+from .zdm import *
 
 
 class Provisioner():
 
     @staticmethod
-    def create(pmethod,config):
+    def create(pmethod,config,ppath=None):
         if pmethod.startswith("aws"):
             aws_data = config.get("aws",{})
             return AWS(pmethod,aws_data)
@@ -16,6 +17,8 @@ class Provisioner():
             pass
         elif pmethod.startswith("manual"):
             return Provisioner()
+        elif pmethod.startswith("zdm"):
+            return ZDM(pmethod,config.get("zdm",{}),ppath)
 
 
 

@@ -6,17 +6,19 @@ from zdevicemanager.base.zrequests import zget, zpost, zput, zdelete
 
 from .datatag import DataApiMixin
 from .devices import DeviceApiMixin
-from .events import EventApiMixin
 from .fleets import FleetApiMixin
 from .gates import GateApiMixin
 from .status import StatusApiMixin
 from .workspace import WorkspaceApiMixin
+from .exports import ExportsApiMixin
+from .conditions import ConditionApiMixin
+
 from ..constants import DEFAULT_TIMEOUT_SECONDS, DEFAULT_USER_AGENT, DEFAULT_ZDM_API_VERSION
 from ..errors import create_api_error_from_http_exception
 
 
-class APIClient(requests.Session, WorkspaceApiMixin, EventApiMixin, DataApiMixin, DeviceApiMixin, FleetApiMixin,
-                GateApiMixin, StatusApiMixin):
+class APIClient(requests.Session, WorkspaceApiMixin, DataApiMixin, DeviceApiMixin, FleetApiMixin,
+                GateApiMixin, StatusApiMixin, ExportsApiMixin, ConditionApiMixin):
     """
     A low-level client for the ZDM API
     """
@@ -43,7 +45,8 @@ class APIClient(requests.Session, WorkspaceApiMixin, EventApiMixin, DataApiMixin
         # return self.get(url, **self._set_request_timeout(kwargs))
 
     def _post(self, url, **kwargs):
-        return zpost(url, **kwargs)
+        res = zpost(url, **kwargs)
+        return res
 
     def _put(self, url, **kwargs):
         return zput(url, **self._set_request_timeout(kwargs))

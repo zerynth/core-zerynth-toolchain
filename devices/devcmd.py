@@ -328,15 +328,20 @@ The option :option:`--skip_burn` avoid flashing the device with the registering 
         "category": tgt.family_name
     }
     remote_uid = _register_device(dinfo)
+    tgt2 = tgt
     tgt = tgt.to_dict()
     tgt["chipid"]=chipid
     tgt["remote_id"]=remote_uid
-    do_put_dev(tgt)
+    if alter_ego:
+        alter_ego = alter_ego.to_dict()
+        alter_ego["chipid"]=chipid
+        alter_ego["remote_id"]=remote_uid
+    do_put_dev(tgt,alter_ego)
 
-def do_put_dev(tgt):
+def do_put_dev(tgt,alter_ego=None):
     env.put_dev(tgt,linked=tgt["sid"]=="no_sid")
-    if tgt["has_alter_ego"]:
-        env.put_dev(tgt)
+    if alter_ego:
+        env.put_dev(alter_ego)
 
 
 def _register_device(dinfo):

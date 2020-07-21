@@ -3,14 +3,18 @@ from .logging import MyLogger
 from .models.datatag import DataTagCollection
 from .models.device import DeviceCollection
 from .models.devicekey import DeviceKeyCollection
-from .models.event import EventCollection
 from .models.firmware import FirmwareCollection
 from .models.fleet import FleetCollection
 from .models.fota import FotaCollection
 from .models.gate import GateCollection
+from .models.gate import WebhookGateCollection
+from .models.gate import ExportGateCollection
+from .models.gate import AlarmGateCollection
 from .models.job import JobCollection
 from .models.status import StatusCollection
 from .models.workspace import WorkspaceCollection
+from .models.export import ExportsCollection
+from .models.condition import ConditionCollection
 
 logger = MyLogger().get_logger()
 
@@ -56,13 +60,6 @@ class ZdmClient(object):
         return FleetCollection(client=self)
 
     @property
-    def events(self):
-        """
-        An object for managing events on the server
-        """
-        return EventCollection(client=self)
-
-    @property
     def data(self):
         """
         An object for managing the data sent by the devices on the server.
@@ -105,8 +102,44 @@ class ZdmClient(object):
         return GateCollection(client=self)
 
     @property
+    def webhooks(self):
+        """
+        An object for managing the webhooks
+        """
+        return WebhookGateCollection(client=self)
+
+    @property
+    def exportgates(self):
+        """
+        An object for managing the export gates
+        """
+        return ExportGateCollection(client=self)
+
+    @property
+    def alarmgates(self):
+        """"
+        An object for managing the alarm gates
+        """
+        return AlarmGateCollection(client=self)
+
+    @property
     def status(self):
         """
         An object for managing the status of a device.
         """
         return StatusCollection(client=self)
+
+    @property
+    def exports(self):
+        """
+        An object for managing the exports.
+        """
+        return ExportsCollection(client=self)
+
+    @property
+    def conditions(self):
+        """
+        An object for managing the conditions.
+        """
+        return ConditionCollection(client=self)
+

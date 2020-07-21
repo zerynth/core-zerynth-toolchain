@@ -14,7 +14,9 @@ class Probe():
     def disconnect(self):
         self.tn.close()
 
-    def send(self,command):
+    def send(self,command,outfn=None):
+        if outfn:
+            outfn("Probe Command:",command)
         self.tn.write(command.encode("ascii")+b'\n')
 
     def read_lines(self,timeout=0):

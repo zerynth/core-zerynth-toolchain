@@ -54,8 +54,15 @@ class Compiler():
         self.syspath.append(env.libs)
         # then add a shortcut to all official zerynth libraries
         self.syspath.append(fs.path(env.libs,"official","zerynth"))
+        # then add a shortcut to the target
+        self.syspath.append(fs.path(env.devices,target))
         #for zd in fs.dirs(fs.path(env.libs,"official","zerynth")):
         #    self.syspath.append(zd)
+        # ZDM provisioning check
+
+    
+
+
         self.file_options = {}
         self.localmods = localmods
         self.mainfile = inputfile
@@ -76,6 +83,8 @@ class Compiler():
                 fatal("Can't load family parameters for",target)
             self.parseNatives()
             self.builtins_module = "__builtins__"
+            self.zdm_provisioning()
+
 
             self.prepdefines.update(self.board.defines)
             if "CDEFS" not in self.prepdefines:
@@ -84,7 +93,11 @@ class Compiler():
                 self.prepdefines["CFG"] = {}
             self.prepdefines["CDEFS"].extend(list(cdefines))
 
-            self.astp = AstPreprocessor(self.board.allnames,self.board.pinmap,self.prepdefines,self.prepcfiles)
+            self.allnames = {}
+            self.dcz_check()
+            self.allnames.update(self.board.allnames)
+
+            self.astp = AstPreprocessor(self.allnames,self.board.pinmap,self.prepdefines,self.prepcfiles)
             self.scopes = {}
             self.moduletable = {}
             self.maindir=None
@@ -94,6 +107,43 @@ class Compiler():
             self.mode=mode
             genByteCodeMap()
 
+    def  zdm_provisioning(self):
+        dcz_file = fs.path(self.curpath,"dcz.yml")
+        zdm_provisioning_file = fs.path(self.curpath,"zdevice.json")
+        zdm_device_dcz = fs.path(env.devices,self.target,"dcz","zdm","dcz.yml")
+        if fs.exists(zdm_provisioning_file):
+            info("ZDM provisioning file detected at",zdm_provisioning_file)
+            if fs.exists(dcz_file):
+                info("DCZ file already present")
+            else:
+                if fs.exists(zdm_device_dcz):
+                    # target supports ZDM DCZ provisioning
+                    info("Target supports ZDM DCZ provisioning, copying configuration...")
+                    fs.copyfile(zdm_device_dcz,dcz_file)
+                else:
+                    warning("Target does not support ZDM DCZ provisioning, using resource files...")
+
+    def dcz_check(self):
+        dcz_file = fs.path(self.curpath,"dcz.yml")
+        if fs.exists(dcz_file):
+            dczfile = fs.get_yaml(dcz_file,failsafe=True)
+            if not dczfile.get("disabled",False):
+                info("DCZ enabled, adding ZERYNTH_USE_DCZ flag")
+                self.prepdefines["CDEFS"].append("ZERYNTH_USE_DCZ")
+                mapping = dczfile.get("dcz",{}).get("mapping",[])
+                maplen = len(mapping)
+                if maplen<8:
+                    mapping.extend([0]*(8-maplen))
+                for i,addr in enumerate(mapping):
+                    info("DCZ enabled, adding ZERYNTH_DCZ_MAPPING_"+str(i)+" flag")
+                    # self.prepdefines["CDEFS"].append("ZERYNTH_DCZ_MAPPING_"+str(i)+"="+hex(addr))
+                    self.allnames["ZERYNTH_DCZ_MAPPING_"+str(i)]=addr
+                self.allnames["ZERYNTH_DCZ_MAPPINGS"]=maplen
+
+
+
+            else:
+                info("DCZ disabled")
 
     def scratch(self):
         self.codeobjs = []
@@ -789,12 +839,12 @@ class Compiler():
         buf+=struct.pack("=I",0)
         #marker
         buf+=struct.pack("=I",0)
-        #blen
+        #blen: bytecode size (filled by uplinker)
         buf+=struct.pack("=I",0)
-        #vversion
+        #vversion: VM version (filled by uplinker)
+        buf+=struct.pack("=I",0)
+        #bversion: sdk version (tool version used to compile the code. WARNING: can be different from the uplinker version -_-)
         buf+=struct.pack("=I",int32_version(env.var.version))
-        #bversion
-        buf+=struct.pack("=I",env.var.bytecode_version)
         #bcoptions
         buf+=struct.pack("=I",0)
 
@@ -859,7 +909,7 @@ class Compiler():
             "rtable_elements": len(self.resources),
             "header_size": len(buf),
             "version":env.var.version,
-            "bversion":env.var.bytecode_version,
+            "bversion":env.var.version,
             "target":self.board.target,
             "project":self.curpath,
             "ofiles": [] if not ofiles else ofiles

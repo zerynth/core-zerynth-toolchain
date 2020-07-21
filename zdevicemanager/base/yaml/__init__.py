@@ -2,7 +2,6 @@
 from .error import *
 
 from .tokens import *
-from .events import *
 from .nodes import *
 
 from .loader import *
