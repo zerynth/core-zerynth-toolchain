@@ -102,7 +102,6 @@ import virtualmachines
 import user
 import linter
 import misc
-import things
 import aws
 import jtag
 import provisioning

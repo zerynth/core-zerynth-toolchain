@@ -371,7 +371,7 @@ class Compiler():
             self.prepdefines["CFG"][opt]=1
         self.prepdefines["CFG"]["TARGET"]=self.prepdefines["BOARD"]
 
-        preg = re.compile("\s*(#+-)(if|else|endif|warning)\s*(!{0,1}[a-zA-Z0-9_]*)(?:\s+(>=|<=|==|!=|>|<)\s+([A-Za-z0-9_]+)){0,1}")
+        preg = re.compile("\s*(#+-)(if|else|endif|warning|error)\s*(!{0,1}[a-zA-Z0-9_]*)(?:\s+(>=|<=|==|!=|>|<)\s+([A-Za-z0-9_ ]+)){0,1}")
         stack = []
         modprg = fs.readfile(file)
         lines = modprg.split("\n")
@@ -453,15 +453,22 @@ class Compiler():
                         raise CSyntaxError(nline,0,file,"Bad preprocessor endif! Check nesting")
                     stack.pop()
                     keepline = True if not stack else stack[-1]
-                else:
+                elif op=="warning":
                     # warning
-                    warning("PREP:",cmacro,"=",vmacro,"@",nline+1)
+                    if keepline:
+                        warning("PREPROCESSOR WARNING:",cval,"@",nline+1)
+                else:
+                    # error
+                    if keepline:
+                        fatal("PREPROCESSOR ERROR:",cval,"@",nline+1)
 
+            if keepline:
+                result.append(line)
             else:
-                if keepline:
-                    result.append(line)
+                result.append("# prep removed # "+line)
 
         modprog = "\n".join(result)
+        # log(modprog)
         # if "zerynth2" not in file:
         #     log(modprog)
         debug(modprog)

@@ -22,3 +22,10 @@ def pep8(data,file,__json):
         log(json.dumps(res))
     else:
         log(res)
+
+@linter.command(help="Fix imports to be used with standard python. \n\n ")
+def fix_imports():
+    for d in fs.dirs(env.official_libs):
+        init_file = fs.path(d,"__init__.py")
+        fs.write_file("# automatically created, do not delete\n\"\"\"\nZerynth parent module for "+fs.basename(d)+" libraries\n\"\"\"\n\n",init_file)
+

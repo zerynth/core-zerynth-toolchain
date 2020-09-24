@@ -414,6 +414,7 @@ def init_cfg():
         "renew":env.backend+"/user/renew",
         "sso":env.backend+"/sso",
         "zdmredirect":env.zdmurl+"/v1/login/ztc/",
+        "zdmlocalredirect":env.zdmurl+"/v1/login/local/",
         "zdmredirectstudio":env.zdmurl+"/v1/login/zstudio/",
         "github_api":"https://api.github.com",
         "github":"https://github.com/login/oauth/authorize?client_id="+github_app+"&scope=user,repo",

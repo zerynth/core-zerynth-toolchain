@@ -15,13 +15,16 @@ The following commands are available:
 
     """
 from base import *
+import os
 import click
 import time
 import webbrowser
 import json
 import base64
-
-
+import threading
+import socket
+import http.server
+from urllib.parse import urlparse,parse_qs
 
 def check_installation():
     try:
@@ -46,13 +49,17 @@ def check_installation():
         warning("Exception while checking installation",str(e))
 
 
+supported_local_logins = ["vscode","zstudio","ide"]
+
 @cli.command("login",help="Obtain an authentication token")
 @click.option("--token",default=None,help="set the token in non interactive mode")
 @click.option("--user",default=None,help="username for manual login")
 @click.option("--passwd",default=None,help="password for manual login")
+@click.option("--local",default=None,help="get token from localhost")
+@click.option("--check",flag_value=True, default=False,help="check if logged")
 @click.option("--origin",default=None,help="origin for 3dparty auth")
 @click.option("--origin_username",default=None,help="origin username for 3dparty auth")
-def __login(token,user,passwd,origin,origin_username):
+def __login(token,user,passwd,origin,origin_username,local,check):
     """
 .. _ztc-cmd-user-login:
 
@@ -86,13 +93,44 @@ The :samp:`authentication_token` can be obtained by manually opening the login/r
 .. warning:: For manual registrations, email address confirmation is needed. An email will be sent at the provided address with instructions.
 
     """
-    if not token and not user and not passwd:
+    if check:
+        res = zget(url=env.api.profile)
+        rj = res.json()
+        if rj["status"]=="success":
+            dname = rj["data"]["display_name"]
+            mail = rj["data"]["email"]
+
+            if env.human:
+                info("Credentials valid")
+            else:
+                log_json({"logged":True, "nickname":dname, "email":mail})
+        else:
+            if env.human:
+                warning("Credentials are invalid")
+            else:
+                log_json({"logged":False})
+        return
+
+
+
+
+    if not token and not user and not passwd and not local:
         log("Hello!")
         log("In a few seconds a browser will open to the login page")
         log("Once logged, copy the authorization token and paste it here")
         time.sleep(1)
         webbrowser.open(env.api.sso + "?redirect="+env.api.zdmredirect)
         token = input("Paste the token here and press enter -->")
+
+    if not token and local:
+        if local.lower() not in supported_local_logins:
+            fatal("Unknown local login provider:",local)
+        # open a localhost server on a free port
+        # open web browser for login
+        # catch jwt on localhost redirect
+        do_local_sso(local)
+        return
+
     if token:
         env.set_token(token)
         zget(env.api.sso + "?redirect="+env.api.zdmredirectstudio)
@@ -119,6 +157,129 @@ The :samp:`authentication_token` can be obtained by manually opening the login/r
             fatal("Error!",e)
     else:
         fatal("Token needed!")
+
+
+
+
+
+class TokenRequestHandler(http.server.BaseHTTPRequestHandler):
+    result = {
+        "token": "",
+        "done": False,
+        "error": ""
+    }
+
+
+    def do_GET(self):
+        o = urlparse(self.path)
+        if o.path.startswith("/zerynth/local"):
+            params = parse_qs(o.query)
+            if "token" in params and "redirect" in params:
+                token = params["token"][0]
+                redirect = params["redirect"][0]
+                # TODO: checkthe validity of the token here
+                TokenRequestHandler.result["token"]=token
+                TokenRequestHandler.result["error"]=""
+                TokenRequestHandler.result["done"]=True
+                try:
+                    env.set_token(token)
+                except:
+                    TokenRequestHandler.result["token"]=""
+                    TokenRequestHandler.result["error"]="Invalid credentials"
+                    redirect=redirect+"/error"
+
+                # redirect to success/error page
+                self.send_response(308)
+                self.send_header("Location",redirect)
+                self.end_headers()
+                # self.wfile.write("".encode("utf-8"))
+                print("Returning",o)
+                return
+            else:
+                TokenRequestHandler.result["error"]="Missing login response parameters"
+                TokenRequestHandler.result["done"]=True
+
+        self.send_response(200)
+        self.send_header("Content-type", "text/html")
+        self.end_headers()
+        self.wfile.write("".encode("utf-8"))
+        print("Exiting",o)
+
+
+def do_start_local_webserver():
+    # find free port
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(('', 0))
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    port = s.getsockname()[1]
+    s.close()
+
+
+    # create server
+    server_address = ("", port)
+    httpd = http.server.HTTPServer(server_address, TokenRequestHandler)
+    log("Starting http local server on port",port)
+
+    # start server in a thread
+    th = threading.Thread(target = httpd.serve_forever)
+    th.start()
+
+    return port, httpd, th
+
+
+
+
+def do_local_sso(provider):
+    ok = False
+    try:
+        port, server, th = do_start_local_webserver()
+        webbrowser.open(env.api.sso + "?redirect="+env.api.zdmlocalredirect+provider.lower()+"/"+str(port))
+
+        timeout=120  # must be divisible by 20 to have tic - toc sequence
+        log("Hello!")
+        log("In a few seconds a browser will open the login page")
+        log("Once logged, you can go back to",provider)
+        while th.is_alive() and timeout>0:
+            time.sleep(1)
+            if timeout%20==0:
+                log("tic")
+            elif timeout%10==0:
+                log("toc")
+            timeout-=1
+            if TokenRequestHandler.result["done"]:
+                break
+
+        if TokenRequestHandler.result["done"] and not TokenRequestHandler.result["error"] and TokenRequestHandler.result["token"]:
+            info("Everything seems good!")
+            ok = True
+
+        if not ok:
+            warning("Something wrong!")
+            if not TokenRequestHandler.result["done"]:
+                warning("- never received a login response")
+            if not th.is_alive():
+                warning("- webserver not started")
+            if TokenRequestHandler.result["error"]:
+                warning("- there was an error:",TokenRequestHandler.result["error"])
+            if not TokenRequestHandler.result["token"]:
+                warning("- login failed")
+    except Exception as e:
+        warning("Can't start SSO local web server",e)
+
+    try:
+        # shutdown server
+        server.server_close()
+        th.join(timeout=2)
+    except:
+        pass
+
+    if not ok:
+        error("Login not successful")
+        ## force exit, there might be non daemon threads waiting in the background
+        os._exit(1)
+    else:
+        os._exit(0)
+
 
 
 @cli.command(help="Password reset. \n\n Arguments: \n\n EMAIL: email linked to the user account")
