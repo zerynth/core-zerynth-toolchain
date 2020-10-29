@@ -4,23 +4,6 @@ from .base import Model, Collection
 class WorkspaceModel(Model):
     """Workspace class represent a Workspace"""
 
-    @property
-    def fleets(self):
-        if self.attrs.get("fleets"):
-            return [fleet["id"] for fleet in self.attrs.get("fleets")]
-        else:
-            return []
-
-    @property
-    def devices(self):
-        devices = []
-        if self.attrs.get("fleets"):
-            for fleet in self.attrs.get("fleets"):
-                if fleet["devices"]:
-                    for d in fleet["devices"]:
-                        devices.append(d["id"])
-        return devices
-
     def tags(self):
         """
         Get all available tags of the data published in the workspace.

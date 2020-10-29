@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 class GateApiMixin(object):
 
-    def gates(self, workspace_id, status="active", gtype=""):
+    def gates(self, workspace_id, status="active", type=""):
         """
         Get all the gates associated to a workspace.
 
@@ -18,7 +18,7 @@ class GateApiMixin(object):
             :py:class:`zdevicemanager.errors.APIError`
                 If the server returns an error.
         """
-        params = {"status": status, "type": gtype}
+        params = {"status": status, "type": type}
 
         u = self._url("/gate/workspace/{0}", workspace_id)
         res = self._result(self._get(u, params=params))
@@ -219,53 +219,6 @@ class GateApiMixin(object):
         res = self._result(self._put(u, data=body))
         return res
 
-    def create_alarm_gate(self, name, workspace_id, tags, threshold, email):
-        """
-        Create a new alarm gate.
-
-        Args:
-           name (str): The gate name
-           workspace_id (str): The workspace where to get data from
-           tags (str[]): Tags array to filter data
-           threshold (int): The min duration of a condition to be notified
-           email (str): The email address where to be notified
-
-        Returns:
-           (dict): a dictionary of details
-
-        Raises:
-           :py:class:`zdevicemanager.errors.APIError`
-               If the server returns an error.
-        """
-
-        body = {
-            "name": name,
-            "payload": {
-                "workspace_id": workspace_id,
-                "tags": tags,
-                "threshold": threshold,
-                "notifications": {
-                    "email": email
-                }
-            }
-        }
-
-        u = self._url("/gate/alarm/")
-        res = self._result(self._post(u, data=body))
-        return res
-
-    def update_alarm_gate(self, gate_id, name=None, tags=None, threshold=None):
-        body = {}
-        if name is not None and name != "":
-            body["name"] = name
-        if tags is not None:
-            body["tags"] = tags
-        if threshold is not None:
-            body["threshold"] = threshold
-
-        u = self._url("/gate/alarm/{0}", gate_id)
-        res = self._result(self._put(u, data=body))
-        return res
 
     def update_gate_status(self, gate_id, status):
         """
@@ -308,4 +261,48 @@ class GateApiMixin(object):
 
         u = self._url("/gate/{0}/", gate_id)
         res = self._result(self._delete(u))
+        return res
+
+    def create_datastream(self, name, url, token, period, workspace_id, tags=None, fleets=None, origin=None):
+        """
+        Create a new webhook.
+
+        Args:
+           name (str): The webhook name
+           url (str): The webhook url for http post requests
+           token (str): The webhook auth token
+           period (int): The interval in seconds between two http requests
+           workspace_id (str): The id of the workspace where to get data from
+           tags ([]str): Optional tags to filter data
+           fleets ([]str): Optional fleets id to filter data
+
+        Returns:
+           (dict): a dictionary of details
+
+        Raises:
+           :py:class:`zdevicemanager.errors.APIError`
+               If the server returns an error.
+        """
+        body = {
+            "name": name,
+            "url": url,
+            "content-type": "application/json",
+            "period": period,
+            "origin": "data",
+            "payload": {
+                "workspace_id": workspace_id},
+
+            "tokens": {
+                "X-Auth-Token": token
+            }
+        }
+
+        if tags is not None:
+            body["payload"]["tags"] = tags
+
+        if fleets is not None:
+            body["payload"]["fleets"] = fleets
+
+        u = self._url("/gate/webhook/")
+        res = self._result(self._post(u, data=body))
         return res

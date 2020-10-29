@@ -18,6 +18,8 @@ from zdevicemanager.base.cfg import env
 
 from zdevicemanager.cli.helper import handle_error
 
+from .export.commands import export
+
 @click.group(help='Manage the data of a workspace')
 def data():
     pass
@@ -57,8 +59,8 @@ To filter result use the options:
         if len(tags) > 0:
             table = []
             for tag in tags:
-                table.append([tag.Tag, tag.Payload, tag.DeviceId, tag.TimestampDevice, tag.TimestampCloud])
-            log_table(table, headers=["Tag", "Payload", "Device", "TimestampDevice", "TimestampCloud"])
+                table.append([tag.Tag, tag.Payload, tag.DeviceId, tag.DeviceName, tag.TimestampDevice, tag.TimestampCloud])
+            log_table(table, headers=["Tag", "Payload", "DeviceId", "DeviceName", "TimestampDevice", "TimestampCloud"])
         else:
             info("No data present for to tag [{}].".format(tag))
     else:
@@ -93,3 +95,5 @@ where :samp:`uid` is the uid of the workspace
     else:
         log_json([tag.toJson for tag in tags])
 
+
+data.add_command(export)

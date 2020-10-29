@@ -26,6 +26,10 @@ class WorkspaceApiMixin(object):
         res = self._result(self._get(self._url("/workspace/{0}", workspace)))
         return res["workspace"]
 
+    def list_fleets(self, workspace):
+        res = self._result(self._get(self._url("/workspace/{0}/fleets", workspace)))
+        return res["fleets"]
+
     def create_workspace(self, name, description=""):
         """
         Create a new workspace.

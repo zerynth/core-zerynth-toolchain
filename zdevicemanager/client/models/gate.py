@@ -3,13 +3,17 @@ from .base import Model, Collection
 
 class GateModel(Model):
 
-    @property
-    def period(self):
-        return self.attrs.get("period")
+    # @property
+    # def period(self):
+    #     return self.attrs.get("period")
 
     @property
     def status(self):
         return self.attrs.get("status")
+
+    @property
+    def workspace_id(self):
+        return self.attrs.get("workspace_id")
 
     @property
     def is_enabled(self):
@@ -24,16 +28,33 @@ class GateModel(Model):
         return self.attrs.get("last_time_schedule")
 
     @property
+    def deleted_at(self):
+        return self.attrs.get("deleted_at")
+
+    @property
     def type(self):
         return self.attrs.get("type")
 
     @property
-    def origin(self):
-        return self.attrs.get("origin")
+    def is_datastream(self):
+        return self.attrs.get("type") == "data_stream"
 
     @property
-    def configuration(self):
-        return self.attrs.get("configuration")
+    def is_conditionstream(self):
+        return self.attrs.get("type") == "condition_stream"
+
+    @property
+    def type_configuration(self):
+        return self.attrs.get("type_configuration")
+
+    @property
+    def subtype(self):
+        return self.attrs.get("subtype")
+
+    @property
+    def subtype_configuration(self):
+        return self.attrs.get("subtype_configuration")
+
 
 
 class GateCollection(Collection):
@@ -87,91 +108,3 @@ class GateCollection(Collection):
                 If the server returns an error.
         """
         return self.prepare_model(self.client.api.update_gate_status(gate_id, status))
-
-
-class WebhookGateModel(GateModel):
-
-    @property
-    def configuration_tags(self):
-        return self.attrs.get("configuration").get("payload").get("tags")
-
-
-class WebhookGateCollection(GateCollection):
-    model = WebhookGateModel
-
-    def create(self, name, url, token, period, workspace_id, tags, fleets, origin):
-        """
-        Create a webhook gate.
-
-        Args:
-            name (str): name of the gate.
-            url(str): url of the webhook
-            token(str): optional token for the webhook
-            period(int): interval for webhook requests
-            workspace_id(str): workspace id
-            tags(str[]): optional tags filter
-            fleets(str[]): optional fleets filter
-
-        Returns:
-            A :py:class:`GateModel` object.
-
-        Raises:
-            :py:class:`adm.errors.APIError`
-                If the server returns an error.
-        """
-        resp = self.client.api.create_webhook(name, url, token, period, workspace_id, tags, fleets, origin)
-        return resp['id']  # self.prepare_model(resp)
-
-    def update(self, gate_id, name=None, period=None, url=None, tokens=None, tags=None, fleets=None):
-        resp = self.client.api.update_webhook(gate_id, name, period, url, tokens, tags, fleets)
-        return resp
-
-class ExportGate(GateModel):
-
-    @property
-    def cron(self):
-        return self.attrs.get("configuration").get("cron")
-
-
-class ExportGateCollection(GateCollection):
-    model = ExportGate
-
-    def create(self, name, dump_name, workspace_id, email, type="json", frequency="now", day="", tags=None, fleets=None):
-        """
-        Create an export gate.
-        """
-
-        resp = self.client.api.create_export_gate(name, dump_name, type, frequency, day, workspace_id, email, tags,
-                                                  fleets)
-        return resp['id']
-
-    def update(self, gate_id, name=None, cron=None, dump_type=None, emails=None, tags=None):
-        resp = self.client.api.update_export_gate(gate_id, name, cron, dump_type, emails, tags)
-        return resp
-
-class AlarmGate(GateModel):
-
-    @property
-    def tags(self):
-        return self.attrs.get("configuration").get("tags")
-
-
-class AlarmGateCollection(GateCollection):
-    model = AlarmGate
-
-    def create(self, name, workspace_id, tags, threshold, email):
-        """
-        Create an alarm gate
-        :param name: the gate name
-        :param workspace_id: the workspace id
-        :param tags: the condition tags (string array)
-        :param threshold: the minimum duration of a condition to be notified when it is opened
-        :param email: the email where to receive notifications
-        :return: id, the uuid of the created gate
-        """
-        resp = self.client.api.create_alarm_gate(name, workspace_id, tags, threshold, email)
-        return resp['id']
-
-    def update(self, gate_id, name=None, tags=None, threshold=None):
-        resp = self.client.api.update_alarm_gate(gate_id, name, tags, threshold)
-        return resp

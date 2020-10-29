@@ -135,15 +135,10 @@ To see all the devices use the command: ::
     devs = zcli.zdm.devices.list()
     if env.human:
         for d in devs:
-            table.append([d.id, d.name, d.fleet_id if d.fleet_id else "<none>", d.workspace_id])
-        log_table(table, headers=["ID", "Name", "FleeId", "WorkspaceID"])
+            table.append([d.id, d.name, d.fleet_id if d.fleet_id else "<none>", d.workspace_id, d.workspace_name])
+        log_table(table, headers=["ID", "Name", "FleeId", "WorkspaceID", "WorkspaceName"])
     else:
-        dd = []
-        for d in devs:
-            dev = d.toJson
-            dev.update({"workspace_id":d.workspace_id})
-            dd.append(dev)
-        log_json(dd)
+        log_json([dev.toJson for dev in devs])
 
 
 @device.command(help="Get a single device by its uid")
@@ -168,8 +163,8 @@ where :samp:`uid` is the device uid.
 
     device = zcli.zdm.devices.get(id)
     if env.human:
-        log_table([[device.id, device.name, device.fleet_id, device.workspace_id]],
-                  headers=["ID", "Name", "FleetID", "WorkspaceID"])
+        log_table([[device.id, device.name, device.fleet_id, device.workspace_id, device.workspace_name]],
+                  headers=["ID", "Name", "FleetID", "WorkspaceID", "WorkspaceName"])
     else:
         dev = device.toJson
         dev.update({"workspace_id":device.workspace_id})

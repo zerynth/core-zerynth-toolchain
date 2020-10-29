@@ -6,15 +6,13 @@ from .models.devicekey import DeviceKeyCollection
 from .models.firmware import FirmwareCollection
 from .models.fleet import FleetCollection
 from .models.fota import FotaCollection
-from .models.gate import GateCollection
-from .models.gate import WebhookGateCollection
-from .models.gate import ExportGateCollection
-from .models.gate import AlarmGateCollection
 from .models.job import JobCollection
 from .models.status import StatusCollection
 from .models.workspace import WorkspaceCollection
 from .models.export import ExportsCollection
 from .models.condition import ConditionCollection
+from .models.stream import StreamCollection
+from .models.alert import AlertCollection
 
 logger = MyLogger().get_logger()
 
@@ -95,46 +93,11 @@ class ZdmClient(object):
         return FirmwareCollection(client=self)
 
     @property
-    def gates(self):
-        """
-        An object for managing the gates.
-        """
-        return GateCollection(client=self)
-
-    @property
-    def webhooks(self):
-        """
-        An object for managing the webhooks
-        """
-        return WebhookGateCollection(client=self)
-
-    @property
-    def exportgates(self):
-        """
-        An object for managing the export gates
-        """
-        return ExportGateCollection(client=self)
-
-    @property
-    def alarmgates(self):
-        """"
-        An object for managing the alarm gates
-        """
-        return AlarmGateCollection(client=self)
-
-    @property
     def status(self):
         """
         An object for managing the status of a device.
         """
         return StatusCollection(client=self)
-
-    @property
-    def exports(self):
-        """
-        An object for managing the exports.
-        """
-        return ExportsCollection(client=self)
 
     @property
     def conditions(self):
@@ -143,3 +106,23 @@ class ZdmClient(object):
         """
         return ConditionCollection(client=self)
 
+    @property
+    def streams(self):
+        """
+        An object for managing the streams.
+        """
+        return StreamCollection(client=self)
+
+    @property
+    def alerts(self):
+        """
+        An object for managing the alerts.
+        """
+        return AlertCollection(client=self)
+
+    @property
+    def exports(self):
+        """
+        An object for managing the exports.
+        """
+        return ExportsCollection(client=self)

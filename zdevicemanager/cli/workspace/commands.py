@@ -18,6 +18,7 @@ List of workspace commands:
 
 * :ref:`Create <zdm-cmd-workspace-create>`
 * :ref:`List workspaces <zdm-cmd-workspace-get-all>`
+* :ref:`List fleets of a workspace <zdm-cmd-workspace-get-all-fleets>`
 * :ref:`Get a single workspace <zdm-cmd-workspace-get-workspace>`
 * :ref:`Manage data <zdm-cmd-workspace-data>`
 * :ref:`List firmwares <zdm-cmd-workspace-firmware>`
@@ -31,6 +32,12 @@ The list of supported devices is available :ref:`here <doc-supported-boards>`
 import click
 from zdevicemanager.base.base import log_table, log_json, pass_zcli, info
 from zdevicemanager.base.cfg import env
+from .conditions.commands import condition
+from .data.commands import data
+from .alert.commands import alert
+from .stream.commands import stream
+from .export.commands import export
+
 
 from ..helper import handle_error
 
@@ -54,15 +61,15 @@ To see the list of all workspaces, use the command: ::
 
     zdm workspace all
 
- The output is a table containing workspaces with ID, name, description, fleets and devices
+ The output is a table containing workspaces with ID, name, description
 
     """
     wks = zcli.zdm.workspaces.list()
     if env.human:
         table = []
         for ws in wks:
-            table.append([ws.id, ws.name, ws.description, ws.fleets, ws.devices])
-        log_table(table, headers=["ID", "Name", "Description", "Fleets", "Devices"])
+            table.append([ws.id, ws.name, ws.description])
+        log_table(table, headers=["ID", "Name", "Description"])
     else:
         log_json([wk.toJson for wk in wks])
 
@@ -87,8 +94,8 @@ where :samp:`uid` is the workspace uid.
     """
     ws = zcli.zdm.workspaces.get(id)
     if env.human:
-        data = [ws.id, ws.name, ws.description, ws.fleets, ws.devices]
-        log_table([data], headers=["ID", "Name", "Description", "Fleets", "Devices"])
+        data = [ws.id, ws.name, ws.description]
+        log_table([data], headers=["ID", "Name", "Description"])
     else:
         log_json(ws.toJson)
 
@@ -147,3 +154,40 @@ where :samp:`uid` is the uid of the workspace.
         log_table(table, headers=["ID", "Version", "Metadata", "WorkspaceID"])
     else:
         log_json([frm.toJson for frm in firmwares])
+
+
+@workspace.command(help="Get all the fleets of a workspace")
+@click.argument('workspace-id')
+@pass_zcli
+@handle_error
+def fleets(zcli, workspace_id):
+    """
+.. _zdm-cmd-workspace-get-all-fleets:
+
+List fleets
+------------
+
+Use this command to have the list of fleets inside a workspace: ::
+
+    zdm workspace fleet all uid
+
+where :samp:`uid` is the uid of the workspace.
+
+    """
+    fleets = zcli.zdm.fleets.list(workspace_id)
+    if env.human:
+        table = []
+        for fl in fleets:
+            table.append([fl.id, fl.name, fl.description, fl.workspace_id])
+        log_table(table, headers=["ID", "Name", "Description", "WorkspaceId"])
+    else:
+        log_json([fl.toJson for fl in fleets])
+
+
+
+workspace.add_command(data)
+workspace.add_command(condition)
+workspace.add_command(alert)
+workspace.add_command(stream)
+# TODO: add exports
+#workspace.add_command(export)

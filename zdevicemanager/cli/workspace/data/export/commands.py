@@ -38,7 +38,7 @@ def export():
 @click.option('--fleet', multiple=True)
 @pass_zcli
 @handle_error
-def create(zcli, name, type, workspace_id, tag, fleet, start, end):
+def create(zcli, name, type, workspace_id, start, end, tag, fleet):
     """
 .. _zdm-cmd-workspace-data-export-create:
 
@@ -104,5 +104,5 @@ where :samp:`export_id` is the uid of the export
     """
     exp = zcli.zdm.exports.get(export_id)
 
-    log_table([[exp.id, exp.Name, exp.Type, exp.Status]],
-      headers=["ID", "Name", "Type", "Status"])
+    log_table([[exp.id, exp.Name, exp.Type, exp.Status, exp.Url]],
+      headers=["ID", "Name", "Type", "Status", "URL"])

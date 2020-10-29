@@ -2,15 +2,6 @@ from .base import Model, Collection
 
 
 class FleetModel(Model):
-
-    @property
-    def devices(self):
-        devices = []
-        if self.attrs.get("devices"):
-            for d in self.attrs.get("devices"):
-                devices.append(d[self.id_attribute])
-        return devices
-
     @property
     def workspace_id(self):
         return self.attrs.get("workspace_id")
@@ -18,13 +9,6 @@ class FleetModel(Model):
 
 class FleetCollection(Collection):
     model = FleetModel
-
-    def list(self):
-        """
-        List fleets
-        """
-        resp = self.client.api.fleets()
-        return [self.prepare_model(r) for r in resp]
 
     def create(self, name, description=""):
         """
@@ -62,3 +46,10 @@ class FleetCollection(Collection):
         """
         resp = self.client.api.get_fleet(device_id)
         return self.prepare_model(resp)
+
+    def list(self, workspace_id):
+        """
+        List fleets of a workspace
+        """
+        resp = self.client.api.list_fleets(workspace_id)
+        return [self.prepare_model(r) for r in resp]

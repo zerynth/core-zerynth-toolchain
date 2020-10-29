@@ -20,6 +20,10 @@ class DataTagModel(Model):
         return self.attrs.get("device_id")
 
     @property
+    def DeviceName(self):
+        return self.attrs.get("device_name")
+
+    @property
     def Payload(self):
         return self.attrs.get("payload")
 

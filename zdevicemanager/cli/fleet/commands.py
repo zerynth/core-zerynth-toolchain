@@ -16,7 +16,6 @@ The main attributes of a fleet are:
 List of fleet commands:
 
 * :ref:`Create <zdm-cmd-fleet-create>`
-* :ref:`List fleets <zdm-cmd-fleet-get-all>`
 * :ref:`Get a single fleet <zdm-cmd-fleet-get-fleet>`
 
     """
@@ -58,31 +57,6 @@ where :samp:`name` is the fleet name and :samp:`workspace_id` is the uid of the 
         log_json(fleet.toJson)
 
 
-@fleet.command(help="Get all the fleets")
-@pass_zcli
-@handle_error
-def all(zcli):
-    """
-.. _zdm-cmd-fleet-get-all:
-
-List fleets
-------------
-
-Use this command to have information about the associated workspace, and the list of devices inside: ::
-
-    zdm fleet all
-
-    """
-    table = []
-    fleets = zcli.zdm.fleets.list()
-    if env.human:
-        for f in fleets:
-            table.append([f.id, f.name, f.workspace_id if f.workspace_id else "<none>", f.devices])
-        log_table(table, headers=["ID", "Name", "WorkspaceId", "Devices"])
-    else:
-        log_json([f.toJson for f in fleets])
-
-
 @fleet.command(help="Get a single fleet by its uid")
 @click.argument('id')
 @pass_zcli
@@ -103,7 +77,20 @@ where :samp:`uid` is the fleet uid
     """
     fleet = zcli.zdm.fleets.get(id)
     if env.human:
-        log_table([[fleet.id, fleet.name, fleet.workspace_id, fleet.devices]],
-              headers=["ID", "Name", "WorkspaceID", "Devices"])
+        log_table([[fleet.id, fleet.name, fleet.workspace_id]],
+              headers=["ID", "Name", "WorkspaceID"])
+    else:
+        log_json(fleet.toJson)
+
+
+def list_fleets(zcli, workspace_id):
+    """
+    List fleets of a workspace
+    """
+    resp = zcli.zdm.fleets.list(workspace_id)
+
+    if env.human:
+        log_table([[fleet.id, fleet.name, fleet.workspace_id]],
+                  headers=["ID", "Name", "WorkspaceID"])
     else:
         log_json(fleet.toJson)

@@ -193,7 +193,7 @@ def _latex_row(cell_values, colwidths, colaligns):
 
 def _rst_escape_first_column(rows, headers):
     def escape_empty(val):
-        if isinstance(val, (_text_type, _binary_type)) and val.strip() is "":
+        if isinstance(val, (_text_type, _binary_type)) and val.strip() == "":
             return ".."
         else:
             return val

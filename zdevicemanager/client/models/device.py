@@ -8,8 +8,11 @@ class DeviceModel(Model):
 
     @property
     def workspace_id(self):
-        res = self.client.api.workspace_of_device(self.id)
-        return res.get(self.id_attribute)
+        return self.attrs.get("workspace_id")
+
+    @property
+    def workspace_name(self):
+        return self.attrs.get("workspace_name")
 
     def create_key(self, name):
         key = self.client.api.devices.create_device_key(self.id, name)

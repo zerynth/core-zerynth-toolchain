@@ -12,13 +12,15 @@ from .status import StatusApiMixin
 from .workspace import WorkspaceApiMixin
 from .exports import ExportsApiMixin
 from .conditions import ConditionApiMixin
+from .stream import StreamApiMixin
+from .alerts import AlertsApiMixin
 
 from ..constants import DEFAULT_TIMEOUT_SECONDS, DEFAULT_USER_AGENT, DEFAULT_ZDM_API_VERSION
 from ..errors import create_api_error_from_http_exception
 
 
-class APIClient(requests.Session, WorkspaceApiMixin, DataApiMixin, DeviceApiMixin, FleetApiMixin,
-                GateApiMixin, StatusApiMixin, ExportsApiMixin, ConditionApiMixin):
+class APIClient(requests.Session, WorkspaceApiMixin, DataApiMixin, DeviceApiMixin, FleetApiMixin, GateApiMixin,
+                StatusApiMixin, ExportsApiMixin, ConditionApiMixin, StreamApiMixin, AlertsApiMixin):
     """
     A low-level client for the ZDM API
     """
