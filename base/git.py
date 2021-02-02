@@ -1,20 +1,23 @@
 from .zrequests import *
 import re
-import pygit2
 import urllib.parse
+try:
+    import pygit2
 
-# hack for pygit2 gc issue on __del__ remote
-# TODO: investigate better
-pygit2_remote_del = pygit2.Remote.__del__
+    # hack for pygit2 gc issue on __del__ remote
+    # TODO: investigate better
+    pygit2_remote_del = pygit2.Remote.__del__
 
-def pygit2_newremote_del(self):
-    try:
-        pygit2_remote_del(self)
-    except Exception as e:
-        pass
+    def pygit2_newremote_del(self):
+        try:
+            pygit2_remote_del(self)
+        except Exception as e:
+            pass
 
-pygit2.Remote.__del__ = pygit2_newremote_del
-# end of hack
+    pygit2.Remote.__del__ = pygit2_newremote_del
+    # end of hack
+except Exception as e:
+    pass
 
 __all__=['git']
 
@@ -308,4 +311,7 @@ class Git():
             warning("Tag",tag,e)
         return repo.lookup_reference("refs/tags/"+tag)
 
-git = Git()
+try:
+    git = Git()
+except:
+    git = None
