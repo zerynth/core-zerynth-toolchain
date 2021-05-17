@@ -123,7 +123,7 @@ def _vm_create(vminfo,custom_target=None):
     except Exception as e:
         critical("Can't create vm", exc=e)
 
-@vm.command(help="Request virtual machine creation given device uid")
+@vm.command("create_by_uid", help="Request virtual machine creation given device uid")
 @click.argument("dev_uid")
 @click.argument("version")
 @click.argument("rtos")
@@ -227,14 +227,14 @@ def _reg_owning(dev,remote_uid,chipid):
 def own(vm_uid):
     chipid, devtype, remote_uid = _own_vm(vm_uid)
 
-@vm.command(help="Redeem third party VM by uid taken from device")
+@vm.command("own_alias", help="Redeem third party VM by uid taken from device")
 @click.argument("alias")
 def own_alias(alias):
     vm_uid,version,target,chipid,dev = retrieve_vm_uid(alias)
     chipid, devtype, remote_uid = _own_vm(vm_uid)
     _reg_owning(dev,remote_uid,chipid)
 
-@vm.command(help="Redeem third party VM by uid taken from device raw")
+@vm.command("own_target", help="Redeem third party VM by uid taken from device raw")
 @click.argument("target")
 @click.option("--spec","__specs",default="",multiple=True)
 def own_target(target,__specs):
@@ -243,7 +243,7 @@ def own_target(target,__specs):
     # _reg_owning(dev,remote_uid,chipid)
 
 
-@vm.command(help="Redeem third party VM by uid taken from device by probe")
+@vm.command("own_by_probe", help="Redeem third party VM by uid taken from device by probe")
 @click.argument("target")
 @click.argument("probe")
 def own_by_probe(target,probe):

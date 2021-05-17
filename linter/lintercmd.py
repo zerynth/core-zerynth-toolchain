@@ -23,7 +23,7 @@ def pep8(data,file,__json):
     else:
         log(res)
 
-@linter.command(help="Fix imports to be used with standard python. \n\n ")
+@linter.command("fix_imports", help="Fix imports to be used with standard python. \n\n ")
 def fix_imports():
     for d in fs.dirs(env.official_libs):
         init_file = fs.path(d,"__init__.py")

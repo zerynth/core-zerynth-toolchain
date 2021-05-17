@@ -364,7 +364,7 @@ def _register_device(dinfo):
         critical("Error during remote registration",exc=e)
 
 
-@device.command(help="Register a new device without extracting the uid")
+@device.command("register_by_uid", help="Register a new device without extracting the uid")
 @click.argument("chipid")
 @click.argument("target")
 def register_by_uid(chipid,target):
@@ -391,7 +391,7 @@ Upon successful registration the device is assigned an UID by the backend.
     }
     _register_device(dinfo)
 
-@device.command(help="Register a new device giving target details")
+@device.command("register_raw", help="Register a new device giving target details")
 @click.argument("target")
 @click.option("--skip-remote","__skip_remote",default=False,flag_value=True)
 @click.option("--skip-probe","__skip_probe",default=False,flag_value=True)
@@ -537,7 +537,7 @@ The virtualization process is automated, no user interaction is required.
         info("Virtualization Ok")
 
 
-@device.command(help="Virtualize a device providing manual parameters.")
+@device.command("virtualize_raw", help="Virtualize a device providing manual parameters.")
 @click.argument("vmuid")
 @click.option("--spec","__specs",default=[],multiple=True)
 def virtualize_raw(vmuid,__specs):
@@ -630,7 +630,7 @@ tries to open the default serial port with the correct parameters for the device
     #     log(data.decode("ascii","replace"),sep="",end="")
     #     #print(,sep="",end="")
 
-@device.command(help="Open device serial.")
+@device.command("open_raw", help="Open device serial.")
 @click.argument("port")
 @click.option("--echo","__echo",flag_value=True, default=False,help="print typed characters to stdin")
 @click.option("--baud","__baud", default=115200,type=int,help="open with a specific baudrate")
@@ -734,7 +734,7 @@ def do_get_supported(type,single,nice):
     elif single:
         log_json(jst)
 
-@device.command(help="List of serial ports and disk devices")
+@device.command("ports_and_disks", help="List of serial ports and disk devices")
 def ports_and_disks():
     res = {
             "disks":_dsc.devsrc.find_all_mount_points(),
@@ -753,7 +753,7 @@ def do_get_serial_ports():
 
     
 
-@device.command(help="Erase the flash of the device. \n\n Arguments: \n\n ALIAS: device alias")
+@device.command("erase_flash", help="Erase the flash of the device. \n\n Arguments: \n\n ALIAS: device alias")
 @click.argument("alias")
 def erase_flash(alias):
     """ 
@@ -783,7 +783,7 @@ where :samp:`alias` is the device alias previously set (or just the initial part
         fatal("Can't erase flash! -->",out)
     info("Memory flash erased")
 
-@device.command(help="Execute a custom action for the device. \n\n Arguments: \n\n ALIAS: device alias \n\n ACTION: selected action")
+@device.command("custom_action", help="Execute a custom action for the device. \n\n Arguments: \n\n ALIAS: device alias \n\n ACTION: selected action")
 @click.argument("alias")
 @click.argument("action")
 @click.option("--action-param",default="",type=str,multiple=True,help="action parameter")

@@ -498,7 +498,7 @@ The :command:`create` can also accept the following options:
 #         error("no project in this path")
 
 
-@project.command(help="Initialize a repository.\n\n Arguments: \n\n PATH: project path.")
+@project.command("git_init", help="Initialize a repository.\n\n Arguments: \n\n PATH: project path.")
 @click.argument("path",type=click.Path())
 def git_init(path):
     """
@@ -553,7 +553,7 @@ Zerynth remote repositories require authentication by basic HTTP authentication 
         except Exception as e:
             fatal("Can't create git repository:", e)
 
-@project.command(help="Show repository status.\n\n Arguments: \n\n PATH: project path.")
+@project.command("git_status", help="Show repository status.\n\n Arguments: \n\n PATH: project path.")
 @click.argument("path",type=click.Path())
 @click.option("--remote",default="zerynth",help="select remote, default is zerynth")
 def git_status(path,remote):
@@ -583,7 +583,7 @@ It also returns the status of the repository HEAD with respect to the selected r
         log_json(res)
 
 
-@project.command(help="Fetch repository.\n\n Arguments: \n\n PATH: project path.")
+@project.command("git_fetch", help="Fetch repository.\n\n Arguments: \n\n PATH: project path.")
 @click.argument("path",type=click.Path())
 @click.option("--remote",default="zerynth",help="select remote, default is zerynth")
 def git_fetch(path,remote):
@@ -602,7 +602,7 @@ is equivalent to the :samp:`git fetch` command executed at :samp:`path'. The def
     """
     git.git_fetch(path,remote)
             
-@project.command(help="Commit changes.\n\n Arguments: \n\n PATH: project path.")
+@project.command("git_commit", help="Commit changes.\n\n Arguments: \n\n PATH: project path.")
 @click.argument("path",type=click.Path())
 @click.option("-m","--msg",default="commit",help="set commit message")
 def git_commit(path,msg):
@@ -621,7 +621,7 @@ is equivalent to the command sequence :samp:`git add .` and :samp:`git commit -m
     """
     git.git_commit(path,msg)
 
-@project.command(help="Push changes.\n\n Arguments: \n\n PATH: project path.")
+@project.command("git_push", help="Push changes.\n\n Arguments: \n\n PATH: project path.")
 @click.argument("path",type=click.Path())
 @click.option("--remote",default="zerynth",help="select remote, default is zerynth")
 def git_push(path,remote):
@@ -640,7 +640,7 @@ is equivalent to the command :samp:`git push origin remote` executed at :samp:`p
     """
     git.git_push(path,remote)
 
-@project.command(help="Pull changes from remote.\n\n Arguments: \n\n PATH: project path.")
+@project.command("git_pull", help="Pull changes from remote.\n\n Arguments: \n\n PATH: project path.")
 @click.argument("path",type=click.Path())
 @click.option("--remote",default="zerynth",help="select remote, default is zerynth")
 def git_pull(path,remote):
@@ -659,7 +659,7 @@ is equivalent to the command :samp:`git pull` executed at :samp:`path` for remot
     """
     git.git_pull(path,remote)
 
-@project.command(help="Create a new branch or switch to existing branch.\n\n Arguments: \n\n PATH: project path \n BRANCH: branch name.")
+@project.command("git_branch", help="Create a new branch or switch to existing branch.\n\n Arguments: \n\n PATH: project path \n BRANCH: branch name.")
 @click.argument("path",type=click.Path())
 @click.argument("branch")
 @click.option("--remote",default="zerynth",help="select remote, default is zerynth")
@@ -679,7 +679,7 @@ behave differently if the :samp:`branch` already exists locally. In this case th
     """
     git.git_branch(path,branch,remote)
 
-@project.command(help="Clone a project repository.\n\n Arguments: \n\n PROJECT: project uid\nPATH: project path")
+@project.command("git_clone", help="Clone a project repository.\n\n Arguments: \n\n PROJECT: project uid\nPATH: project path")
 @click.argument("project")
 @click.argument("path",type=click.Path())
 def git_clone(project,path):
@@ -699,7 +699,7 @@ retrieves a project repository saved to the Zerynth backend and clones it to :sa
 
     git.git_clone(project,path)
 
-@project.command(help="Clone a project repository.\n\n Arguments: \n\n PROJECT: project uid\nPATH: project path")
+@project.command("git_clone_external", help="Clone a project repository.\n\n Arguments: \n\n PROJECT: project uid\nPATH: project path")
 @click.argument("url")
 @click.argument("dest",type=click.Path())
 @click.option("--title",default="",help="set cloned project title")
@@ -764,7 +764,7 @@ The max number of results is 50, the option :samp:`--from n` can be used to spec
     except Exception as e:
         critical("Can't get project list",exc=e)
 
-@project.command(help="Build project documentation.\n\n Arguments: \n\n PATH: project path.")
+@project.command("make_doc", help="Build project documentation.\n\n Arguments: \n\n PATH: project path.")
 @click.argument("path",type=click.Path())
 @click.option("--to","__to",type=click.Path(),default=None,help="Save built documentation to specified path")
 @click.option("--open","__open", flag_value=True, default=False,help="Open the documentation in the system browser")

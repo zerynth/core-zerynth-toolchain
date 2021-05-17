@@ -130,7 +130,7 @@ The :command:`uplink` may the additional :option:`--loop times` option that spec
 
 
 
-@cli.command(help="Uplink bytecode to a configured device")
+@cli.command("uplink_raw", help="Uplink bytecode to a configured device")
 @click.argument("target")
 @click.argument("bytecode",type=click.Path())
 @click.option("--loop",default=5,type=click.IntRange(1,20),help="number of retries during device discovery.")
@@ -176,7 +176,7 @@ def _uplink_raw(target,bytecode,loop,__specs,skip_layout,layout_root,tmpdir):
         _uplink_dev(dev,bytecode,loop,tmpdir)
     # _uplink_dev(dev,bytecode,loop)
 
-@cli.command(help="Uplink bytecode to a device using a probe.")
+@cli.command("uplink_by_probe", help="Uplink bytecode to a device using a probe.")
 @click.argument("target")
 @click.argument("probe")
 @click.argument("linked_bytecode",type=click.Path())
